@@ -1,0 +1,30 @@
+{
+  "common": {
+    "welcome": "Baga nagaan dhuftan gara Sira-Voice",
+    "loading": "Fe'amaa jira...",
+    "save": "Oolchi",
+    "cancel": "Haquu"
+  },
+  "voice": {
+    "mic_label": "Dubbachuuf cuqaasi",
+    "listening": "Dhaggeeffachaan jira...",
+    "processing": "Sira yaadaa jira...",
+    "instruction": "Afaan Oromoo, Amaariffa ykn Ingiliffaan dubbadhu"
+  },
+  "agent": {
+    "title": "Eejentii AI Sira",
+    "status_on": "Eejentichi hojiirra jira",
+    "status_off": "Eejentichi dhaameera",
+    "auto_apply": "Ofiin akka iyyatu hayyami",
+    "finding_jobs": "Hojii siif ta'u barbaadaa jira"
+  },
+  "safety": {
+    "badge_safe": "🛡️ Hojii Amanamaa",
+    "badge_risk": "⚠️ Hojii Shakkisiisaa",
+    "scam_alert": "Hojiin kun mallattoo gowwoomsaa qaba"
+  },
+  "subscription": {
+    "upgrade": "Gara Protti ol guddisi",
+    "pro_features": "Eejentii AI fi iyyannoo ofumaa argadhu"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "common": {
+    "welcome": "እንኳን ደህና መጡ ወደ ሲራ-ቮይስ",
+    "loading": "በመጫን ላይ...",
+    "save": "አስቀምጥ",
+    "cancel": "ሰርዝ"
+  },
+  "voice": {
+    "mic_label": "ለመናገር ይጫኑ",
+    "listening": "እየሰማሁ ነው...",
+    "processing": "ሲራ እያሰበ ነው...",
+    "instruction": "በአማርኛ፣ በአፋን ኦሮሞ ወይም በእንግሊዝኛ ይናገሩ"
+  },
+  "agent": {
+    "title": "የሲራ AI ወኪል",
+    "status_on": "ወኪሉ ንቁ ነው",
+    "status_off": "ወኪሉ ጠፍቷል",
+    "auto_apply": "በራሱ እንዲያመለክት ፍቀድ",
+    "finding_jobs": "ለእርስዎ የሚሆኑ ስራዎችን እየፈለግኩ ነው"
+  },
+  "safety": {
+    "badge_safe": "🛡️ የታመነ ስራ",
+    "badge_risk": "⚠️ አጠራጣሪ ስራ",
+    "scam_alert": "ይህ ስራ የማጭበርበር ምልክቶች አሉት"
+  },
+  "subscription": {
+    "upgrade": "ወደ ፕሮ ያሳድጉ",
+    "pro_features": "የ AI ወኪል እና አውቶማቲክ ማመልከቻን ያግኙ"
+  }
+}

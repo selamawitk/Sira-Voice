@@ -1,0 +1,26 @@
+{
+  "common": {
+    "welcome": "Welcome to Sira-Voice",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "voice": {
+    "mic_label": "Press to Speak",
+    "listening": "Listening...",
+    "processing": "Sira is thinking...",
+    "instruction": "Speak in Amharic, Afan Oromo, or English"
+  },
+  "agent": {
+    "title": "Sira AI Agent",
+    "status_on": "Agent is Active",
+    "status_off": "Agent is Off",
+    "auto_apply": "Enable Auto-Apply",
+    "finding_jobs": "Finding the best matches for you"
+  },
+  "safety": {
+    "badge_safe": "🛡️ Safe Job",
+    "badge_risk": "⚠️ High Risk",
+    "scam_alert": "This job shows signs of a scam"
+  }
+}
