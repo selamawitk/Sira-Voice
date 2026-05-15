@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Search, Filter, Clock } from 'lucide-react';
 import api from '../../services/api.js';
 import { useVoice } from '../../hooks/useVoice.js';
-import { LanguageContext } from '../../context/LanguageContext.jsx';
+import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 import { useNavigate } from 'react-router-dom';
 
 const JobList = () => {

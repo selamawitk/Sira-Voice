@@ -1,29 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useVoice } from '../../hooks/useVoice.js';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { startListening, isListening, result } = useVoice();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  useEffect(() => {
-    if (result) {
-      if (result.intent === 'hire_worker') {
-        navigate('/login'); // Or register employer
-      } else if (result.intent === 'job_search') {
-        navigate('/login'); // Or jobs
-      }
-    }
-  }, [result, navigate]);
 
   const scrollTo = (id) => {
     if (location.pathname !== '/') {
@@ -52,7 +40,7 @@ const Navbar = () => {
           <div className="text-white text-2xl font-black tracking-tight">
             Sira-<span className="text-[#2BB8B8]">Voice</span>
           </div>
-          {/* Handshake Icon (Matches screenshot image_4e4a2b.png) */}
+          {/* Handshake Icon */}
           <div className="text-2xl ml-1">🤝</div>
         </div>
         
@@ -69,13 +57,6 @@ const Navbar = () => {
             className="border-2 border-[#2BB8B8] text-white px-7 py-1.5 rounded-full font-bold hover:bg-[#2BB8B8] hover:text-slate-950 transition-all duration-300"
           >
             Login
-          </button>
-          <button
-            onClick={() => startListening()}
-            disabled={isListening}
-            className="border-2 border-white/20 text-white px-4 py-1.5 rounded-full font-bold hover:bg-white/10 transition-all duration-300 disabled:opacity-50"
-          >
-            {isListening ? '🎙️' : '🎙️ Voice'}
           </button>
         </div>
 
@@ -101,13 +82,6 @@ const Navbar = () => {
               className="block w-full text-left border-2 border-[#2BB8B8] text-white px-4 py-2 rounded-full font-bold hover:bg-[#2BB8B8] hover:text-slate-950 transition-all duration-300"
             >
               Login
-            </button>
-            <button
-              onClick={() => { startListening(); setIsOpen(false); }}
-              disabled={isListening}
-              className="block w-full text-left border-2 border-white/20 text-white px-4 py-2 rounded-full font-bold hover:bg-white/10 transition-all duration-300 disabled:opacity-50"
-            >
-              {isListening ? '🎙️ Listening...' : '🎙️ Voice'}
             </button>
           </div>
         </div>

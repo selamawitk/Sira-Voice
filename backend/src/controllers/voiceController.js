@@ -1,202 +1,262 @@
 import asyncHandler from '../utils/asyncHandler.js';
 
 import {
-  processTextToData,
-  processVoiceToData,
+  analyzeJobForScam,
+  extractProfileFromText,
+  processTextToData
 } from '../services/aiService.js';
 
-import { sendSms } from '../services/smsService.js';
-import Application from '../models/Application.js';
+import { transcribeAudio } from '../services/voiceService.js';
+
+import { createApplicationLogic } from './applicationController.js';
+
 import Job from '../models/Job.js';
-import Notification from '../models/Notification.js';
+import User from '../models/User.js';
 
-/* =========================
-   🧠 TEXT → AI
-========================= */
-export const processText = asyncHandler(async (req, res) => {
-  const { transcript } = req.body;
+/**
+ * 🎤 FAST VOICE PIPELINE
+ * audio → transcription → AI (text only)
+ */
+export const processVoiceAction = asyncHandler(async (req, res) => {
+  let text = req.body.transcript;
+  let detectedLang = req.body.language || 'unknown';
 
-  if (!transcript || transcript.trim() === '') {
-    return res.status(400).json({
+  if (req.file) {
+    const transcription = await transcribeAudio(req.file.path);
+    text = transcription.text;
+  }
+
+  if (!text) {
+    return res.json({
       success: false,
-      message: 'Transcript is required',
+      transcript: '',
+      aiInterpreted: {},
+      actionTaken: 'NO_SPEECH'
     });
   }
 
-  try {
-    const parsed = await processTextToData(transcript);
+  const intent = await processTextToData(text);
 
-    return res.status(200).json({
-      success: true,
-      intent: parsed?.intent || 'search',
-      details: parsed?.summary || transcript,
-      location: parsed?.location || '',
-      detectedLanguage: parsed?.detectedLanguage || 'unknown',
-      aiInterpreted: parsed || {},
+  const response = {
+    transcript: text,
+    language: detectedLang,
+    aiInterpreted: intent,
+    actionTaken: '',
+    data: []
+  };
+
+  /**
+   * 🟢 POST JOB (EMPLOYER ONLY)
+   */
+  if (intent.intent === 'post' && req.user?.role === 'employer') {
+    const job = await Job.create({
+      employer: req.user._id,
+      title: intent.category ? `${intent.category} Job` : 'New Job',
+      category: intent.category || 'General',
+      description: text,
+      salary: intent.salary || 0,
+      location: {
+        address: intent.location || 'Addis Ababa',
+        type: 'Point',
+        coordinates: [38.7578, 8.9806]
+      },
+      status: 'open'
     });
 
-  } catch (error) {
-    console.error('❌ TEXT ERROR:', error);
-
-    return res.status(500).json({
-      success: false,
-      message: 'Text processing failed',
-    });
+    response.actionTaken = 'JOB_CREATED';
+    response.data = job;
   }
-});
 
-/* =========================
-   🎤 VOICE → AI (FAST PIPELINE)
-========================= */
-export const transcribeVoice = asyncHandler(async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({
-      success: false,
-      message: 'No audio file received',
-    });
-  }
+  /**
+   * 🟡 APPLY (WORKER ONLY)
+   */
+  else if (intent.intent === 'apply' && req.user?.role === 'worker') {
+    const jobId = req.body.jobId;
 
-  try {
-    // 🎤 STEP 1: Voice → AI (FAST + SAFE)
-    const result = await processVoiceToData(req.file.path);
-
-    if (!result) {
-      return res.status(500).json({
+    if (!jobId) {
+      return res.json({
         success: false,
-        message: 'Voice processing failed',
+        actionTaken: 'ERROR',
+        error: 'Missing jobId'
       });
     }
 
-    // 📩 SMS (NON-BLOCKING SAFE CALL)
-    const destinationPhone =
-      req.user?.phone || process.env.AFRICASTALKING_TEST_NUMBER;
+    const application = await createApplicationLogic(
+      jobId,
+      req.user._id,
+      req.io,
+      false
+    );
 
-    if (destinationPhone) {
-      sendSms({
-        to: destinationPhone,
-        message: `Sira Voice: ${result.intent || 'unknown'} | ${result.category || 'General'}`
-      }).catch(err =>
-        console.error('⚠️ SMS failed:', err.message)
-      );
-    }
-
-    return res.status(200).json({
-      success: true,
-      transcript: result.transcript || '',
-      intent: result.intent || 'search',
-      category: result.category || '',
-      location: result.location || '',
-      skills: result.skills || [],
-      summary: result.summary || '',
-      detectedLanguage: result.detectedLanguage || 'unknown',
-    });
-
-  } catch (error) {
-    console.error('❌ VOICE ERROR:', error);
-
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Voice processing failed',
-    });
+    response.actionTaken = 'JOB_APPLICATION_CREATED';
+    response.data = {
+      applicationId: application._id,
+      jobId
+    };
   }
+
+  /**
+   * 🔵 SEARCH JOBS
+   */
+  else if (intent.intent === 'search') {
+    const jobs = await Job.find({
+      $or: [
+        {
+          category: {
+            $regex: intent.category || '',
+            $options: 'i'
+          }
+        },
+        {
+          title: {
+            $regex: intent.category || '',
+            $options: 'i'
+          }
+        }
+      ]
+    })
+      .limit(10)
+      .populate('employer', 'fullName');
+
+    response.actionTaken = 'JOB_SEARCH_RESULTS';
+    response.data = jobs;
+  }
+
+  /**
+   * 🟣 PROFILE UPDATE (VOICE CV ONLY)
+   */
+  else if (intent.intent === 'profile' && req.user) {
+    const user = await User.findById(req.user._id);
+
+    if (user && user.role === 'worker') {
+      user.workerProfile.skills = [
+        ...new Set([
+          ...(user.workerProfile.skills || []),
+          ...(intent.skills || [])
+        ])
+      ];
+
+      user.workerProfile.bio =
+        intent.summary || user.workerProfile.bio;
+
+      await user.save();
+
+      response.actionTaken = 'PROFILE_UPDATED';
+      response.data = user.workerProfile;
+    }
+  }
+
+  return res.json(response);
 });
 
-/* =========================
-   🎤 VOICE HIRE (MATCH SYSTEM)
-========================= */
-export const voiceHire = asyncHandler(async (req, res) => {
-  const { jobId } = req.params;
+/**
+ * 🔍 VOICE JOB SEARCH ONLY
+ */
+export const voiceJobSearch = asyncHandler(async (req, res) => {
+  let text = req.body.transcript;
 
-  if (!req.file) {
-    return res.status(400).json({
+  if (req.file) {
+    const transcription = await transcribeAudio(req.file.path);
+    text = transcription.text;
+  }
+
+  if (!text) {
+    return res.json({
       success: false,
-      message: 'No audio file provided',
+      jobs: []
     });
   }
 
-  if (!jobId) {
-    return res.status(400).json({
-      success: false,
-      message: 'Job ID is required',
-    });
-  }
+  const intent = await processTextToData(text);
 
-  const job = await Job.findOne({
-    _id: jobId,
-    employer: req.user._id,
+  const jobs = await Job.find({
+    $or: [
+      {
+        category: {
+          $regex: intent.category || '',
+          $options: 'i'
+        }
+      },
+      {
+        title: {
+          $regex: intent.category || '',
+          $options: 'i'
+        }
+      }
+    ]
+  })
+    .limit(10)
+    .populate('employer', 'fullName');
+
+  res.json({
+    aiInterpreted: intent,
+    jobs
   });
+});
+
+/**
+ * 🎤 VOICE CV BUILDER
+ */
+export const processVoiceCV = asyncHandler(async (req, res) => {
+  let text = req.body.transcript;
+  let voiceUrl = '';
+
+  if (req.file) {
+    const transcription = await transcribeAudio(req.file.path);
+    text = transcription.text;
+    voiceUrl = `/uploads/${req.file.filename}`;
+  }
+
+  if (!text) {
+    return res.json({
+      success: false,
+      message: 'No profile data'
+    });
+  }
+
+  const extracted = await extractProfileFromText(text);
+
+  const update = {
+    'workerProfile.rawVoiceTranscript': text,
+    'workerProfile.skills': extracted.skills || [],
+    'workerProfile.bio': extracted.bio || '',
+    'workerProfile.preferredLanguage': 'amharic'
+  };
+
+  if (voiceUrl) {
+    update['workerProfile.voiceUrl'] = voiceUrl;
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { $set: update },
+    { new: true }
+  );
+
+  res.json({
+    success: true,
+    transcript: text,
+    profile: user.workerProfile
+  });
+});
+
+/**
+ * ⚠️ JOB SAFETY CHECK
+ */
+export const checkJobSafety = asyncHandler(async (req, res) => {
+  const job = await Job.findById(req.params.jobId);
 
   if (!job) {
     return res.status(404).json({
       success: false,
-      message: 'Job not found or permission denied',
+      message: 'Job not found'
     });
   }
 
-  // 🎤 Voice AI
-  const aiResult = await processVoiceToData(req.file.path);
+  const report = await analyzeJobForScam(job.description);
 
-  if (!aiResult) {
-    return res.status(500).json({
-      success: false,
-      message: 'Voice processing failed',
-    });
-  }
-
-  // ❌ Wrong intent guard
-  if (aiResult.intent !== 'hire') {
-    return res.status(400).json({
-      success: false,
-      message: `Detected intent: ${aiResult.intent || 'unknown'}`,
-    });
-  }
-
-  const applications = await Application.find({ job: jobId })
-    .populate('worker', 'fullName phone');
-
-  const spokenText = (aiResult.transcript || '').toLowerCase();
-
-  const match = applications.find(app => {
-    const name = app.worker?.fullName?.toLowerCase();
-    return name && spokenText.includes(name);
-  });
-
-  if (!match) {
-    return res.status(404).json({
-      success: false,
-      message: 'Worker not found among applicants',
-    });
-  }
-
-  // ✅ Accept worker
-  match.status = 'accepted';
-  await match.save();
-
-  // 📩 SMS (non-blocking)
-  if (match.worker?.phone) {
-    sendSms({
-      to: match.worker.phone,
-      message: `🎉 You are hired for "${job.title}" via Sira Voice!`,
-    }).catch(err =>
-      console.error('⚠️ Worker SMS failed:', err.message)
-    );
-  }
-
-  // 🔔 Notification (non-blocking)
-  Notification.create({
-    user: match.worker._id,
-    message: `You have been hired for "${job.title}"`,
-  }).catch(err =>
-    console.error('⚠️ Notification failed:', err.message)
-  );
-
-  return res.status(200).json({
+  res.json({
     success: true,
-    message: `Successfully hired ${match.worker.fullName}`,
-    hiredWorker: {
-      id: match.worker._id,
-      name: match.worker.fullName,
-    },
-    transcript: aiResult.transcript,
+    analysis: report
   });
 });

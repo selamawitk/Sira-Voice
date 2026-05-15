@@ -1,8 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { useVoice } from '../../hooks/useVoice.js';
-import { LanguageContext } from '../../context/LanguageContext.jsx';
-import api from '../../services/api.js';
-import { ToastContext } from '../../components/ui/ToastProvider.jsx';
+import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
+import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
 
 const TalkToSira = () => {
   const { isListening, transcript, isProcessing, startListening, stopListening } = useVoice();

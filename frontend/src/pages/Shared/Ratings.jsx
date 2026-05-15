@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useMemo, useState } from 'react';
 import api from '../../services/api.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import RatingModal from '../../components/trust/RatingModal.jsx';
-import { LanguageContext } from '../../context/LanguageContext.jsx';
+import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 
 const GlassCard = ({ children, className = '' }) => (
   <div className={`bg-white/[0.03] border border-white/10 rounded-3xl p-6 backdrop-blur-md ${className}`}>

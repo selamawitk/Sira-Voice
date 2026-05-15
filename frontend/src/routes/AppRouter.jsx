@@ -12,6 +12,9 @@ import Login from '../pages/Auth/Login.jsx';
 import ForgotPassword from '../pages/Auth/ForgotPassword.jsx';
 import ResetPassword from '../pages/Auth/ResetPassword.jsx';
 
+// Role selection page (IMPORTANT)
+import ChooseRolePage from '../pages/Auth/ChooseRolePage.jsx';
+
 // Worker pages
 import Dashboard from '../pages/Worker/Dashboard.jsx';
 import JobList from '../pages/Worker/JobList.jsx';
@@ -20,6 +23,7 @@ import Map from '../pages/Worker/Map.jsx';
 import Profile from '../pages/Worker/Profile.jsx';
 import VoiceToCV from '../pages/Worker/VoiceToCV.jsx';
 import ApplicationHistory from '../pages/Worker/ApplicationHistory.jsx';
+import Subscription from '../pages/Worker/Subscription.jsx';
 
 // Employer pages
 import EmployerDashboard from '../pages/Employer/Dashboard.jsx';
@@ -30,6 +34,7 @@ import Applicants from '../pages/Employer/Applicants.jsx';
 import AdminDashboard from '../pages/Admin/Dashboard.jsx';
 import ScamLog from '../pages/Admin/ScamLog.jsx';
 import Ratings from '../pages/Shared/Ratings.jsx';
+import SubscriptionSuccess from '../pages/Shared/SubscriptionSuccess.jsx';
 
 const NotFound = () => (
   <div className="flex flex-col items-center justify-center h-screen bg-[#1A2E35] text-white">
@@ -79,12 +84,17 @@ const AppRouter = () => {
     <Router>
       <div className="min-h-screen bg-[#1A2E35]">
         <Routes>
+
           {/* Public */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/subscription-success" element={<SubscriptionSuccess />} />
+
+          {/* 🔥 ROLE SELECTION ROUTE (ADDED) */}
+          <Route path="/choose-role" element={<ChooseRolePage />} />
 
           {/* Worker */}
           <Route element={<WorkerSection />}>
@@ -95,6 +105,7 @@ const AppRouter = () => {
             <Route path="/profile" element={<Profile />} />
             <Route path="/voice-to-cv" element={<VoiceToCV />} />
             <Route path="/application-history" element={<ApplicationHistory />} />
+            <Route path="/subscription" element={<Subscription />} />
             <Route path="/ratings" element={<Ratings />} />
           </Route>
 
@@ -121,4 +132,3 @@ const AppRouter = () => {
 };
 
 export default AppRouter;
-

@@ -1,11 +1,9 @@
-import React, { useContext, useState } from 'react';
+import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header.jsx';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 
 const MainLayout = ({ children }) => {
-  const auth = useContext(AuthContext);
-  const user = auth?.user;
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (

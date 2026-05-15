@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
 import { User, MapPin, Award, ShieldCheck, Edit3 } from 'lucide-react';
+import api from '../../services/api.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 
 const Profile = () => {
@@ -87,7 +88,7 @@ const Profile = () => {
                     // Refresh user data
                     window.location.reload();
                   } catch (err) {
-                    console.error('Failed to update preferences');
+                    console.error('Failed to update preferences', err);
                   }
                 }}
               >
@@ -112,7 +113,7 @@ const Profile = () => {
                       }
                     });
                   } catch (err) {
-                    console.error('Failed to update preferences');
+                    console.error('Failed to update preferences', err);
                   }
                 }}
                 className="w-16 bg-[#1A2E35] border border-white/10 rounded px-2 py-1 text-white text-sm"
@@ -132,7 +133,7 @@ const Profile = () => {
                       }
                     });
                   } catch (err) {
-                    console.error('Failed to update preferences');
+                    console.error('Failed to update preferences', err);
                   }
                 }}
                 className="w-16 bg-[#1A2E35] border border-white/10 rounded px-2 py-1 text-white text-sm"

@@ -1,6 +1,7 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useContext, useEffect, useState } from 'react';
 import { useVoice } from '../../hooks/useVoice.js';
-import { LanguageContext } from '../../context/LanguageContext.jsx';
+import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 
 const RatingModal = ({ open, onClose, onSubmit, initialComment = '' }) => {
   const { isListening, transcript, isProcessing, startListening, stopListening } = useVoice();

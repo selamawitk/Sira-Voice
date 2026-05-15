@@ -1,6 +1,5 @@
-import React, { createContext, useMemo, useState, useEffect } from 'react';
-
-export const LanguageContext = createContext(null);
+import React, { useMemo, useState } from 'react';
+import { LanguageContext } from './LanguageContextInstance.jsx';
 
 const COPY = {
   am: {
@@ -33,7 +32,6 @@ const COPY = {
     fieldLocation: 'ቦታ',
     fieldSalary: 'ደመወዝ (ብር)',
     fieldDescription: 'መግለጫ',
-    postJob: 'ስራ ለጥፍ',
     dashboard: 'ዳሽቦርድ',
     availableJobs: 'የሚገኙ ስራዎች',
     talkToSira: 'ከሲራ ይናገሩ',
@@ -85,7 +83,6 @@ const COPY = {
     fieldLocation: 'Bakka',
     fieldSalary: 'Mindaa (ETB)',
     fieldDescription: 'Ibsa',
-    postJob: 'Hojii Maxxansi',
     dashboard: 'Daashboordii',
     availableJobs: 'Hojii Jiran',
     talkToSira: 'Siira Waliin Haasa’i',
@@ -137,7 +134,6 @@ const COPY = {
     fieldLocation: 'Location',
     fieldSalary: 'Salary (ETB)',
     fieldDescription: 'Description',
-    postJob: 'Post Job',
     dashboard: 'Dashboard',
     availableJobs: 'Available Jobs',
     talkToSira: 'Talk to Sira',
@@ -147,7 +143,6 @@ const COPY = {
     ratings: 'Ratings',
     profile: 'Profile',
     employerDashboard: 'Employer Dashboard',
-    postJob: 'Post Job',
     applicants: 'Applicants',
     adminDashboard: 'Admin Dashboard',
     scamLog: 'Scam Log',
@@ -162,12 +157,10 @@ const COPY = {
 };
 
 export const LanguageProvider = ({ children }) => {
-  const [lang, setLangState] = useState('en');
-
-  useEffect(() => {
-    const saved = localStorage.getItem('language');
-    if (saved && COPY[saved]) setLangState(saved);
-  }, []);
+  const [lang, setLangState] = useState(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('language') : null;
+    return saved && COPY[saved] ? saved : 'en';
+  });
 
   const setLang = (newLang) => {
     setLangState(newLang);

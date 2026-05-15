@@ -1,7 +1,7 @@
 import { useState, useRef, useContext } from 'react';
-import { LanguageContext } from '../context/LanguageContext.jsx';
+import { LanguageContext } from '../context/LanguageContextInstance.jsx';
 import { AuthContext } from '../context/AuthContextInstance.jsx';
-import { ToastContext } from '../components/ui/ToastProvider.jsx';
+import { ToastContext } from '../components/ui/ToastContextInstance.jsx';
 import api from '../services/api.js';
 
 export const useVoice = () => {
@@ -91,7 +91,12 @@ export const useVoice = () => {
           if (jobId) formData.append('jobId', jobId);
           if (action) formData.append('action', action);
 
-          const request = api.post('/api/ai/voice-action', formData, {
+          // Choose endpoint based on action
+          const endpoint = (action === 'register' || action === 'login') 
+            ? '/auth/voice-auth' 
+            : '/ai/voice-action';
+
+          const request = api.post(endpoint, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
           });
 
@@ -121,7 +126,7 @@ export const useVoice = () => {
           }
 
           onComplete?.(data);
-        } catch (err) {
+} catch {
           setError('AI processing failed. Try again.');
 
           toastContext?.show?.(
@@ -141,7 +146,7 @@ export const useVoice = () => {
       timeoutRef.current = setTimeout(() => {
         stopListening();
       }, 12000);
-    } catch (err) {
+    } catch {
       setError('Microphone access denied');
 
       toastContext?.show?.(

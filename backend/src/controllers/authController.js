@@ -1,90 +1,122 @@
 import User from '../models/User.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import generateToken from '../utils/generateToken.js';
-import { extractProfileFromText, processVoiceToData } from '../services/aiService.js';
 import passport from 'passport';
+import OTP from '../models/OTP.js';
+import { sendSms } from '../services/smsService.js';
+import crypto from 'crypto';
+import {
+  generateRegistrationOptions,
+  verifyRegistrationResponse,
+  generateAuthenticationOptions,
+  verifyAuthenticationResponse,
+} from '@simplewebauthn/server';
+import { isoUint8Array } from '@simplewebauthn/server/helpers';
 
-/* =========================
-   🎤 VOICE AUTH
-========================= */
-export const voiceAuth = asyncHandler(async (req, res) => {
-  let text = req.body.transcript;
-  const action = req.body.action || 'login';
+const RP_ID = process.env.RP_ID || 'localhost';
+const ORIGIN = process.env.ORIGIN || `http://${RP_ID}:5173`;
 
-  if (req.file) {
-    const result = await processVoiceToData(req.file.path);
-    text = result?.transcript;
-  }
+export const generatePasskeyRegistration = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
 
-  if (!text) {
-    res.status(400);
-    throw new Error('No voice input detected');
-  }
+  const options = await generateRegistrationOptions({
+    rpName: 'Sira Platform',
+    rpID: RP_ID,
+    userID: isoUint8Array.fromUTF8String(user._id.toString()),
+    userName: user.phone || user.email || user.fullName,
+    attestationType: 'none',
+    authenticatorSelection: {
+      residentKey: 'required',
+      userVerification: 'required',
+      authenticatorAttachment: 'platform',
+    },
+  });
 
-  const extractedData = await extractProfileFromText(text);
+  user.currentChallenge = options.challenge;
+  await user.save();
 
-  if (action === 'register') {
-    const userExists = await User.findOne({ phone: extractedData.phone });
+  res.status(200).json(options);
+});
 
-    if (userExists) {
-      res.status(400);
-      throw new Error('User already exists with this phone number');
-    }
+export const verifyPasskeyRegistration = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  const expectedChallenge = user.currentChallenge;
 
-    const user = await User.create({
-      fullName: extractedData.name || "Voice User",
-      phone: extractedData.phone || "0000000000",
-      email: extractedData.email || `voice_${Date.now()}@sira.com`,
-      password: Math.random().toString(36).slice(-8),
-      role: 'worker',
-      isVerified: true,
-      workerProfile: {
-        bio: extractedData.bio || "",
-        skills: extractedData.skills || [],
-        rawVoiceTranscript: text
-      }
-    });
+  const verification = await verifyRegistrationResponse({
+    response: req.body,
+    expectedChallenge,
+    expectedOrigin: ORIGIN,
+    expectedRPID: RP_ID,
+  });
 
-    res.status(201).json({
-      _id: user._id,
-      fullName: user.fullName,
-      role: user.role,
-      token: generateToken(user),
-      message: 'Voice registration successful'
-    });
-
+  if (verification.verified) {
+    const { registrationInfo } = verification;
+    user.passkey = {
+      credentialID: Buffer.from(registrationInfo.credentialID).toString('base64url'),
+      publicKey: Buffer.from(registrationInfo.credentialPublicKey).toString('base64url'),
+      counter: registrationInfo.counter,
+      transports: req.body.response.transports,
+    };
+    user.currentChallenge = undefined;
+    await user.save();
+    res.status(200).json({ success: true });
   } else {
-    let user = null;
+    res.status(400);
+    throw new Error('Registration verification failed');
+  }
+});
 
-    if (extractedData.phone) {
-      user = await User.findOne({ phone: extractedData.phone });
-    }
+export const generatePasskeyLoginOptions = asyncHandler(async (req, res) => {
+  const { phone } = req.body;
+  const user = await User.findOne({ phone: phone.trim() });
 
-    if (!user && extractedData.email) {
-      user = await User.findOne({ email: extractedData.email });
-    }
+  if (!user || !user.passkey || !user.passkey.credentialID) {
+    res.status(404);
+    throw new Error('No biometric credentials found for this user');
+  }
 
-    if (!user) {
-      const users = await User.find({ role: 'worker' });
+  const options = await generateAuthenticationOptions({
+    rpID: RP_ID,
+    allowCredentials: [{
+      id: user.passkey.credentialID,
+      type: 'public-key',
+      transports: user.passkey.transports,
+    }],
+    userVerification: 'required',
+  });
 
-      for (const u of users) {
-        const skillMatch = extractedData.skills?.some(skill =>
-          u.workerProfile?.skills?.includes(skill)
-        );
+  user.currentChallenge = options.challenge;
+  await user.save();
 
-        if (skillMatch) {
-          user = u;
-          break;
-        }
-      }
-    }
+  res.status(200).json(options);
+});
 
-    if (!user) {
-      res.status(401);
-      throw new Error('Voice not recognized. Please register first.');
-    }
+export const verifyPasskeyLogin = asyncHandler(async (req, res) => {
+  const { phone, body } = req.body;
+  const user = await User.findOne({ phone: phone.trim() });
+  
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
 
-    user.workerProfile.lastVoiceLogin = new Date();
+  const expectedChallenge = user.currentChallenge;
+
+  const verification = await verifyAuthenticationResponse({
+    response: body,
+    expectedChallenge,
+    expectedOrigin: ORIGIN,
+    expectedRPID: RP_ID,
+    authenticator: {
+      credentialID: user.passkey.credentialID,
+      credentialPublicKey: Buffer.from(user.passkey.publicKey, 'base64url'),
+      counter: user.passkey.counter,
+    },
+  });
+
+  if (verification.verified) {
+    user.passkey.counter = verification.authenticationInfo.newCounter;
+    user.currentChallenge = undefined;
     await user.save();
 
     res.status(200).json({
@@ -92,73 +124,116 @@ export const voiceAuth = asyncHandler(async (req, res) => {
       fullName: user.fullName,
       role: user.role,
       token: generateToken(user),
-      message: 'Voice login successful'
     });
+  } else {
+    res.status(400);
+    throw new Error('Biometric authentication failed');
   }
 });
 
-/* =========================
-   👤 GET PROFILE (FIXED)
-========================= */
-export const getProfile = asyncHandler(async (req, res) => {
+export const googleAuth = (req, res, next) => {
+  const { role } = req.query;
+  const state = role ? Buffer.from(JSON.stringify({ role })).toString('base64') : undefined;
+
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    prompt: 'select_account',
+    state: state
+  })(req, res, next);
+};
+
+export const googleAuthCallback = passport.authenticate('google', {
+  session: false,
+  failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=google_auth_failed`,
+});
+
+export const googleAuthSuccess = asyncHandler(async (req, res) => {
+  if (!req.user) {
+    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=google_auth_failed`);
+  }
+
+  let targetRole = 'worker';
+  if (req.query.state) {
+    try {
+      const decodedState = JSON.parse(Buffer.from(req.query.state, 'base64').toString());
+      if (decodedState.role) targetRole = decodedState.role;
+    } catch (e) {
+      console.error("State decoding error:", e);
+    }
+  }
+
   const user = await User.findById(req.user._id);
 
-  if (!user) {
-    res.status(404);
-    throw new Error('User not found');
+  if (user && (!user.role || user.role === 'user')) {
+    user.role = targetRole;
+    await user.save();
+  }
+
+  const token = generateToken(user);
+  const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+
+  const redirectPath = user.role === 'employer' ? '/employer-dashboard' : '/dashboard';
+  res.redirect(`${frontendUrl}${redirectPath}?token=${token}`);
+});
+
+export const loginUser = asyncHandler(async (req, res) => {
+  const { phone, password } = req.body;
+
+  if (!phone || !password) {
+    res.status(400);
+    throw new Error('Phone and password are required');
+  }
+
+  const user = await User.findOne({ phone: phone.trim() }).select('+password');
+
+  if (!user || !(await user.matchPassword(password))) {
+    res.status(401);
+    throw new Error('Invalid phone or password');
   }
 
   res.status(200).json({
     _id: user._id,
     fullName: user.fullName,
-    phone: user.phone,
-    email: user.email,
     role: user.role,
-    isAgentActive: user.isAgentActive,
-    workerProfile: user.workerProfile,
-    employerProfile: user.employerProfile
+    token: generateToken(user),
   });
 });
 
-/* =========================
-   👤 REGISTER
-========================= */
 export const registerUser = asyncHandler(async (req, res) => {
   const { fullName, phone, email, password, role } = req.body;
-  let transcript = req.body.transcript;
 
-  if (req.file) {
-    const result = await processVoiceToData(req.file.path);
-    transcript = result?.transcript;
-  }
-
-  const userExists = await User.findOne({ phone });
-  if (userExists) {
+  if (!fullName || !phone || !password) {
     res.status(400);
-    throw new Error('User already exists');
+    throw new Error('Full name, phone and password are required');
   }
 
-  let workerProfile = {};
+  const normalizedPhone = phone.trim();
 
-  if (role === 'worker' && transcript) {
-    const extractedData = await extractProfileFromText(transcript);
+  const existingPhoneUser = await User.findOne({ phone: normalizedPhone });
+  if (existingPhoneUser) {
+    res.status(400);
+    throw new Error('User already exists with this phone number');
+  }
 
-    workerProfile = {
-      skills: extractedData.skills || [],
-      experienceYears: extractedData.experienceYears || 0,
-      bio: extractedData.bio || "",
-      preferredLanguage: extractedData.preferredLanguage || 'amharic',
-      rawVoiceTranscript: transcript
-    };
+  if (email) {
+    const existingEmailUser = await User.findOne({
+      email: email.toLowerCase(),
+    });
+
+    if (existingEmailUser) {
+      res.status(400);
+      throw new Error('User already exists with this email');
+    }
   }
 
   const user = await User.create({
-    fullName,
-    phone,
-    email,
+    fullName: fullName.trim(),
+    phone: normalizedPhone,
+    email: email ? email.toLowerCase().trim() : undefined,
     password,
-    role,
-    workerProfile
+    role: role || 'worker',
+    isVerified: false,
+    workerProfile: {},
   });
 
   res.status(201).json({
@@ -169,42 +244,93 @@ export const registerUser = asyncHandler(async (req, res) => {
   });
 });
 
-/* =========================
-   🔐 LOGIN
-========================= */
-export const loginUser = asyncHandler(async (req, res) => {
-  const { phone, password } = req.body;
+export const getProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select('-password');
 
-  const user = await User.findOne({ phone });
-
-  if (user && (await user.matchPassword(password))) {
-    res.json({
-      _id: user._id,
-      fullName: user.fullName,
-      role: user.role,
-      token: generateToken(user),
-    });
-  } else {
-    res.status(401);
-    throw new Error('Invalid phone or password');
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
   }
+
+  res.status(200).json(user);
 });
 
-/* =========================
-   🔐 GOOGLE AUTH
-========================= */
-export const googleAuth = passport.authenticate('google', {
-  scope: ['profile', 'email']
+export const setUserRole = asyncHandler(async (req, res) => {
+  const { role } = req.body;
+
+  if (!['worker', 'employer'].includes(role)) {
+    res.status(400);
+    throw new Error('Invalid role');
+  }
+
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  user.role = role;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    role: user.role,
+  });
 });
 
-export const googleAuthCallback = passport.authenticate('google', {
-  failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { phone } = req.body;
+
+  const user = await User.findOne({ phone: phone.trim() });
+
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  const code = crypto.randomInt(100000, 999999).toString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  await OTP.create({
+    phone: phone.trim(),
+    code,
+    purpose: 'password_reset',
+    expiresAt,
+  });
+
+  await sendSms({
+    to: phone.trim(),
+    message: `Sira: Your password reset code is ${code}. Valid for 10 minutes.`,
+  });
+
+  res.status(200).json({ success: true, message: 'OTP sent' });
 });
 
-export const googleAuthSuccess = asyncHandler(async (req, res) => {
-  const token = generateToken(req.user);
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { phone, code, newPassword } = req.body;
 
-  res.redirect(
-    `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?token=${token}`
-  );
+  const otp = await OTP.findOne({
+    phone: phone.trim(),
+    code,
+    purpose: 'password_reset',
+    expiresAt: { $gt: new Date() },
+  });
+
+  if (!otp) {
+    res.status(400);
+    throw new Error('Invalid or expired OTP');
+  }
+
+  const user = await User.findOne({ phone: phone.trim() });
+
+  user.password = newPassword;
+  await user.save();
+
+  await OTP.deleteMany({
+    phone: phone.trim(),
+    purpose: 'password_reset',
+  });
+
+  res.status(200).json({ success: true, message: 'Password reset successful' });
 });

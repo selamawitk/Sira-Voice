@@ -2,14 +2,16 @@ import React, { useContext, useEffect, useState } from 'react';
 import { Bell, Menu, Search, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
-import { LanguageContext } from '../../context/LanguageContext.jsx';
-import { ToastContext } from '../../components/ui/ToastProvider.jsx';
+import { LanguageContext } from '../../context/LanguageContextInstance.jsx'; 
+// Fixed: Importing from Instance file instead of Provider
+import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
 import { connectSocket, disconnectSocket } from '../../services/socketService.js';
 
 const Header = ({ onMobileMenuToggle }) => {
   const auth = useContext(AuthContext);
   const user = auth?.user;
-  const lang = useContext(LanguageContext);
+  
+  const { lang, setLang, copy, options } = useContext(LanguageContext) || {};
   const toast = useContext(ToastContext);
   const navigate = useNavigate();
   const [hasUnread, setHasUnread] = useState(false);
@@ -26,6 +28,7 @@ const Header = ({ onMobileMenuToggle }) => {
     }
 
     const socket = connectSocket(user._id);
+    
     const handleNotification = (payload) => {
       setHasUnread(true);
       toast?.show?.(payload?.message ?? 'New notification received', 'success');
@@ -68,7 +71,7 @@ const Header = ({ onMobileMenuToggle }) => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 w-4 h-4" />
           <input
             type="text"
-            placeholder={lang?.copy?.headerSearchPlaceholder ?? 'Search jobs by voice or text…'}
+            placeholder={copy?.headerSearchPlaceholder ?? 'Search jobs by voice or text…'}
             className="w-full bg-white/5 border border-white/10 rounded-2xl py-2.5 pl-12 pr-4 text-white text-sm outline-none focus:border-[#2BB8B8]/40 transition-all placeholder:text-white/30"
           />
         </div>
@@ -78,11 +81,11 @@ const Header = ({ onMobileMenuToggle }) => {
         {/* Language switcher */}
         <div className="hidden sm:block">
           <select
-            value={lang?.lang ?? 'en'}
-            onChange={(e) => lang?.setLang?.(e.target.value)}
+            value={lang ?? 'en'}
+            onChange={(e) => setLang?.(e.target.value)}
             className="bg-[#1A2E35] border border-[#2BB8B8] text-[#2BB8B8] rounded-2xl px-4 py-2 text-sm font-bold outline-none shadow-inner shadow-[#2BB8B8]/10 focus:border-[#2BB8B8]"
           >
-            {(lang?.options ?? []).map((opt) => (
+            {(options ?? []).map((opt) => (
               <option key={opt.key} value={opt.key} className="bg-[#1A2E35] text-[#2BB8B8]">
                 {opt.label}
               </option>
@@ -129,4 +132,3 @@ const Header = ({ onMobileMenuToggle }) => {
 };
 
 export default Header;
-

@@ -5,7 +5,7 @@ import api from '../../services/api.js';
 import { jobService } from '../../services/jobService.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import { LocationContext } from '../../context/LocationContextInstance.jsx';
-import { ToastContext } from '../../components/ui/ToastProvider.jsx';
+import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
 import VoiceActionComponent from '../../components/voice/VoiceActionComponent.jsx';
 
 const Dashboard = () => {
@@ -304,14 +304,16 @@ const Dashboard = () => {
               buttonText="Speak to Apply"
               placeholder="Say something like 'I am experienced in this work and available tomorrow'..."
               jobId={voiceApplyJob._id}
-              onSuccess={(result) => {
+              onSuccess={() => {
                 setVoiceApplyJob(null);
                 // Refresh applications
                 const run = async () => {
                   try {
                     const res = await api.get('/applications/history');
                     setApplications(res.data?.data ?? []);
-                  } catch {}
+                  } catch (err) {
+                    console.error(err);
+                  }
                 };
                 run();
               }}

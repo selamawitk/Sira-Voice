@@ -1,6 +1,5 @@
-import React, { createContext, useCallback, useMemo, useState } from 'react';
-
-export const ToastContext = createContext(null);
+import React, { useCallback, useMemo, useState } from 'react';
+import { ToastContext } from './ToastContextInstance.jsx';
 
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);

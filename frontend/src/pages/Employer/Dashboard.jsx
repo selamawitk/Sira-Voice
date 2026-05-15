@@ -2,8 +2,8 @@ import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import api from '../../services/api.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
-import { ToastContext } from '../../components/ui/ToastProvider.jsx';
-import { LanguageContext } from '../../context/LanguageContext.jsx';
+import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
+import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 import { useVoice } from '../../hooks/useVoice.js';
 import { useNavigate } from 'react-router-dom';
 import VoiceActionComponent from '../../components/voice/VoiceActionComponent.jsx';
@@ -23,7 +23,6 @@ const Badge = ({ children }) => (
 const EmployerDashboard = () => {
   const auth = useContext(AuthContext);
   const toast = useContext(ToastContext);
-  const lang = useContext(LanguageContext);
   const employerId = auth?.user?._id;
   const navigate = useNavigate();
 
@@ -35,7 +34,7 @@ const EmployerDashboard = () => {
   const [matches, setMatches] = useState([]);
   const [hiringWorkerId, setHiringWorkerId] = useState('');
 
-  const { startListening, isListening, isProcessing, result, transcript, error } = useVoice();
+  const { isListening, result, transcript, error } = useVoice();
 
   useEffect(() => {
     const run = async () => {
@@ -107,7 +106,7 @@ const EmployerDashboard = () => {
       // 2) Accept
       await api.put(`/applications/${app._id}/status`, { status: 'accepted' });
       toast?.show?.('Success — worker hired!', 'success');
-    } catch (e) {
+    } catch {
       toast?.show?.('Hire failed. Please try again.', 'error');
     } finally {
       setHiringWorkerId('');
@@ -153,7 +152,9 @@ const EmployerDashboard = () => {
                   const active = mine.filter((j) => (j.status ?? 'open') === 'open');
                   setJobs(active);
                   setSelectedJobId(active?.[0]?._id ?? '');
-                } catch {}
+                } catch (err) {
+                  console.error(err);
+                }
               };
               run();
             }

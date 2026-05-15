@@ -1,22 +1,30 @@
 {
   "common": {
-    "welcome": "እንኳን ደህና መጡ ወደ ሲራ-ቮይስ",
+    "welcome": "እንኳን ደህና መጡ ወደ ሲራ",
     "loading": "በመጫን ላይ...",
     "save": "አስቀምጥ",
-    "cancel": "ሰርዝ"
+    "cancel": "ሰርዝ",
+    "or": "ወይም"
   },
-  "voice": {
-    "mic_label": "ለመናገር ይጫኑ",
-    "listening": "እየሰማሁ ነው...",
-    "processing": "ሲራ እያሰበ ነው...",
-    "instruction": "በአማርኛ፣ በአፋን ኦሮሞ ወይም በእንግሊዝኛ ይናገሩ"
+  "auth": {
+    "title": "ይግቡ",
+    "subtitle": "በሲራ ቀጣይ እድልዎን ያግኙ።",
+    "identifier": "ኢሜይል ወይም ስልክ ቁጥር",
+    "password": "የይለፍ ቃል",
+    "forgot": "የይለፍ ቃል ረስተዋል?",
+    "loginBtn": "ይግቡ",
+    "processing": "በማከናወን ላይ...",
+    "google": "በጉግል ይቀጥሉ",
+    "noAccount": "አካውንት የለዎትም?",
+    "registerLink": "እዚህ ይመዝገቡ።"
   },
   "agent": {
     "title": "የሲራ AI ወኪል",
     "status_on": "ወኪሉ ንቁ ነው",
     "status_off": "ወኪሉ ጠፍቷል",
     "auto_apply": "በራሱ እንዲያመለክት ፍቀድ",
-    "finding_jobs": "ለእርስዎ የሚሆኑ ስራዎችን እየፈለግኩ ነው"
+    "finding_jobs": "ለእርስዎ የሚሆኑ ስራዎችን እየፈለግኩ ነው",
+    "instruction": "በአማርኛ፣ በአፋን ኦሮሞ ወይም በእንግሊዝኛ ይናገሩ"
   },
   "safety": {
     "badge_safe": "🛡️ የታመነ ስራ",

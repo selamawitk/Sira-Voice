@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Phone, ArrowLeft, ShieldCheck, Send } from 'lucide-react';
 import AuthLayout from '../../components/ui/AuthLayout';

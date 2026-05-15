@@ -2,6 +2,7 @@ import axios from 'axios';
 import crypto from 'crypto';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
+import Subscription from '../models/Subscription.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { sendRealTimeNotification } from '../services/notificationService.js';
 
@@ -96,6 +97,56 @@ export const verifyChapaWebhook = asyncHandler(async (req, res) => {
           title: "Account Verified! ✅",
           message: "You now have a verified badge. Your jobs will get more attention.",
           type: "verification"
+        });
+      }
+
+      if (transaction.purpose.startsWith('subscription_')) {
+        const planType = transaction.purpose.split('_')[1];
+        let durationDays = 30;
+        let features = [];
+
+        if (planType === 'pro') {
+          features = ['auto_apply', 'unlimited_matches', 'priority_support'];
+          durationDays = 30;
+        } else if (planType === 'business') {
+          features = ['unlimited_job_posts', 'verified_badge', 'analytics'];
+          durationDays = 90;
+        }
+
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(startDate.getDate() + durationDays);
+
+        const subscription = await Subscription.findOneAndUpdate(
+          { user: transaction.employer },
+          {
+            planType,
+            status: 'active',
+            startDate,
+            endDate,
+            features
+          },
+          { upsert: true, new: true }
+        );
+
+        // Update user premium status
+        if (planType === 'pro') {
+          await User.findByIdAndUpdate(transaction.employer, { 
+            isPremium: true,
+            isAgentActive: true,
+            'workerProfile.agentPreferences.autoApply': true 
+          });
+        } else if (planType === 'business') {
+          await User.findByIdAndUpdate(transaction.employer, { 
+            isPremium: true,
+            isVerified: true
+          });
+        }
+
+        await sendRealTimeNotification(req.io, transaction.employer, {
+          title: "Premium Subscription Activated! 🎉",
+          message: `Welcome to ${planType.charAt(0).toUpperCase() + planType.slice(1)} plan. Enjoy your premium features!`,
+          type: "subscription"
         });
       }
 

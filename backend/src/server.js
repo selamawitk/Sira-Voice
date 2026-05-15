@@ -8,6 +8,8 @@ import fs from 'fs';
 import session from 'express-session';
 import passport from 'passport';
 import helmet from 'helmet';
+import MongoStore from 'connect-mongo';
+
 import './config/passport.js';
 
 import connectDB from './config/db.js';
@@ -15,7 +17,6 @@ import { initSocket } from './config/socket.js';
 import errorHandler from './middleware/errorHandlerMiddleware.js';
 import { initCronJobs } from './utils/cronJob.js';
 
-// Route Imports
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import jobRoutes from './routes/jobRoutes.js';
@@ -25,94 +26,208 @@ import voiceRoutes from './routes/voiceRoutes.js';
 import ratingRoutes from './routes/ratingRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
-import adminRoutes from './routes/adminRoutes.js'; 
+import adminRoutes from './routes/adminRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 
 dotenv.config();
 
+const requiredEnvVars = [
+  'JWT_SECRET',
+  'SESSION_SECRET',
+  'GOOGLE_CLIENT_ID',
+  'GOOGLE_CLIENT_SECRET',
+  'MONGO_URI',
+];
+
+const missingVars = requiredEnvVars.filter(
+  (key) => !process.env[key]
+);
+
+if (missingVars.length > 0) {
+  console.error('\n❌ Missing environment variables:\n');
+
+  missingVars.forEach((key) => {
+    console.error(`- ${key}`);
+  });
+
+  process.exit(1);
+}
+
 const app = express();
 const httpServer = createServer(app);
+
+await connectDB();
+
 const io = initSocket(httpServer);
 
-// Connect to Database
-connectDB();
+app.set('trust proxy', 1);
 
-// --- 1. SECURITY & CSP CONFIGURATION ---
-// CLEANED: Removed Port 5002 to prevent local security mismatches
+const frontendUrl =
+  process.env.FRONTEND_URL || 'http://localhost:5173';
+
+const allowedOrigins = [
+  frontendUrl,
+  'http://localhost:5173',
+];
+
 app.use(
   helmet({
+    crossOriginResourcePolicy: {
+      policy: 'cross-origin',
+    },
+
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
+
         connectSrc: [
-          "'self'", 
-          "http://localhost:5001", 
-          "ws://localhost:5001", 
-          "http://localhost:5173"
+          "'self'",
+          frontendUrl,
+          process.env.BACKEND_URL || 'http://localhost:5001',
+          'ws://localhost:5001',
+          'wss:',
         ],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", "data:", "blob:", "https:"],
-        fontSrc: ["'self'", "https:", "data:"],
+
+        imgSrc: [
+          "'self'",
+          'data:',
+          'blob:',
+          'https:',
+        ],
+
+        styleSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          'https:',
+        ],
+
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "'unsafe-eval'",
+        ],
+
+        fontSrc: [
+          "'self'",
+          'https:',
+          'data:',
+        ],
+
         objectSrc: ["'none'"],
-        upgradeInsecureRequests: null,
+
+        frameAncestors: ["'none'"],
       },
     },
-    crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
 
-// --- 2. CORS CONFIGURATION ---
-// Ensure this matches your Vite frontend port (5173)
-const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 app.use(
   cors({
-    origin: frontendUrl,
+    origin(origin, callback) {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(
+        new Error(`CORS blocked for origin: ${origin}`)
+      );
+    },
+
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+
+    methods: [
+      'GET',
+      'POST',
+      'PUT',
+      'PATCH',
+      'DELETE',
+      'OPTIONS',
+    ],
+
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+    ],
   })
 );
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
 
-// --- 3. SESSION CONFIGURATION ---
-app.set('trust proxy', 1); 
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'sira_voice_default_dev_key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production', 
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 
-  }
-}));
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: '10mb',
+  })
+);
+
+app.use(
+  session({
+    name: 'sira.sid',
+
+    secret: process.env.SESSION_SECRET,
+
+    resave: false,
+
+    saveUninitialized: false,
+
+    rolling: true,
+
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGO_URI,
+      collectionName: 'sessions',
+      ttl: 24 * 60 * 60,
+    }),
+
+    cookie: {
+      httpOnly: true,
+
+      secure: process.env.NODE_ENV === 'production',
+
+      sameSite:
+        process.env.NODE_ENV === 'production'
+          ? 'none'
+          : 'lax',
+
+      maxAge: 24 * 60 * 60 * 1000,
+    },
+  })
+);
 
 app.use(passport.initialize());
 app.use(passport.session());
 
-initCronJobs(io);
-
-// File handling for profile pictures/voice recordings
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 const uploadDir = path.join(__dirname, 'uploads');
+
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
+  fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 app.use('/uploads', express.static(uploadDir));
 
-// Attach Socket.io to requests
 app.use((req, res, next) => {
   req.io = io;
   next();
 });
 
-// --- 4. API ROUTES ---
+initCronJobs(io);
+
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Sira Voice API running',
+    environment:
+      process.env.NODE_ENV || 'development',
+  });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/jobs', jobRoutes);
@@ -125,13 +240,21 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 
-app.get('/', (req, res) => {
-  res.send('Sira-Voice API is running...');
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route not found: ${req.originalUrl}`,
+  });
 });
 
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5001;
+
 httpServer.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  console.log(`
+Sira Voice Server Running
+Environment: ${process.env.NODE_ENV}
+Port: ${PORT}
+`);
 });

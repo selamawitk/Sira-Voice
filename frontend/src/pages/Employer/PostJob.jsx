@@ -1,8 +1,8 @@
 import React, { useContext, useState } from 'react';
 import api from '../../services/api.js';
 import { useVoice } from '../../hooks/useVoice.js';
-import { ToastContext } from '../../components/ui/ToastProvider.jsx';
-import { LanguageContext } from '../../context/LanguageContext.jsx';
+import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
+import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 import VoiceActionComponent from '../../components/voice/VoiceActionComponent.jsx';
 
 const PostJob = () => {
@@ -16,7 +16,7 @@ const PostJob = () => {
   const [loading, setLoading] = useState(false);
   const [voiceMode, setVoiceMode] = useState(true);
 
-  const { startListening, isListening, isProcessing, result, transcript, error } = useVoice();
+  const { startListening, isListening, isProcessing, stopListening } = useVoice();
 
   const runVoice = async () => {
     await startListening((res) => {

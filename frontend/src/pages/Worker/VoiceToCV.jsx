@@ -1,6 +1,6 @@
 import React, { useContext, useMemo, useState, useEffect } from 'react';
 import { useVoice } from '../../hooks/useVoice.js';
-import { LanguageContext } from '../../context/LanguageContext.jsx';
+import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 import api from '../../services/api.js';
 
 const SkillCard = ({ skill }) => (

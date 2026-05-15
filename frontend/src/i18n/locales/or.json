@@ -1,22 +1,30 @@
 {
   "common": {
-    "welcome": "Baga nagaan dhuftan gara Sira-Voice",
+    "welcome": "Baga nagaan dhuftan gara Sira",
     "loading": "Fe'amaa jira...",
     "save": "Oolchi",
-    "cancel": "Haquu"
+    "cancel": "Haquu",
+    "or": "ykn"
   },
-  "voice": {
-    "mic_label": "Dubbachuuf cuqaasi",
-    "listening": "Dhaggeeffachaan jira...",
-    "processing": "Sira yaadaa jira...",
-    "instruction": "Afaan Oromoo, Amaariffa ykn Ingiliffaan dubbadhu"
+  "auth": {
+    "title": "Seeni",
+    "subtitle": "Carra kee itti aanu Sira wajjiin bari.",
+    "identifier": "Iimeeyilii ykn Lakkoofsa Bilbilaa",
+    "password": "Jecha Icchitii",
+    "forgot": "Jecha icchitii dagattee?",
+    "loginBtn": "Seeni",
+    "processing": "Hojjechaa jira...",
+    "google": "Google'n itti fufi",
+    "noAccount": "Account hin qabduu?",
+    "registerLink": "Asitti galmaa'i."
   },
   "agent": {
     "title": "Eejentii AI Sira",
     "status_on": "Eejentichi hojiirra jira",
     "status_off": "Eejentichi dhaameera",
     "auto_apply": "Ofiin akka iyyatu hayyami",
-    "finding_jobs": "Hojii siif ta'u barbaadaa jira"
+    "finding_jobs": "Hojii siif ta'u barbaadaa jira",
+    "instruction": "Afaan Oromoo, Amaariffa ykn Ingiliffaan dubbadhu"
   },
   "safety": {
     "badge_safe": "🛡️ Hojii Amanamaa",

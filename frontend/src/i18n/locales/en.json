@@ -1,26 +1,38 @@
 {
   "common": {
-    "welcome": "Welcome to Sira-Voice",
+    "welcome": "Welcome to Sira",
     "loading": "Loading...",
     "save": "Save",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "or": "or"
   },
-  "voice": {
-    "mic_label": "Press to Speak",
-    "listening": "Listening...",
-    "processing": "Sira is thinking...",
-    "instruction": "Speak in Amharic, Afan Oromo, or English"
+  "auth": {
+    "title": "Login",
+    "subtitle": "Find your next opportunity with Sira.",
+    "identifier": "Email or Phone Number",
+    "password": "Password",
+    "forgot": "Forgot Password?",
+    "loginBtn": "Login",
+    "processing": "Processing...",
+    "google": "Continue with Google",
+    "noAccount": "Don't have an account?",
+    "registerLink": "Register here."
   },
   "agent": {
     "title": "Sira AI Agent",
     "status_on": "Agent is Active",
     "status_off": "Agent is Off",
     "auto_apply": "Enable Auto-Apply",
-    "finding_jobs": "Finding the best matches for you"
+    "finding_jobs": "Finding the best matches for you",
+    "instruction": "Speak in Amharic, Afan Oromo, or English"
   },
   "safety": {
     "badge_safe": "🛡️ Safe Job",
     "badge_risk": "⚠️ High Risk",
     "scam_alert": "This job shows signs of a scam"
+  },
+  "subscription": {
+    "upgrade": "Upgrade to Pro",
+    "pro_features": "Get AI Agent and automatic applications"
   }
 }

@@ -6,7 +6,7 @@ import { LocationContext } from '../../context/LocationContextInstance.jsx';
 import api from '../../services/api.js';
 import { useVoice } from '../../hooks/useVoice.js';
 import { jobService } from '../../services/jobService.js';
-import { LanguageContext } from '../../context/LanguageContext.jsx';
+import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 
 const jobPin = new L.DivIcon({
   className: '',
@@ -140,7 +140,8 @@ const Map = () => {
     startListening(async () => {
       try {
         await jobService.applyToJob(jobId);
-      } catch {
+      } catch (err) {
+        console.error('Job apply failed:', err);
       } finally {
         setApplyJobId('');
       }
@@ -154,14 +155,19 @@ const Map = () => {
       url: `${window.location.origin}/job/${job._id}`,
     };
     if (navigator.share) {
-      try { await navigator.share(sharePayload); } catch {}
+      try {
+        await navigator.share(sharePayload);
+      } catch (err) {
+        console.error('Share failed:', err);
+      }
       return;
     }
     if (navigator.clipboard) {
       try {
         await navigator.clipboard.writeText(sharePayload.url);
         window.alert('Job link copied to clipboard.');
-      } catch {
+      } catch (err) {
+        console.error('Copy failed:', err);
         window.alert('Copy failed. Manual URL: ' + sharePayload.url);
       }
       return;

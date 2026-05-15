@@ -1,6 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
-import fs from 'fs';
 
 dotenv.config();
 
@@ -10,27 +9,20 @@ const model = genAI.getGenerativeModel({
   model: 'gemini-1.5-flash',
 });
 
-/* =========================
-   SAFE JSON PARSER
-========================= */
+export { genAI, model };
+
 const safeParse = (text) => {
   try {
     if (!text) return null;
 
-    const cleaned = text
-      .replace(/```json|```/g, '')
-      .trim();
+    const cleaned = text.replace(/```json|```/g, '').trim();
 
     return JSON.parse(cleaned);
-  } catch (err) {
-    console.error('❌ JSON parse error:', text);
+  } catch {
     return null;
   }
 };
 
-/* =========================
-   🧠 TEXT AI (FAST)
-========================= */
 export const processTextToData = async (transcript = '') => {
   try {
     const prompt = `
@@ -56,89 +48,57 @@ Return ONLY valid JSON:
 
     const parsed = safeParse(raw);
 
-    return parsed || fallbackText(transcript);
-  } catch (err) {
-    console.error('❌ TEXT AI ERROR:', err);
-    return fallbackText(transcript);
+    return parsed;
+  } catch {
+    return null;
   }
 };
 
-/* =========================
-   🎤 VOICE AI (STABLE VERSION)
-========================= */
-export const processVoiceToData = async (filePath) => {
+export const extractProfileFromText = async (text) => {
   try {
-    if (!filePath) return fallbackVoice();
-
-    const audioBase64 = fs.readFileSync(filePath).toString('base64');
-
     const prompt = `
-You are Sira Voice AI.
-
-1. Transcribe speech EXACTLY
-2. Detect intent: search | post | profile | hire
-3. Extract category, location, skills
+Extract user profile from this text:
+"${text}"
 
 Return ONLY JSON:
 
 {
-  "transcript": "",
-  "intent": "",
-  "category": "",
-  "location": "",
-  "skills": [],
-  "summary": "",
-  "detectedLanguage": ""
+  "name": "full name or null",
+  "phone": "phone or null",
+  "email": "email or null",
+  "skills": ["skill1"],
+  "bio": "short bio",
+  "location": "location or null"
 }
 `;
 
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: audioBase64,
-          mimeType: 'audio/webm;codecs=opus',
-        },
-      },
-    ]);
-
+    const result = await model.generateContent(prompt);
     const raw = (await result.response).text();
+
     const parsed = safeParse(raw);
 
-    if (!parsed) return fallbackVoice();
-
-    return parsed;
-  } catch (err) {
-    console.error('❌ VOICE AI ERROR:', err);
-    return fallbackVoice();
-  } finally {
-    try {
-      if (filePath && fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+    return (
+      parsed || {
+        name: 'User',
+        phone: null,
+        email: null,
+        skills: [],
+        bio: text,
+        location: '',
       }
-    } catch {}
+    );
+  } catch {
+    return {
+      name: 'User',
+      phone: null,
+      email: null,
+      skills: [],
+      bio: text,
+      location: '',
+    };
   }
 };
 
-/* =========================
-   👤 PROFILE EXTRACTION
-========================= */
-export const extractProfileFromText = async (text) => {
-  const res = await processTextToData(text);
-
-  return {
-    phone: null,
-    email: null,
-    name: res.summary?.split(' ')[0] || 'User',
-    skills: res.skills || [],
-    bio: res.summary || text,
-    location: res.location || '',
-  };
-};
-
-/* =========================
-   ⚠️ JOB SCAM CHECK (FAST LOCAL)
-========================= */
 export const analyzeJobForScam = async (description = '') => {
   const risky = [
     'pay before',
@@ -160,25 +120,3 @@ export const analyzeJobForScam = async (description = '') => {
       : 'Looks safe',
   };
 };
-
-/* =========================
-   🧯 FALLBACKS
-========================= */
-const fallbackText = (t) => ({
-  intent: 'search',
-  category: '',
-  location: '',
-  skills: [],
-  summary: t,
-  detectedLanguage: 'unknown',
-});
-
-const fallbackVoice = () => ({
-  transcript: '',
-  intent: 'search',
-  category: '',
-  location: '',
-  skills: [],
-  summary: '',
-  detectedLanguage: 'unknown',
-});

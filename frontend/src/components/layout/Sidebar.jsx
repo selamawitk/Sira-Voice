@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, BriefcaseBusiness, Mic, MapPin, ClipboardList, Settings, UserCircle, Globe, FileText, ShieldAlert, Star, X } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
-import { LanguageContext } from '../../context/LanguageContext.jsx';
+import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 
 const Sidebar = ({ onClose }) => {
   const auth = useContext(AuthContext);

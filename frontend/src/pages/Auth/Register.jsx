@@ -1,34 +1,110 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Mail, Lock, Mic, Loader2 } from 'lucide-react';
+import { User, Mail, Lock, LogIn, Fingerprint } from 'lucide-react';
 import AuthLayout from '../../components/ui/AuthLayout';
 import Input from '../../components/ui/Input';
-import { useVoice } from '../../hooks/useVoice.js';
 import api from '../../services/api.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
-import { ToastContext } from '../../components/ui/ToastProvider.jsx';
+import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
+
+const translations = {
+  en: {
+    title: "Create Account",
+    subtitle: "Join Sira and find your match today.",
+    roleWorker: "I am a Worker",
+    roleEmployer: "I am an Employer",
+    fullName: "Full Name",
+    identifier: "Phone Number",
+    password: "Password",
+    confirm: "Confirm",
+    registerBtn: "Create Account",
+    biometricBtn: "Register Passkey",
+    processing: "Processing...",
+    or: "or",
+    google: "Sign up with Google",
+    hasAccount: "Already have an account?",
+    loginLink: "Login here.",
+    toastErrorFields: "Please complete all required fields.",
+    toastErrorMatch: "Passwords do not match.",
+    toastSuccess: "Account created successfully.",
+    toastOAuthFail: "Google registration failed. Please try again.",
+    biometricSuccess: "Passkey registered! You can now login with biometrics.",
+    biometricError: "Failed to register passkey."
+  },
+  am: {
+    title: "አካውንት ይፍጠሩ",
+    subtitle: "ሲራን በመቀላቀል ስራዎን ዛሬ ያግኙ።",
+    roleWorker: "እኔ ሰራተኛ ነኝ",
+    roleEmployer: "እኔ አሰሪ ነኝ",
+    fullName: "ሙሉ ስም",
+    identifier: "ስልክ ቁጥር",
+    password: "የይለፍ ቃል",
+    confirm: "ያረጋግጡ",
+    registerBtn: "አካውንት ይፍጠሩ",
+    biometricBtn: "የጣት አሻራ መመዝገቢያ",
+    processing: "በማከናወን ላይ...",
+    or: "ወይም",
+    google: "በጉግል ይመዝገቡ",
+    hasAccount: "አካውንት አለዎት?",
+    loginLink: "እዚህ ይግቡ።",
+    toastErrorFields: "እባክዎን ሁሉንም መስኮች ይሙሉ::",
+    toastErrorMatch: "የይለፍ ቃሉ አይዛመድም::",
+    toastSuccess: "አካውንትዎ በተሳካ ሁኔታ ተፈጥሯል።",
+    toastOAuthFail: "የጉግል ምዝገባ አልተሳካም። እባክዎ እንደገና ይሞክሩ።",
+    biometricSuccess: "የጣት አሻራ ተመዝግቧል! አሁን በጣት አሻራዎ መግባት ይችላሉ።",
+    biometricError: "የጣት አሻራ መመዝገብ አልተቻለም።"
+  },
+  or: {
+    title: "Account Uumi",
+    subtitle: "Sira'n walitti makamuun hojii kee har'a argadhu.",
+    roleWorker: "Ani Hojjataadha",
+    roleEmployer: "Ani Qaxaraadha",
+    fullName: "Maqaa Guutuu",
+    identifier: "Lakkoofsa Bilbilaa",
+    password: "Jecha Icchitii",
+    confirm: "Mirkaneessi",
+    registerBtn: "Account Uumi",
+    biometricBtn: "Mallattoo Qubaa Galmeessi",
+    processing: "Hojjechaa jira...",
+    or: "ykn",
+    google: "Google'n galmaa'i",
+    hasAccount: "Account qabduu?",
+    loginLink: "Asitti seeni.",
+    toastErrorFields: "Maaloo hunda guuti.",
+    toastErrorMatch: "Jechi iccitii wal hin fakkaatu.",
+    toastSuccess: "Milkaa'inaan galmoofteetta.",
+    toastOAuthFail: "Galmeen Google hin milkoofne. Maaloo irra deebi'i yaali.",
+    biometricSuccess: "Mallattoon qubaa galmaa'eera! Amma kanaan seenuu dandeessa.",
+    biometricError: "Mallattoo qubaa galmeessuun hin danda'amne."
+  }
+};
 
 const RegisterPage = () => {
   const navigate = useNavigate();
   const toast = useContext(ToastContext);
   const auth = useContext(AuthContext);
+
+  const [lang, setLang] = useState(localStorage.getItem('app_lang') || 'en');
+  const t = translations[lang];
+
   const [role, setRole] = useState('worker');
   const [fullName, setFullName] = useState('');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { isListening, isProcessing, startListening } = useVoice();
+  const [biometricLoading, setBiometricLoading] = useState(false);
 
-  /**
-   * FIXED URL HELPER
-   * Prevents /api/api and ensures absolute path for OAuth
-   */
+  const handleLangChange = (newLang) => {
+    setLang(newLang);
+    localStorage.setItem('app_lang', newLang);
+  };
+
   const getGoogleAuthUrl = () => {
     let base = (import.meta.env.VITE_API_URL || 'http://localhost:5001');
-    // Remove trailing slash and any existing /api to prevent doubling
     base = base.replace(/\/$/, '').replace(/\/api$/, '');
-    return `${base}/api/auth/google`;
+    localStorage.setItem('pending_role', role);
+    return `${base}/api/auth/google?role=${role}&prompt=select_account`;
   };
 
   const getRedirectPath = (roleValue) => {
@@ -37,16 +113,59 @@ const RegisterPage = () => {
     return '/dashboard';
   };
 
+  const handleBiometricRegister = async () => {
+    setBiometricLoading(true);
+    try {
+      await auth.registerPasskey();
+      toast?.show?.(t.biometricSuccess, 'success');
+    } catch (error) {
+      toast?.show?.(error?.response?.data?.message || t.biometricError, 'error');
+    } finally {
+      setBiometricLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    const handleOAuthCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      const error = urlParams.get('error');
+
+      if (error) {
+        toast?.show?.(t.toastOAuthFail, 'error');
+        navigate('/register', { replace: true });
+        return;
+      }
+
+      if (token) {
+        localStorage.setItem('token', token);
+        try {
+          const user = await auth?.fetchMe?.();
+          localStorage.removeItem('pending_role');
+          if (isMounted) {
+            navigate(getRedirectPath(user?.role), { replace: true });
+          }
+        } catch (err) {
+          localStorage.removeItem('token');
+          navigate('/register', { replace: true });
+        }
+      }
+    };
+    handleOAuthCallback();
+    return () => { isMounted = false; };
+  }, [auth, navigate, toast, t.toastOAuthFail]);
+
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
 
     if (!fullName.trim() || !identifier.trim() || !password.trim()) {
-      toast?.show?.('Please complete all required fields.', 'error');
+      toast?.show?.(t.toastErrorFields, 'error');
       return;
     }
 
     if (password !== confirmPassword) {
-      toast?.show?.('Passwords do not match.', 'error');
+      toast?.show?.(t.toastErrorMatch, 'error');
       return;
     }
 
@@ -63,14 +182,10 @@ const RegisterPage = () => {
         role
       };
 
-      const { data } = await api.post('/auth/register', payload);
-
-      if (data?.token) {
-        localStorage.setItem('token', data.token);
-        await auth?.fetchMe?.();
-      }
-
-      toast?.show?.('Account created successfully.', 'success');
+      const data = await auth.register(payload);
+      toast?.show?.(t.toastSuccess, 'success');
+      
+      // After registration, offer passkey registration automatically or navigate
       navigate(getRedirectPath(data?.role || role));
     } catch (error) {
       toast?.show?.(error?.response?.data?.message || 'Registration failed.', 'error');
@@ -79,56 +194,46 @@ const RegisterPage = () => {
     }
   };
 
-  const handleVoiceRegister = () => {
-    startListening(async (result) => {
-      setLoading(true);
-      try {
-        const data = await auth.voiceAuth(result.transcript);
-        toast?.show?.(`Sira-Voice identified you as ${data.fullName}!`, 'success');
-        navigate(getRedirectPath(data.role));
-      } catch {
-        toast?.show?.('Voice capture failed. Please speak clearly in Amharic, Oromiffa, or English.', 'error');
-      } finally {
-        setLoading(false);
-      }
-    });
-  };
-
   return (
-    <AuthLayout 
-      title="Create Account" 
-      subtitle="Join Sira-Voice and find your match today."
-    >
-      <form className="space-y-2.5" onSubmit={handleSubmit}>
-        <div className="flex gap-2 mb-1">
+    <AuthLayout title={t.title} subtitle={t.subtitle}>
+      <div className="flex justify-center gap-2 mb-4">
+        {['en', 'am', 'or'].map((l) => (
           <button
-            type="button"
-            onClick={() => setRole('worker')}
-            className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
-              role === 'worker' 
-                ? 'bg-[#2BB8B8] border-[#2BB8B8] text-slate-950 shadow-[0_0_15px_rgba(43,184,184,0.18)]' 
-                : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+            key={l}
+            onClick={() => handleLangChange(l)}
+            className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${
+              lang === l 
+                ? 'bg-[#2BB8B8] text-slate-950 shadow-lg scale-105' 
+                : 'bg-white/5 text-gray-400 hover:bg-white/10'
             }`}
           >
-            I am a Worker
+            {l === 'en' ? 'English' : l === 'am' ? 'አማርኛ' : 'Oromoo'}
           </button>
-          <button
-            type="button"
-            onClick={() => setRole('employer')}
-            className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
-              role === 'employer' 
-                ? 'bg-[#2BB8B8] border-[#2BB8B8] text-slate-950 shadow-[0_0_15px_rgba(43,184,184,0.18)]' 
-                : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-            }`}
-          >
-            I am an Employer
-          </button>
+        ))}
+      </div>
+
+      <form className="space-y-2" onSubmit={handleSubmit}>
+        <div className="flex gap-2 mb-4">
+          {['worker', 'employer'].map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setRole(r)}
+              className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
+                role === r 
+                  ? 'bg-[#2BB8B8] border-[#2BB8B8] text-slate-950 shadow-[0_0_15px_rgba(43,184,184,0.18)]' 
+                  : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+              }`}
+            >
+              {r === 'worker' ? t.roleWorker : t.roleEmployer}
+            </button>
+          ))}
         </div>
 
         <Input 
           icon={User} 
           type="text" 
-          placeholder="Full Name"
+          placeholder={t.fullName}
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
           required
@@ -137,17 +242,17 @@ const RegisterPage = () => {
         <Input 
           icon={Mail} 
           type="text" 
-          placeholder="Email or Phone Number"
+          placeholder={t.identifier}
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
           required
         />
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           <Input 
             icon={Lock} 
             type="password" 
-            placeholder="Password"
+            placeholder={t.password}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -155,7 +260,7 @@ const RegisterPage = () => {
           <Input 
             icon={Lock} 
             type="password" 
-            placeholder="Confirm"
+            placeholder={t.confirm}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
@@ -164,58 +269,44 @@ const RegisterPage = () => {
 
         <button
           type="submit"
-          disabled={loading}
-          className="w-full bg-[#2BB8B8] text-slate-950 py-2 rounded-xl font-black text-md hover:brightness-110 transition-all active:scale-[0.98] mt-1 disabled:opacity-60"
+          disabled={loading || biometricLoading}
+          className="w-full bg-[#2BB8B8] text-slate-950 py-2 rounded-xl font-black text-sm hover:brightness-110 transition-all active:scale-[0.98] mt-1 disabled:opacity-60 flex items-center justify-center gap-2 group"
         >
-          {loading ? 'Processing...' : 'Create Account'}
+          {loading ? t.processing : t.registerBtn} <LogIn className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </button>
 
-        <div className="relative text-center">
-          <span className="bg-[#1A2E35] px-3 text-gray-600 text-[10px] font-black uppercase tracking-[0.2em] relative z-10">or</span>
+        {/* Optional: Passkey setup during registration flow */}
+        <button
+          type="button"
+          onClick={handleBiometricRegister}
+          disabled={loading || biometricLoading}
+          className="w-full bg-white/5 border border-white/10 text-white py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-white/10 transition disabled:opacity-50"
+        >
+          <Fingerprint className="w-4 h-4 text-[#2BB8B8]" />
+          {biometricLoading ? t.processing : t.biometricBtn}
+        </button>
+
+        <div className="relative text-center my-1">
+          <span className="bg-[#1A2E35] px-3 text-gray-600 text-[10px] font-black uppercase tracking-[0.2em] relative z-10">{t.or}</span>
           <hr className="absolute top-1/2 w-full border-white/5" />
         </div>
 
-        <button 
-          type="button"
-          onClick={handleVoiceRegister}
-          disabled={loading || isListening || isProcessing}
-          className="w-full group flex items-center justify-between bg-[#2BB8B8]/5 border border-[#2BB8B8]/20 hover:border-[#2BB8B8]/50 p-2 pr-4 rounded-2xl transition-all duration-300"
-        >
-          <div className="flex items-center gap-3">
-            <div className="bg-[#2BB8B8] p-2 rounded-xl shadow-[0_0_15px_rgba(43,184,184,0.25)] group-hover:scale-110 transition-transform">
-              {isListening ? (
-                <Loader2 className="w-4 h-4 text-white animate-spin" />
-              ) : isProcessing ? (
-                <Loader2 className="w-4 h-4 text-white animate-spin" />
-              ) : (
-                <Mic className="w-4 h-4 text-white" />
-              )}
-            </div>
-            <span className="text-white text-xs font-bold tracking-tight">
-              {isListening ? 'Listening (አማርኛ/Afan Oromo)...' : isProcessing ? 'Extracting Identity...' : 'Register with Voice'}
-            </span>
-          </div>
-          <div className="text-[10px] text-[#2BB8B8] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-            Instant Sign-up
-          </div>
-        </button>
-
         <a 
           href={getGoogleAuthUrl()}
-          className="w-full bg-white/5 border border-white/10 text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-3 hover:bg-white/10 transition shadow-xl"
+          className="w-full bg-white/5 border border-white/10 text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-3 hover:bg-white/10 transition shadow-xl"
         >
           <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-4 h-4" alt="Google" />
-          Sign up with Google
+          {t.google}
         </a>
       </form>
 
-      <p className="mt-5 text-center text-gray-500 text-[12px] font-medium">
-        Already have an account? 
+      <p className="mt-4 text-center text-gray-500 text-[11px] font-medium">
+        {t.hasAccount} 
         <button 
           onClick={() => navigate('/login')} 
           className="text-[#2BB8B8] font-black ml-1 hover:underline underline-offset-4"
         >
-          Login here.
+          {t.loginLink}
         </button>
       </p>
     </AuthLayout>

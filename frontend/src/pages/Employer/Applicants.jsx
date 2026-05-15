@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import api from '../../services/api.js';
-import { ToastContext } from '../../components/ui/ToastProvider.jsx';
+import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
 import { useVoice } from '../../hooks/useVoice.js';
 import { voiceHire } from '../../services/voiceService.js';
 
@@ -12,7 +12,7 @@ const Applicants = () => {
   const [hiringId, setHiringId] = useState('');
   const [voiceHiring, setVoiceHiring] = useState(false);
 
-  const { isRecording, startListening, stopListening } = useVoice();
+  const { isListening, startListening, stopListening } = useVoice();
 
   const urlJobId = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
@@ -84,7 +84,7 @@ const Applicants = () => {
           toast?.show?.(error.response?.data?.message || 'Voice hiring failed. Please try again.', 'error');
         }
       });
-    } catch (error) {
+    } catch {
       toast?.show?.('Failed to start voice recording.', 'error');
     } finally {
       setVoiceHiring(false);
@@ -107,14 +107,14 @@ const Applicants = () => {
           <div className="mt-4 flex gap-3">
             <button
               className={`px-4 py-2 rounded-xl font-black text-xs transition ${
-                voiceHiring || isRecording
+                voiceHiring || isListening
                   ? 'bg-red-500 text-white hover:bg-red-600'
                   : 'bg-[#2BB8B8] text-slate-950 hover:brightness-110'
               }`}
-              onClick={voiceHiring || isRecording ? stopVoiceHire : handleVoiceHire}
+              onClick={voiceHiring || isListening ? stopVoiceHire : handleVoiceHire}
               disabled={!jobId}
             >
-              {isRecording ? '🎤 Listening...' : voiceHiring ? '⏹️ Stop' : '🎤 Voice Hire'}
+              {isListening ? '🎤 Listening...' : voiceHiring ? '⏹️ Stop' : '🎤 Voice Hire'}
             </button>
             <p className="text-gray-500 text-sm self-center">
               Say "hire [worker name]" to hire via voice

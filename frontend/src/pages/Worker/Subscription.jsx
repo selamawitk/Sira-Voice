@@ -1,19 +1,43 @@
-import React from 'react';
-import { Zap, CheckCircle2, Crown, ShieldCheck } from 'lucide-react';
-import api from '../../services/api.js';
-import { ToastContext } from '../../components/ui/ToastProvider.jsx';
-import { useContext } from 'react';
+import React, { useState, useContext } from 'react';
+import { Zap, CheckCircle2, Crown, ShieldCheck, Loader2 } from 'lucide-react';
+import { upgradeSubscription } from '../../services/paymentService.js';
+import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
+import { AuthContext } from '../../context/AuthContextInstance.jsx';
 
 const Subscription = () => {
   const toast = useContext(ToastContext);
+  const auth = useContext(AuthContext);
+  const [loading, setLoading] = useState(null);
+
   const handleUpgrade = async (planType) => {
+    if (planType === 'basic') {
+      try {
+        setLoading(planType);
+        await upgradeSubscription(planType);
+        toast?.show?.('Successfully subscribed to Basic plan!', 'success');
+        await auth.fetchMe(); // Refresh user data
+      } catch (err) {
+        toast?.show?.(err?.response?.data?.message || 'Upgrade failed.', 'error');
+      } finally {
+        setLoading(null);
+      }
+      return;
+    }
+
     try {
-      // Logic for Chapa or other payment gateway
-      await api.post('/subscriptions/upgrade', { planType });
-      toast?.show?.(`Success! Plan ${planType} activated.`, 'success');
-      window.location.reload();
+      setLoading(planType);
+      const response = await upgradeSubscription(planType);
+      
+      if (response.checkoutUrl) {
+        // Redirect to Chapa checkout
+        window.location.href = response.checkoutUrl;
+      } else {
+        toast?.show?.('Payment initialization failed.', 'error');
+      }
     } catch (err) {
-      toast?.show?.('Upgrade failed. Please check your balance or connection.', 'error');
+      toast?.show?.(err?.response?.data?.message || 'Payment initialization failed.', 'error');
+    } finally {
+      setLoading(null);
     }
   };
 
@@ -27,7 +51,7 @@ const Subscription = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
         {/* FREE PLAN CARD */}
         <div className="bg-white/[0.03] border border-white/10 p-8 rounded-[2.5rem] relative flex flex-col group">
@@ -44,8 +68,12 @@ const Subscription = () => {
             ))}
           </ul>
 
-          <button className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-500 font-black text-xs uppercase tracking-widest cursor-default">
-            Current Plan
+          <button 
+            onClick={() => handleUpgrade('basic')}
+            disabled={loading === 'basic'}
+            className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-500 font-black text-xs uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {loading === 'basic' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Select Plan'}
           </button>
         </div>
 
@@ -63,7 +91,7 @@ const Subscription = () => {
             <div className="mb-8 flex justify-between items-start">
               <div>
                 <h3 className="text-[#2BB8B8] font-black text-xs uppercase tracking-[0.2em] mb-2">Sira Pro</h3>
-                <div className="text-white text-4xl font-black">200 ETB<span className="text-sm text-gray-500 font-bold ml-1">/mo</span></div>
+                <div className="text-white text-4xl font-black">500 ETB<span className="text-sm text-gray-500 font-bold ml-1">/mo</span></div>
               </div>
               <Crown className="w-8 h-8 text-[#2BB8B8] drop-shadow-[0_0_10px_rgba(43,184,184,0.35)]" />
             </div>
@@ -83,11 +111,41 @@ const Subscription = () => {
 
             <button 
               onClick={() => handleUpgrade('pro')}
-              className="w-full py-4 rounded-2xl bg-[#2BB8B8] text-slate-950 font-black text-xs uppercase tracking-widest shadow-xl hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+              disabled={loading === 'pro'}
+              className="w-full py-4 rounded-2xl bg-[#2BB8B8] text-slate-950 font-black text-xs uppercase tracking-widest shadow-xl hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 disabled:opacity-60 flex items-center justify-center gap-2"
             >
-              Upgrade with Chapa
+              {loading === 'pro' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Upgrade with Chapa'}
             </button>
           </div>
+        </div>
+
+        {/* BUSINESS PLAN CARD */}
+        <div className="bg-white/[0.03] border border-white/10 p-8 rounded-[2.5rem] relative flex flex-col group">
+          <div className="mb-8">
+            <h3 className="text-gray-500 font-black text-xs uppercase tracking-[0.2em] mb-2">Business</h3>
+            <div className="text-white text-4xl font-black">1500 ETB<span className="text-sm text-gray-500 font-bold ml-1">/3mo</span></div>
+          </div>
+          
+          <ul className="space-y-4 mb-10 flex-1">
+            {[
+              'Everything in Pro',
+              'Unlimited Job Posts',
+              'Advanced Analytics',
+              'Priority Support'
+            ].map((feat) => (
+              <li key={feat} className="flex items-center gap-3 text-gray-400 text-sm font-medium">
+                <CheckCircle2 className="w-4 h-4 text-gray-600" /> {feat}
+              </li>
+            ))}
+          </ul>
+
+          <button 
+            onClick={() => handleUpgrade('business')}
+            disabled={loading === 'business'}
+            className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-xs uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {loading === 'business' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Upgrade with Chapa'}
+          </button>
         </div>
 
       </div>

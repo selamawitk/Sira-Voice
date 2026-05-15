@@ -6,21 +6,21 @@ import {
   processTextToData
 } from '../services/aiService.js';
 
+import { transcribeAudio } from '../services/voiceService.js';
 import { createApplicationLogic } from './applicationController.js';
+
 import Job from '../models/Job.js';
 import User from '../models/User.js';
 
 /**
  * 🎤 FAST VOICE PIPELINE
  * audio → transcription → AI (text only)
+ * NO AUTH LOGIC
  */
 export const processVoiceAction = asyncHandler(async (req, res) => {
   let text = req.body.transcript;
   let detectedLang = req.body.language || 'unknown';
 
-  /**
-   * STEP 1: TRANSCRIBE ONLY (FAST PATH)
-   */
   if (req.file) {
     const transcription = await transcribeAudio(req.file.path);
     text = transcription.text;
@@ -35,9 +35,6 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
     });
   }
 
-  /**
-   * STEP 2: AI PROCESSING (TEXT ONLY - FAST)
-   */
   const intent = await processTextToData(text);
 
   const response = {
@@ -49,34 +46,21 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
   };
 
   /**
-   * 🟢 POST JOB
+   * 🟢 POST JOB (EMPLOYER ONLY)
    */
   if (intent.intent === 'post' && req.user?.role === 'employer') {
-    const defaultCoordinates = [38.7578, 8.9806];
-
-    const coords =
-      Array.isArray(req.user?.location?.coordinates) &&
-      req.user.location.coordinates.length === 2
-        ? req.user.location.coordinates
-        : defaultCoordinates;
-
-    const address =
-      intent.location ||
-      req.user?.employerProfile?.businessAddress ||
-      'Addis Ababa';
-
     const job = await Job.create({
       employer: req.user._id,
       title: intent.category
-        ? `${intent.category} Job Request`
-        : 'New Job Request',
+        ? `${intent.category} Job`
+        : 'New Job',
       category: intent.category || 'General',
       description: text,
       salary: intent.salary || 0,
       location: {
-        address,
+        address: intent.location || 'Addis Ababa',
         type: 'Point',
-        coordinates: coords
+        coordinates: [38.7578, 8.9806]
       },
       status: 'open'
     });
@@ -86,7 +70,7 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
   }
 
   /**
-   * 🟡 APPLY
+   * 🟡 APPLY (WORKER ONLY)
    */
   else if (intent.intent === 'apply' && req.user?.role === 'worker') {
     const jobId = req.body.jobId;
@@ -106,7 +90,7 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
       false
     );
 
-    response.actionTaken = 'JOB_APPLIED';
+    response.actionTaken = 'JOB_APPLICATION_CREATED';
     response.data = {
       applicationId: application._id,
       jobId
@@ -116,13 +100,8 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
   /**
    * 🔵 SEARCH JOBS
    */
-  else if (
-    intent.intent === 'search' ||
-    (intent.intent === 'post' && req.user?.role === 'worker')
-  ) {
-    response.actionTaken = 'JOB_SEARCH';
-
-    response.data = await Job.find({
+  else if (intent.intent === 'search') {
+    const jobs = await Job.find({
       $or: [
         {
           category: {
@@ -140,10 +119,13 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
     })
       .limit(10)
       .populate('employer', 'fullName');
+
+    response.actionTaken = 'JOB_SEARCH_RESULTS';
+    response.data = jobs;
   }
 
   /**
-   * 🟣 PROFILE UPDATE
+   * 🟣 PROFILE UPDATE (VOICE CV ONLY)
    */
   else if (intent.intent === 'profile' && req.user) {
     const user = await User.findById(req.user._id);
@@ -156,7 +138,8 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
         ])
       ];
 
-      user.workerProfile.bio = intent.summary || user.workerProfile.bio;
+      user.workerProfile.bio =
+        intent.summary || user.workerProfile.bio;
 
       await user.save();
 
@@ -214,7 +197,7 @@ export const voiceJobSearch = asyncHandler(async (req, res) => {
 });
 
 /**
- * 🎤 VOICE CV
+ * 🎤 VOICE CV BUILDER (ONLY FEATURE YOU KEEP)
  */
 export const processVoiceCV = asyncHandler(async (req, res) => {
   let text = req.body.transcript;
@@ -260,7 +243,7 @@ export const processVoiceCV = asyncHandler(async (req, res) => {
 });
 
 /**
- * ⚠️ SAFETY CHECK
+ * ⚠️ JOB SAFETY CHECK
  */
 export const checkJobSafety = asyncHandler(async (req, res) => {
   const job = await Job.findById(req.params.jobId);

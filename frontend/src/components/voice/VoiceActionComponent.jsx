@@ -1,8 +1,8 @@
-import React, { useContext } from 'react';
+import React, { useCallback, useContext, useEffect } from 'react';
 import { Mic, MicOff, Loader2 } from 'lucide-react';
 import { useVoice } from '../../hooks/useVoice.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
-import { ToastContext } from '../ui/ToastProvider.jsx';
+import { ToastContext } from '../ui/ToastContextInstance.jsx';
 
 const VoiceActionComponent = ({
   action = 'voice-action',
@@ -28,7 +28,7 @@ const VoiceActionComponent = ({
     stopListening
   } = useVoice();
 
-  const handleVoiceAction = async () => {
+  const handleVoiceAction = useCallback(async () => {
     if (isListening) {
       stopListening();
       return;
@@ -57,13 +57,13 @@ const VoiceActionComponent = ({
         onSuccess?.(voiceResult);
       }
     }, { action, jobId });
-  };
+  }, [action, jobId, isListening, onError, onSuccess, startListening, stopListening, toast]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (autoStart && !disabled && auth?.user) {
       handleVoiceAction();
     }
-  }, [autoStart, disabled, auth?.user]);
+  }, [autoStart, disabled, auth?.user, handleVoiceAction]);
 
   const isDisabled = disabled || isProcessing || !auth?.user;
 
