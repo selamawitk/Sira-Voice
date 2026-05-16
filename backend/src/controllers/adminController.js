@@ -2,6 +2,7 @@ import User from '../models/User.js';
 import Job from '../models/Job.js';
 import Application from '../models/Application.js';
 import asyncHandler from '../utils/asyncHandler.js';
+import ScamAnalysis from '../models/ScamAnalysis.js';
 
 export const getPlatformStats = asyncHandler(async (req, res) => {
   const totalWorkers = await User.countDocuments({ role: 'worker' });
@@ -39,4 +40,13 @@ export const deleteJob = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error('Job not found');
   }
+});
+
+export const getScamHistory = asyncHandler(async (req, res) => {
+  const history = await ScamAnalysis.find()
+    .populate({ path: 'jobId', select: 'title location salary employer' })
+    .sort({ analyzedAt: -1 })
+    .limit(200);
+
+  res.status(200).json({ success: true, data: history, count: history.length });
 });

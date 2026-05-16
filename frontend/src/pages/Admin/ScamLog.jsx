@@ -31,8 +31,20 @@ const ScamLog = () => {
     const run = async () => {
       setLoading(true);
       try {
-        const res = await api.get('/jobs');
-        setJobs(res.data?.data ?? []);
+        // Fetch persisted scam analysis history (admin)
+        const res = await api.get('/admin/scam-history');
+        const data = res.data?.data ?? [];
+        // Map to jobs array shape for backwards compatibility
+        setJobs(data.map((h) => h.jobId ?? {}));
+        const map = {};
+        data.forEach((h) => {
+          if (h.jobId?._id) {
+            map[h.jobId._id] = { score: h.score, reason: h.reason, isSafe: h.isSafe };
+          }
+        });
+        setAnalysisByJobId(map);
+      } catch (err) {
+        console.error('Failed to load scam history:', err);
       } finally {
         setLoading(false);
       }

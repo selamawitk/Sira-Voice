@@ -6,6 +6,7 @@ import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 // Fixed: Importing from Instance file instead of Provider
 import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
 import { connectSocket, disconnectSocket } from '../../services/socketService.js';
+import api from '../../services/api.js';
 
 const Header = ({ onMobileMenuToggle }) => {
   const auth = useContext(AuthContext);
@@ -14,7 +15,7 @@ const Header = ({ onMobileMenuToggle }) => {
   const { lang, setLang, copy, options } = useContext(LanguageContext) || {};
   const toast = useContext(ToastContext);
   const navigate = useNavigate();
-  const [hasUnread, setHasUnread] = useState(false);
+  const [hasUnread, setHasUnread] = useState(0);
 
   const handleLogout = () => {
     auth?.logout?.();
@@ -22,25 +23,38 @@ const Header = ({ onMobileMenuToggle }) => {
   };
 
   useEffect(() => {
+    let mounted = true;
+
     if (!user?._id) {
       disconnectSocket();
       return;
     }
 
+    // Fetch current unread count
+    (async () => {
+      try {
+        const res = await api.get('/notifications');
+        if (!mounted) return;
+        setHasUnread(res.data?.unreadCount || 0);
+      } catch (e) {
+        console.error('Failed to fetch notifications for header:', e);
+      }
+    })();
+
     const socket = connectSocket(user._id);
-    
+
     const handleNotification = (payload) => {
-      setHasUnread(true);
+      setHasUnread((c) => Number(c || 0) + 1);
       toast?.show?.(payload?.message ?? 'New notification received', 'success');
     };
 
     const handleMatch = (payload) => {
-      setHasUnread(true);
+      setHasUnread((c) => Number(c || 0) + 1);
       toast?.show?.(payload?.message ?? 'New job match available', 'success');
     };
 
     const handleApplicationStatus = (payload) => {
-      setHasUnread(true);
+      setHasUnread((c) => Number(c || 0) + 1);
       toast?.show?.(payload?.message ?? 'Application status updated', 'success');
     };
 
@@ -50,6 +64,7 @@ const Header = ({ onMobileMenuToggle }) => {
     socket.on('application_status', handleApplicationStatus);
 
     return () => {
+      mounted = false;
       socket.off('notification', handleNotification);
       socket.off('new_match', handleMatch);
       socket.off('new_job_match', handleMatch);
@@ -58,7 +73,7 @@ const Header = ({ onMobileMenuToggle }) => {
   }, [user?._id, toast]);
 
   const clearNotifications = () => {
-    setHasUnread(false);
+    navigate('/notifications');
   };
 
   return (
@@ -99,8 +114,10 @@ const Header = ({ onMobileMenuToggle }) => {
           className="relative p-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-[#2BB8B8] transition-all"
         >
           <Bell className="w-5 h-5" />
-          {hasUnread ? (
-            <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#1A2E35] animate-ping" />
+          {hasUnread > 0 ? (
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-5 px-1.5 flex items-center justify-center bg-red-500 rounded-full border-2 border-[#1A2E35] text-[10px] font-medium text-white">
+              {hasUnread > 9 ? '9+' : hasUnread}
+            </span>
           ) : null}
         </button>
 

@@ -8,6 +8,7 @@ import {
 
 import { transcribeAudio } from '../services/voiceService.js';
 import { createApplicationLogic } from './applicationController.js';
+import { processNewJobMatches } from './jobController.js';
 
 import Job from '../models/Job.js';
 import User from '../models/User.js';
@@ -64,6 +65,8 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
       },
       status: 'open'
     });
+
+    await processNewJobMatches(job, req.io);
 
     response.actionTaken = 'JOB_CREATED';
     response.data = job;

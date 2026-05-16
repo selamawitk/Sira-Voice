@@ -1,7 +1,8 @@
 import Application from '../models/Application.js';
 import Job from '../models/Job.js';
+import Contract from '../models/Contract.js';
 import asyncHandler from '../utils/asyncHandler.js';
-import { sendRealTimeNotification } from '../services/notificationService.js';
+import { sendRealTimeNotification, sendHireNotification, sendJobMatchNotification } from '../services/notificationService.js';
 
 export const getMyApplicationHistory = asyncHandler(async (req, res) => {
   const userId = req.user._id;
@@ -60,10 +61,10 @@ export const applyToJob = asyncHandler(async (req, res) => {
   res.status(201).json(application);
 });
 
-export const createApplicationLogic = async (jobId, workerId, io, isAutoApply = false) => {
-  const alreadyApplied = await Application.findOne({ 
-    job: jobId, 
-    worker: workerId 
+export const createApplicationLogic = async (jobId, workerId, io, isAutoApply = false, matchScore = 0) => {
+  const alreadyApplied = await Application.findOne({
+    job: jobId,
+    worker: workerId
   });
 
   if (alreadyApplied) {
@@ -85,19 +86,22 @@ export const createApplicationLogic = async (jobId, workerId, io, isAutoApply = 
     employer: job.employer,
     status: 'pending',
     appliedByAI: isAutoApply,
-    matchScore: isAutoApply ? 85 : 0 
+    matchScore: matchScore || (isAutoApply ? 85 : 0)
   });
 
-  const notificationData = {
-    title: isAutoApply ? "Sira Agent: Auto-Match! 🤖" : "New Applicant! 👤",
-    message: isAutoApply 
-      ? `Our AI Agent automatically applied a top-tier match for your "${job.title}" post.`
-      : `A worker has applied for your "${job.title}" post.`,
+  await sendRealTimeNotification(io, job.employer, {
+    title: isAutoApply ? "Sira AI Match 🤖" : "New Applicant 👤",
+    message: isAutoApply
+      ? `AI matched a worker for "${job.title}"`
+      : `New applicant for "${job.title}"`,
     jobId: job._id,
-    type: 'match'
-  };
+    type: isAutoApply ? 'JOB_MATCH' : 'SYSTEM'
+  });
 
-  await sendRealTimeNotification(io, job.employer, notificationData);
+  if (isAutoApply) {
+    // Also notify the worker that they've been matched
+    await sendJobMatchNotification(io, workerId, job._id, job.title);
+  }
 
   return application;
 };
@@ -106,8 +110,10 @@ export const updateApplicationStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
-  const application = await Application.findById(id).populate('job worker');
-  
+  const application = await Application.findById(id)
+    .populate('job')
+    .populate('worker');
+
   if (!application) {
     res.status(404);
     throw new Error('Application not found');
@@ -121,38 +127,72 @@ export const updateApplicationStatus = asyncHandler(async (req, res) => {
   application.status = status;
   await application.save();
 
+  const job = application.job;
+  const employer = await Job.findById(job._id).populate('employer', 'fullName');
+
   if (status === 'accepted') {
-    await Job.findByIdAndUpdate(application.job._id, { 
-      status: 'in-progress', 
-      worker: application.worker._id 
+    await Job.findByIdAndUpdate(job._id, {
+      status: 'in-progress',
+      worker: application.worker._id
     });
+
+    const contract = await Contract.create({
+      employerId: job.employer,
+      workerId: application.worker._id,
+      jobId: job._id,
+      agreedAmount: job.salary,
+      paymentType: 'daily',
+      status: 'active'
+    });
+
+    // Send enhanced HIRE notification
+    await sendHireNotification(
+      req.io,
+      application.worker._id,
+      employer.employer?.fullName || 'Employer',
+      job.title,
+      contract._id
+    );
   }
 
   if (status === 'completed') {
-    await Job.findByIdAndUpdate(application.job._id, {
+    await Job.findByIdAndUpdate(job._id, {
       status: 'completed'
     });
   }
 
   const workerNotification = {
-    title: status === 'accepted' ? "You're Hired! 🎉" : "Application Update",
-    message: status === 'accepted' 
-      ? `Pack your tools! Your application for "${application.job.title}" was accepted.`
-      : `Status updated for "${application.job.title}": ${status}`,
-    jobId: application.job._id,
-    type: 'system'
+    title: status === 'accepted' ? "You're Hired 🎉" : "Application Update",
+    message:
+      status === 'accepted'
+        ? `Your application for "${job.title}" was accepted`
+        : `Status updated: ${status}`,
+    jobId: job._id,
+    type: status === 'accepted' ? 'HIRE' : 'SYSTEM'
   };
 
   if (req.io) {
     req.io.to(application.worker._id.toString()).emit('application_status', {
       title: workerNotification.title,
       message: workerNotification.message,
-      jobId: application.job._id,
+      jobId: job._id,
       status: application.status
     });
   }
 
-  await sendRealTimeNotification(req.io, application.worker._id, workerNotification);
+  // Don't double-notify for 'accepted' status since we already sent HIRE notification
+  if (status !== 'accepted') {
+    await sendRealTimeNotification(req.io, application.worker._id, workerNotification);
+  }
 
   res.json(application);
+});
+
+// 🆕 Added hireWorker function to fix the SyntaxError
+export const hireWorker = asyncHandler(async (req, res) => {
+  const { id } = req.params; // This is the application ID
+
+  // We reuse the updateApplicationStatus logic for 'accepted'
+  req.body.status = 'accepted';
+  return updateApplicationStatus(req, res);
 });

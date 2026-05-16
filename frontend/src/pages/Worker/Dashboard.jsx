@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { Mic, TrendingUp, Star, CheckCircle2, Map as MapIcon, Mic2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useVoice } from '../../hooks/useVoice.js';
 import api from '../../services/api.js';
 import { jobService } from '../../services/jobService.js';
@@ -13,6 +14,7 @@ const Dashboard = () => {
   const user = auth?.user;
   const toast = useContext(ToastContext);
   const location = useContext(LocationContext);
+  const navigate = useNavigate();
 
   const { isListening, startListening, stopListening, isProcessing } = useVoice();
 
@@ -89,14 +91,7 @@ const Dashboard = () => {
   }, [voiceJobs, nearbyJobs]);
 
   const startVoiceSearch = async () => {
-    await startListening((res) => {
-      if (res?.actionTaken === 'JOB_SEARCH') {
-        setVoiceJobs(Array.isArray(res?.data) ? res.data : []);
-        toast?.show?.('Voice search updated your matches.', 'success');
-      } else {
-        toast?.show?.('Voice captured. Try again with “find jobs near me”.', 'success');
-      }
-    });
+    navigate('/sira');
   };
 
   return (
@@ -122,24 +117,18 @@ const Dashboard = () => {
 
           <div className="flex flex-col items-center gap-6">
             <button 
-              onMouseDown={() => startVoiceSearch()}
-              onMouseUp={() => stopListening()}
+              onClick={() => startVoiceSearch()}
               className={`relative w-28 h-28 rounded-full flex items-center justify-center transition-all duration-500 shadow-2xl
-                ${isListening 
-                  ? 'bg-red-500 scale-110 shadow-red-500/40' 
-                  : 'bg-[#2BB8B8] hover:scale-105 shadow-[#2BB8B8]/25'}
+                bg-[#2BB8B8] hover:scale-105 shadow-[#2BB8B8]/25
               `}
             >
-              {isListening && (
-                <div className="absolute inset-0 rounded-full border-4 border-white/30 animate-ping"></div>
-              )}
-              <Mic className={`w-10 h-10 text-white ${isListening ? 'animate-pulse' : ''}`} />
+              <Mic className="w-10 h-10 text-white" />
             </button>
             <div className="text-center">
-              <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">
-                {isListening ? "Recording..." : isProcessing ? "Analyzing Voice..." : "Hold to speak"}
+              <p className="text-[10px] text-gray-500 font-medium uppercase tracking-widest">
+                Click to use Sira Voice
               </p>
-              <p className="text-[11px] text-[#2BB8B8] font-bold mt-1 opacity-60 italic">"Find jobs near me"</p>
+              <p className="text-[11px] text-[#2BB8B8] font-semibold mt-1 opacity-60 italic">"Talk to find jobs"</p>
             </div>
           </div>
         </div>

@@ -1,12 +1,15 @@
+/* --- UPDATED CSS --- */
+
 .counter {
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
+  /* Increased from 16px to 20px */
+  font-size: 20px; 
+  padding: 8px 16px;
+  border-radius: 8px;
   color: var(--accent);
   background: var(--accent-bg);
   border: 2px solid transparent;
   transition: border-color 0.3s;
-  margin-bottom: 24px;
+  margin-bottom: 16px; /* Reduced from 24px to move content up */
 
   &:hover {
     border-color: var(--accent-border);
@@ -19,6 +22,8 @@
 
 .hero {
   position: relative;
+  /* Reduced top margin if hero was pushing things down */
+  margin-top: 0; 
 
   .base,
   .framework,
@@ -59,14 +64,18 @@
 #center {
   display: flex;
   flex-direction: column;
-  gap: 25px;
-  place-content: center;
-  place-items: center;
+  /* FIXED: Changed from 'center' to 'flex-start' to move content to the top */
+  justify-content: flex-start;
+  align-items: center;
   flex-grow: 1;
+  /* Reduced top padding significantly */
+  padding-top: 20px; 
+  gap: 20px;
 
   @media (max-width: 1024px) {
-    padding: 32px 20px 24px;
-    gap: 18px;
+    /* Tightened mobile padding */
+    padding: 10px 20px 10px;
+    gap: 15px;
   }
 }
 
@@ -85,8 +94,8 @@
 
   .icon {
     margin-bottom: 16px;
-    width: 22px;
-    height: 22px;
+    width: 26px; /* Scaled up icon */
+    height: 26px;
   }
 
   @media (max-width: 1024px) {
@@ -108,22 +117,24 @@
   list-style: none;
   padding: 0;
   display: flex;
-  gap: 8px;
-  margin: 32px 0 0;
+  gap: 10px;
+  margin: 20px 0 0;
 
   .logo {
-    height: 18px;
+    height: 22px; /* Scaled up logo */
   }
 
   a {
     color: var(--text-h);
-    font-size: 16px;
-    border-radius: 6px;
+    /* Increased from 16px to 18px for "Large" feel */
+    font-size: 18px; 
+    font-weight: 600;
+    border-radius: 8px;
     background: var(--social-bg);
     display: flex;
-    padding: 6px 12px;
+    padding: 10px 16px; /* Larger hit area */
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     text-decoration: none;
     transition: box-shadow 0.3s;
 
@@ -131,13 +142,13 @@
       box-shadow: var(--shadow);
     }
     .button-icon {
-      height: 18px;
-      width: 18px;
+      height: 20px;
+      width: 20px;
     }
   }
 
   @media (max-width: 1024px) {
-    margin-top: 20px;
+    margin-top: 15px;
     flex-wrap: wrap;
     justify-content: center;
 
@@ -154,10 +165,11 @@
 }
 
 #spacer {
-  height: 88px;
+  /* Reduced from 88px to move everything up */
+  height: 40px; 
   border-top: 1px solid var(--border);
   @media (max-width: 1024px) {
-    height: 48px;
+    height: 20px;
   }
 }
 

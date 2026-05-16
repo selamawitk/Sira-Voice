@@ -59,6 +59,8 @@ const httpServer = createServer(app);
 await connectDB();
 
 const io = initSocket(httpServer);
+// Make socket available via app.get('io') for controllers and webhooks
+app.set('io', io);
 
 app.set('trust proxy', 1);
 

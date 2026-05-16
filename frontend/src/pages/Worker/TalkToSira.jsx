@@ -37,19 +37,20 @@ const TalkToSira = () => {
 
       <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-6 md:p-8">
         <div className="flex flex-col items-center gap-6">
+          {/* Main Voice Button */}
           <button
             onClick={isListening ? stopListening : start}
-            className="relative w-40 h-40 rounded-full bg-[#1A2E35] border border-white/10 grid place-items-center"
+            className="relative w-40 h-40 rounded-full bg-[#1A2E35] border border-white/10 grid place-items-center transition-all active:scale-95"
             aria-label={isListening ? 'Stop recording' : 'Start recording'}
           >
-            {/* Pulsing green ring */}
+            {/* Pulsing effect when active */}
             <span
               className={`absolute inset-0 rounded-full ${
                 isListening ? 'animate-ping bg-[#2BB8B8]/20' : 'bg-transparent'
               }`}
             />
             <span
-              className={`absolute inset-[-12px] rounded-full border ${
+              className={`absolute inset-[-12px] rounded-full border transition-all duration-500 ${
                 isListening ? 'border-[#2BB8B8]/60 shadow-[0_0_50px_rgba(43,184,184,0.28)]' : 'border-white/10'
               }`}
             />
@@ -76,16 +77,7 @@ const TalkToSira = () => {
             />
           </div>
 
-          <div className="w-full flex items-center justify-end gap-3">
-            <button
-              type="button"
-              className="px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-gray-200 hover:bg-white/10 transition"
-              onClick={() => setEditable('')}
-            >
-              Clear
-            </button>
-          </div>
-
+          {/* Job Results Section */}
           {jobs.length > 0 ? (
             <div className="w-full mt-6">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-3">
@@ -93,9 +85,11 @@ const TalkToSira = () => {
               </p>
               <div className="space-y-3">
                 {jobs.map((j) => (
-                  <div key={j._id} className="bg-[#1A2E35]/70 border border-white/10 rounded-2xl p-4">
+                  <div key={j._id} className="bg-[#1A2E35]/70 border border-white/10 rounded-2xl p-4 hover:border-[#2BB8B8]/30 transition-colors">
                     <p className="text-white font-black">{j.title}</p>
-                    <p className="text-white/45 text-sm mt-1">{j.location?.address ?? 'Addis Ababa'} • {j.salary ?? 0} ETB</p>
+                    <p className="text-white/45 text-sm mt-1">
+                      {j.location?.address ?? 'Addis Ababa'} • {j.salary ?? 0} ETB
+                    </p>
                   </div>
                 ))}
               </div>
@@ -108,4 +102,3 @@ const TalkToSira = () => {
 };
 
 export default TalkToSira;
-

@@ -1,15 +1,15 @@
 import mongoose from 'mongoose';
 
 const notificationSchema = new mongoose.Schema({
-  user: {
+  userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
   type: { 
     type: String, 
-    enum: ['match', 'hired', 'payment', 'verification', 'system'], 
-    default: 'system' 
+    enum: ['JOB_MATCH', 'HIRE', 'PAYMENT', 'RATING', 'SYSTEM'], 
+    default: 'SYSTEM' 
   },
   title: { 
     type: String, 
@@ -23,16 +23,43 @@ const notificationSchema = new mongoose.Schema({
     type: Boolean, 
     default: false 
   },
-  job: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Job'
+  metadata: {
+    jobId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Job'
+    },
+    contractId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Contract'
+    },
+    workerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    employerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    paymentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Payment'
+    },
+    additionalData: {
+      type: Object
+    }
   },
-  metadata: { 
-    type: Object 
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
-}, { timestamps: true });
+});
 
-notificationSchema.index({ user: 1, createdAt: -1 });
+notificationSchema.index({ userId: 1, createdAt: -1 });
+notificationSchema.index({ userId: 1, isRead: 1 });
 
 const Notification = mongoose.model('Notification', notificationSchema);
 export default Notification;

@@ -1,11 +1,14 @@
 import Job from '../models/Job.js';
 import User from '../models/User.js';
+import Transaction from '../models/Transaction.js'; // Added missing transaction ledger connection
 import asyncHandler from '../utils/asyncHandler.js';
 import { findMatchingWorkers } from '../services/jobMatcher.js';
 import { analyzeJobForScam } from '../services/aiService.js';
+import ScamAnalysis from '../models/ScamAnalysis.js';
+import { createApplicationLogic } from './applicationController.js';
 
 const getDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371e3;
+  const R = 6371e3; // Earth's radius in meters
   const φ1 = (lat1 * Math.PI) / 180;
   const φ2 = (lat2 * Math.PI) / 180;
   const Δφ = ((lat2 - lat1) * Math.PI) / 180;
@@ -42,10 +45,49 @@ const normalizeLocationCoordinates = (location) => {
   return location;
 };
 
+export const processNewJobMatches = async (job, io) => {
+  const matches = await findMatchingWorkers(job);
+  const nonAutoMatches = [];
+
+  for (const match of matches) {
+    const worker = match.worker;
+    const canAutoApply = worker?.workerProfile?.agentPreferences?.autoApply;
+
+    if (canAutoApply) {
+      try {
+        await createApplicationLogic(job._id, worker._id, io, true);
+      } catch (err) {
+        if (err.statusCode !== 400) {
+          console.error(`Auto-Apply failed for worker ${worker._id}:`, err.message);
+        }
+      }
+    } else {
+      nonAutoMatches.push(match);
+    }
+  }
+
+  if (io) {
+    nonAutoMatches.forEach((match) => {
+      if (match.worker?._id) {
+        const userId = match.worker._id.toString();
+        const payload = {
+          title: 'Sira Agent: Match Found! 📍',
+          message: `A new ${job.category || 'matching'} job matches your profile. Check it out!`,
+          jobId: job._id,
+          score: match.score
+        };
+        io.to(userId).emit('new_job_match', payload);
+        io.to(userId).emit('new_match', payload);
+      }
+    });
+  }
+
+  return matches;
+};
+
 export const createJob = asyncHandler(async (req, res) => {
   const { title, description, category, salary, location } = req.body;
   
-  // Scam detection
   const scamAnalysis = await analyzeJobForScam(description, salary);
   if (!scamAnalysis.isSafe) {
     res.status(400);
@@ -63,22 +105,19 @@ export const createJob = asyncHandler(async (req, res) => {
     location: normalizedLocation
   });
 
-  const matches = await findMatchingWorkers(job) || [];
+  const matches = await processNewJobMatches(job, req.io);
   const matchCount = matches.length;
 
-  if (matchCount > 0) {
-    matches.forEach(match => {
-      if (req.io && match._id) {
-        const userId = match._id.toString();
-        const payload = {
-          title: "Sira Agent: Match Found! 📍",
-          message: `A new ${category} job matches your profile. Check it out!`,
-          jobId: job._id
-        };
-        req.io.to(userId).emit('new_job_match', payload);
-        req.io.to(userId).emit('new_match', payload);
-      }
+  try {
+    await ScamAnalysis.create({
+      jobId: job._id,
+      isSafe: scamAnalysis.isSafe,
+      score: scamAnalysis.score,
+      reason: scamAnalysis.reason,
+      analyzedAt: new Date()
     });
+  } catch (err) {
+    console.error('Failed to persist scam analysis:', err?.message || err);
   }
 
   res.status(201).json({
@@ -123,7 +162,7 @@ export const getJobs = asyncHandler(async (req, res) => {
 export const getJobById = asyncHandler(async (req, res) => {
   const job = await Job.findById(req.params.id)
     .populate('employer', 'fullName employerProfile.employerRating')
-    .populate('worker', 'fullName phone');
+    .populate('worker', 'fullName phone workerProfile');
 
   if (!job) {
     res.status(404);
@@ -182,6 +221,81 @@ export const startJob = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     message: 'GPS Verified. Job is now in-progress.',
+    job
+  });
+});
+
+// ==========================================================
+//  UPDATED FUNCTION: PROCESSES SAVING THROUGH TRANSACTION MODEL
+// ==========================================================
+export const completeJob = asyncHandler(async (req, res) => {
+  const job = await Job.findById(req.params.id);
+
+  if (!job) {
+    res.status(404);
+    throw new Error('Job not found');
+  }
+
+  if (job.employer.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error('Unauthorized: Only the employer can mark this job as completed');
+  }
+
+  if (job.status !== 'in-progress') {
+    res.status(400);
+    throw new Error(`Job cannot be completed because its current status is: ${job.status}`);
+  }
+
+  if (!job.worker) {
+    res.status(400);
+    throw new Error('This job cannot be completed because no worker was ever assigned');
+  }
+
+  // 1. Update Job Status Lifecycle
+  job.status = 'completed';
+  job.completedAt = Date.now();
+  await job.save();
+
+  const payoutAmount = Number(job.salary) || 0;
+  const earningRef = `EARN-${job._id}-${Date.now()}`;
+
+  // 2. Create entry inside your separate Transaction collection schema
+  await Transaction.create({
+    employer: job.employer,
+    worker: job.worker,
+    job: job._id,
+    amount: payoutAmount,
+    currency: 'ETB',
+    tx_ref: earningRef,
+    status: 'success', 
+    purpose: `Job Execution Earning: ${job.title}`,
+    paidAt: new Date()
+  });
+
+  // 3. Update active worker digital wallet balance safely
+  const worker = await User.findById(job.worker);
+  if (worker) {
+    if (!worker.workerProfile) worker.workerProfile = {};
+    if (worker.workerProfile.balance === undefined) {
+      worker.workerProfile.balance = 0;
+    }
+
+    worker.workerProfile.balance += payoutAmount;
+    await worker.save();
+
+    // 4. Emit live update over WebSockets
+    if (req.io) {
+      req.io.to(worker._id.toString()).emit('payment_received', {
+        title: 'Payment Verified! 💸',
+        message: `You earned ${payoutAmount} ETB for completing "${job.title}".`,
+        balance: worker.workerProfile.balance
+      });
+    }
+  }
+
+  res.json({
+    success: true,
+    message: 'Job successfully completed. Financial audit records updated.',
     job
   });
 });

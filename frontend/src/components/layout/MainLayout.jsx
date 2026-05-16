@@ -7,7 +7,7 @@ const MainLayout = ({ children }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-[#1A2E35] overflow-hidden">
+    <div className="flex min-h-screen bg-[#1A2E35] overflow-hidden">
       {/* Sidebar - Desktop */}
       <div className="hidden md:block">
         <Sidebar />
@@ -30,7 +30,7 @@ const MainLayout = ({ children }) => {
         <Header onMobileMenuToggle={() => setIsMobileOpen(!isMobileOpen)} />
 
         {/* Dynamic Content */}
-        <main className="px-4 sm:px-6 lg:px-8 pt-20 py-8 relative z-10 max-w-7xl mx-auto w-full">
+        <main className="px-4 sm:px-6 lg:px-8 pt-6 py-8 relative z-10 max-w-7xl mx-auto w-full">
           {children}
         </main>
       </div>

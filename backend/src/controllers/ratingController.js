@@ -2,6 +2,7 @@ import Rating from '../models/Rating.js';
 import User from '../models/User.js';
 import mongoose from 'mongoose';
 import asyncHandler from '../utils/asyncHandler.js';
+import { sendRatingNotification } from '../services/notificationService.js';
 
 export const postRating = asyncHandler(async (req, res) => {
   const { targetUserId, jobId, score, comment, roleAtTime } = req.body;
@@ -24,6 +25,7 @@ export const postRating = asyncHandler(async (req, res) => {
     const avg = stats[0].avgRating;
     const count = stats[0].count;
     const targetUser = await User.findById(targetUserId);
+    const rater = await User.findById(req.user._id);
 
     if (targetUser) {
       if (targetUser.role === 'worker') {
@@ -35,6 +37,18 @@ export const postRating = asyncHandler(async (req, res) => {
         targetUser.employerProfile.employerRating = parseFloat(avg.toFixed(1));
       }
       await targetUser.save();
+    }
+
+    // Send rating notification to the rated user
+    try {
+      await sendRatingNotification(
+        req.io,
+        targetUserId,
+        rater?.fullName || 'User',
+        score
+      );
+    } catch (error) {
+      console.error('Failed to send rating notification:', error);
     }
   }
 

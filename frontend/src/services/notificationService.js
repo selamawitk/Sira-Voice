@@ -11,6 +11,7 @@ export const markAsRead = async (notificationId) => {
 };
 
 export const markAllAsRead = async () => {
-  const response = await api.put('/notifications/mark-all-read');
+  // Backend route is '/notifications/read-all'
+  const response = await api.put('/notifications/read-all');
   return response.data;
 };
