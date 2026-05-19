@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useContext } from 'react';
 import api from '../../services/api.js';
+import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 
 const GlassCard = ({ children, className = '' }) => (
   <div className={`bg-white/[0.03] border border-white/10 rounded-3xl p-6 backdrop-blur-md ${className}`}>
@@ -16,6 +17,7 @@ const statusPill = (status) => {
 };
 
 const ApplicationHistory = () => {
+  const { copy } = useContext(LanguageContext);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
 
@@ -33,22 +35,21 @@ const ApplicationHistory = () => {
   }, []);
 
   const grouped = useMemo(() => {
-    // Simple list (timeline-style)
     return items;
   }, [items]);
 
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-4xl font-black text-white">Application History</h1>
-        <p className="text-white/60 mt-2">Track every application, hire, and completion in one place.</p>
+        <h1 className="text-4xl font-black text-white">{copy.applicationHistoryTitle}</h1>
+        <p className="text-white/60 mt-2">{copy.trackHistorySubtitle}</p>
       </div>
 
       <GlassCard>
         {loading ? (
-          <p className="text-white/50">Loading…</p>
+          <p className="text-white/50">{copy.listening ? 'Loading…' : '...'}</p>
         ) : grouped.length === 0 ? (
-          <p className="text-white/50">No applications yet.</p>
+          <p className="text-white/50">{copy.noApplicationsYet}</p>
         ) : (
           <div className="space-y-4">
             {grouped.map((a) => (
@@ -63,7 +64,7 @@ const ApplicationHistory = () => {
                       Updated: <span className="text-white/70 font-bold">{new Date(a.updatedAt ?? a.createdAt).toLocaleString()}</span>
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex item-center gap-2">
                     <span className={statusPill(a.status)}>{a.status}</span>
                     {a.appliedByAI ? (
                       <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] bg-[#2BB8B8]/10 text-[#2BB8B8] border border-[#2BB8B8]/20">
@@ -82,4 +83,3 @@ const ApplicationHistory = () => {
 };
 
 export default ApplicationHistory;
-

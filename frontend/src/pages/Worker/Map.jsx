@@ -7,20 +7,23 @@ import api from '../../services/api.js';
 import { useVoice } from '../../hooks/useVoice.js';
 import { jobService } from '../../services/jobService.js';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
+import { MapPin, Navigation, Share2, Mic, Info } from 'lucide-react';
 
 const jobPin = new L.DivIcon({
   className: '',
   html: `
     <div style="
-      width: 14px; height: 14px;
+      width: 16px; height: 16px;
       border-radius: 999px;
-      background: rgba(148,163,184,0.9);
-      border: 2px solid rgba(255,255,255,0.7);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-    "></div>
+      background: #8B5CF6;
+      border: 2px solid rgba(255,255,255,0.9);
+      box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);
+      transition: transform 0.2s;
+    " class="hover:scale-125"></div>
   `,
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
+  popupAnchor: [0, -8]
 });
 
 const userDot = new L.DivIcon({
@@ -46,6 +49,22 @@ const userDot = new L.DivIcon({
         0% { transform: scale(0.8); opacity: 0.35; }
         70% { transform: scale(1.6); opacity: 0; }
         100% { transform: scale(1.6); opacity: 0; }
+      }
+      .dark-map-popup .leaflet-popup-content-wrapper {
+        background: #0B1519 !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 1.5rem !important;
+        padding: 4px !important;
+        box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5) !important;
+      }
+      .dark-map-popup .leaflet-popup-tip {
+        background: #0B1519 !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      }
+      .dark-map-popup .leaflet-popup-close-button {
+        color: rgba(255,255,255,0.4) !important;
+        padding: 8px 8px 0 0 !important;
       }
     </style>
   `,
@@ -176,22 +195,22 @@ const Map = () => {
   };
 
   return (
-    <div className="h-75 md:h-150 w-full rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl relative">
+    <div className="h-75 md:h-150 w-full rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl relative bg-[#060D0F]">
       {!isOnline && (
-        <div className="absolute top-0 left-0 right-0 z-30 bg-red-600 text-white text-center py-2 text-sm font-bold">
+        <div className="absolute top-0 left-0 right-0 z-30 bg-red-600 text-white text-center py-2 text-xs font-black uppercase tracking-wider shadow-md">
           Offline Mode - Viewing Cached Jobs
         </div>
       )}
       
       {isLoading && (
-        <div className="absolute top-4 left-4 z-20 space-y-3">
+        <div className="absolute top-4 left-4 z-20 space-y-3 pointer-events-none">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="bg-white/[0.03] border border-white/10 p-4 rounded-2xl animate-pulse">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white/10 rounded-xl"></div>
+            <div key={i} className="bg-[#0B1519]/80 backdrop-blur-md border border-white/5 p-4 rounded-2xl w-64 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-white/5 rounded-xl"></div>
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-white/10 rounded w-3/4"></div>
-                  <div className="h-3 bg-white/5 rounded w-1/2"></div>
+                  <div className="h-3 bg-white/10 rounded w-3/4"></div>
+                  <div className="h-2 bg-white/5 rounded w-1/2"></div>
                 </div>
               </div>
             </div>
@@ -199,63 +218,94 @@ const Map = () => {
         </div>
       )}
       
-      <MapContainer center={center} zoom={13} className="h-full w-full z-0">
+      <MapContainer center={center} zoom={13} className="h-full w-full z-0" zoomControl={false}>
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; OpenStreetMap contributors'
+          attribution='&copy; OpenStreetMap contributors &copy; CARTO'
         />
         <RecenterMap coords={center} />
+        
+        {/* User Location Node */}
         <Marker position={center} icon={userDot} />
+        
+        {/* Dynamic Proximity Mapping Filtering Loop */}
         {jobs.filter(j => {
           if (!j.location?.coordinates) return false;
           const pos = normalizeCoordinates(j.location.coordinates);
-          return pos ? getDistance(center[0], center[1], pos[0], pos[1]) <= 5000 : false;
+          // Standard tracking limit bound configuration
+          return pos ? getDistance(center[0], center[1], pos[0], pos[1]) <= 15000 : false;
         }).map(job => {
           const pos = normalizeCoordinates(job.location.coordinates);
-          return pos ? (
+          if (!pos) return null;
+
+          // Convert meters from getDistance into exact, clean kilometers
+          const distanceInMeters = getDistance(center[0], center[1], pos[0], pos[1]);
+          const distanceInKm = (distanceInMeters / 1000).toFixed(1);
+
+          return (
             <Marker key={job._id} position={pos} icon={jobPin}>
-              <Popup>
-                <div className="p-1 min-w-37.5">
-                  <h4 className="font-bold text-slate-900">{job.title}</h4>
-                  <p className="text-xs text-slate-600 mt-1">{job.location?.address || 'Addis Ababa'}</p>
-                  <p className="text-xs font-bold text-[#2BB8B8] mt-1">{job.salary ?? 0} ETB</p>
-                  <button
-                    className="mt-3 w-full px-3 py-2 rounded-lg bg-[#2BB8B8] text-white font-bold text-[10px] uppercase tracking-wider hover:brightness-110 transition disabled:opacity-50"
-                    onClick={() => handleApply(job._id)}
-                    disabled={applyJobId === job._id && (isListening || isProcessing)}
-                  >
-                    {applyJobId === job._id && (isListening || isProcessing) ? 'Processing...' : (lang?.copy?.mapApplyCta || 'Speak to Apply')}
-                  </button>
-                  <button
-                    type="button"
-                    className="mt-2 w-full px-3 py-2 rounded-lg bg-white/10 text-white font-bold text-[10px] uppercase tracking-wider hover:bg-white/20 transition"
-                    onClick={() => handleShare(job)}
-                  >
-                    {navigator.share ? 'Share Job' : 'Copy Job Link'}
-                  </button>
+              <Popup className="dark-map-popup" maxWidth={260}>
+                <div className="p-2 space-y-3">
+                  <div>
+                    <div className="flex items-center gap-1 text-[10px] text-[#2BB8B8] font-black uppercase tracking-widest bg-[#2BB8B8]/10 w-max px-2.5 py-1 rounded-md mb-2">
+                      <Navigation className="w-2.5 h-2.5 fill-current" />
+                      <span>{distanceInKm} km away</span>
+                    </div>
+                    <h4 className="font-black text-white text-sm tracking-tight leading-snug">{job.title}</h4>
+                    <p className="text-[11px] text-white/40 flex items-center gap-1 mt-1">
+                      <MapPin className="w-3 h-3 text-[#2BB8B8] shrink-0" />
+                      <span className="truncate">{job.location?.address || 'Addis Ababa'}</span>
+                    </p>
+                  </div>
+
+                  <div className="bg-white/[0.03] border border-white/5 p-2 rounded-xl flex items-center justify-between text-xs">
+                    <span className="text-white/40 font-bold">Est. Compensation</span>
+                    <span className="font-black text-emerald-400">{job.salary ?? 0} ETB</span>
+                  </div>
+
+                  <div className="grid grid-cols-5 gap-1.5 pt-0.5">
+                    <button
+                      className="col-span-4 px-3 py-2.5 rounded-xl bg-[#2BB8B8] hover:bg-[#229494] text-slate-950 font-black text-[10px] uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-teal-500/10"
+                      onClick={() => handleApply(job._id)}
+                      disabled={applyJobId === job._id && (isListening || isProcessing)}
+                    >
+                      <Mic className="w-3 h-3" />
+                      <span className="truncate">
+                        {applyJobId === job._id && (isListening || isProcessing) ? 'Processing...' : (lang?.copy?.mapApplyCta || 'Speak to Apply')}
+                      </span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      className="col-span-1 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 text-white transition-all cursor-pointer"
+                      onClick={() => handleShare(job)}
+                      title={navigator.share ? 'Share Job' : 'Copy Job Link'}
+                    >
+                      <Share2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               </Popup>
             </Marker>
-          ) : null;
+          );
         })}
       </MapContainer>
 
       {isLoading && (
-        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-[#0b1820]/80">
+        <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#060D0F]/80 backdrop-blur-xs">
           <div className="flex flex-col items-center gap-3 text-white">
-            <div className="h-12 w-12 rounded-full border-4 border-t-[#2BB8B8] border-white/20 animate-spin" />
-            <span className="text-sm uppercase tracking-[0.2em] text-white/70">Loading jobs...</span>
+            <div className="h-10 w-10 rounded-full border-2 border-white/10 border-t-[#2BB8B8] animate-spin" />
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/50">Triangulating Proximity Coordinates...</span>
           </div>
         </div>
       )}
       
-      <div className="absolute bottom-6 left-6 z-10 bg-[#1A2E35]/80 backdrop-blur-md border border-white/10 p-3 px-5 rounded-2xl shadow-2xl">
-        <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 bg-[#2BB8B8] rounded-full animate-pulse"></div>
-          <span className="text-white font-black text-[10px] uppercase tracking-widest">
-            {jobs.length} {lang?.copy?.availableJobs?.toLowerCase() ?? 'jobs found nearby'}
-          </span>
-        </div>
+      {/* Active Satellite Broadcast Counter Badge */}
+      <div className="absolute bottom-6 left-6 z-10 bg-[#0B1519]/90 backdrop-blur-md border border-white/5 p-2.5 px-4 rounded-xl shadow-xl flex items-center gap-3">
+        <div className="w-2 h-2 bg-[#2BB8B8] rounded-full animate-pulse"></div>
+        <span className="text-white/80 font-black text-[10px] uppercase tracking-widest">
+          {jobs.length} {lang?.copy?.availableJobs?.toLowerCase() ?? 'gigs mapped dynamic'}
+        </span>
       </div>
     </div>
   );

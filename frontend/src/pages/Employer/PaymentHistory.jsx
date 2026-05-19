@@ -1,8 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import api from '../../services/api.js';
+import { LanguageContext } from '../../context/LanguageContextInstance.jsx'; // 👈 Imported Language Context
 import { Loader2, Receipt, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 
 const PaymentHistory = () => {
+  const lang = useContext(LanguageContext); // 👈 Accessing localization brain
+  const t = lang?.copy || {}; // 👈 Shortcut configuration mapping object
+
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,48 +25,75 @@ const PaymentHistory = () => {
     }
   };
 
+  // Helper utility function updated to map status badges dynamically by active locale language string
   const getStatusStyles = (status) => {
-    switch (status?.toLowerCase()) {
+    const normalize = status?.toLowerCase();
+    
+    // Internal labels map dictionary matching design schemas
+    const statusLabels = {
+      am: { success: 'ተሳክቷል', pending: 'በጥበቃ ላይ', failed: 'አልተሳካም' },
+      or: { success: 'Milkaa’eera', pending: 'Eeggamaa jira', failed: 'Kufeera' },
+      en: { success: 'Success', pending: 'Pending', failed: 'Failed' }
+    };
+
+    const activeLang = lang?.lang || 'en';
+
+    switch (normalize) {
       case 'completed':
       case 'success':
         return {
           bg: 'bg-green-500/10',
           text: 'text-green-400',
           border: 'border-green-500/20',
-          icon: <CheckCircle2 className="w-3 h-3" />
+          icon: <CheckCircle2 className="w-3 h-3" />,
+          label: statusLabels[activeLang]?.success || 'Success'
         };
       case 'pending':
         return {
           bg: 'bg-yellow-500/10',
           text: 'text-yellow-400',
           border: 'border-yellow-500/20',
-          icon: <Clock className="w-3 h-3" />
+          icon: <Clock className="w-3 h-3" />,
+          label: statusLabels[activeLang]?.pending || 'Pending'
         };
       case 'failed':
         return {
           bg: 'bg-red-500/10',
           text: 'text-red-400',
           border: 'border-red-500/20',
-          icon: <AlertCircle className="w-3 h-3" />
+          icon: <AlertCircle className="w-3 h-3" />,
+          label: statusLabels[activeLang]?.failed || 'Failed'
         };
       default:
         return {
           bg: 'bg-white/5',
           text: 'text-white/40',
           border: 'border-white/10',
-          icon: null
+          icon: null,
+          label: status || ''
         };
     }
   };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* LOCALIZED HEADER BLOCK */}
       <div className="mb-10">
         <h1 className="text-4xl font-black text-white italic tracking-tighter">
-          PAYMENT <span className="text-[#2BB8B8]">HISTORY</span>
+          {lang?.lang === 'am' ? (
+            <>የክፍያ <span className="text-[#2BB8B8]">ታሪክ</span></>
+          ) : lang?.lang === 'or' ? (
+            <>SEENAA <span className="text-[#2BB8B8]">KAFALTII</span></>
+          ) : (
+            <>PAYMENT <span className="text-[#2BB8B8]">HISTORY</span></>
+          )}
         </h1>
         <p className="text-white/40 mt-2 font-medium uppercase text-xs tracking-widest">
-          Verified transactions and escrow releases
+          {lang?.lang === 'am' 
+            ? 'የተረጋገጡ የባንክ ዝውውሮች እና የባለአደራ ክፍያዎች' 
+            : lang?.lang === 'or' 
+            ? 'Dambii kafaltii mirkanaa’ee fi gadi lakkifama dhiyeessii' 
+            : 'Verified transactions and escrow releases'}
         </p>
       </div>
 
@@ -70,12 +101,16 @@ const PaymentHistory = () => {
         {loading ? (
           <div className="py-20 flex flex-col items-center gap-4">
             <Loader2 className="w-8 h-8 text-[#2BB8B8] animate-spin" />
-            <p className="text-white/20 font-black uppercase text-xs">Accessing Ledger...</p>
+            <p className="text-white/20 font-black uppercase text-xs">
+              {lang?.lang === 'am' ? 'መዝገቡን በመፈተሽ ላይ...' : lang?.lang === 'or' ? 'Kuusaa Maallaqa Sakatta’aa Jira...' : 'Accessing Ledger...'}
+            </p>
           </div>
         ) : payments.length === 0 ? (
           <div className="py-20 text-center">
             <Receipt className="w-12 h-12 text-white/10 mx-auto mb-4" />
-            <p className="text-white/20 font-black italic uppercase">No transaction history found</p>
+            <p className="text-white/20 font-black italic uppercase">
+              {lang?.lang === 'am' ? 'ምንም የክፍያ ታሪክ አልተገኘም' : lang?.lang === 'or' ? 'Seenaan kafaltii hin argamne' : 'No transaction history found'}
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-white/5">
@@ -93,10 +128,10 @@ const PaymentHistory = () => {
                       </div>
                       <div>
                         <h2 className="text-white font-black uppercase italic tracking-tight text-lg">
-                          {payment.worker?.fullName || 'External Transfer'}
+                          {payment.worker?.fullName || (lang?.lang === 'am' ? 'የውጭ ማስተላለፊያ' : lang?.lang === 'or' ? 'Dabarsa Alaa' : 'External Transfer')}
                         </h2>
                         <p className="text-white/40 text-xs font-bold uppercase tracking-wider">
-                          Project: {payment.job?.title || 'General Service'}
+                          {lang?.lang === 'am' ? 'ፕሮጀክት' : lang?.lang === 'or' ? 'Hojii' : 'Project'}: {payment.job?.title || (lang?.lang === 'am' ? 'አጠቃላይ አገልግሎት' : lang?.lang === 'or' ? 'Tajaajila Waliigalaa' : 'General Service')}
                         </p>
                         <p className="text-white/20 text-[10px] font-mono mt-1">
                           TXID: {payment.tx_ref || payment._id}
@@ -112,12 +147,13 @@ const PaymentHistory = () => {
                       <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${styles.bg} ${styles.text} ${styles.border}`}>
                         {styles.icon}
                         <span className="text-[10px] font-black uppercase tracking-tighter">
-                          {payment.status}
+                          {styles.label}
                         </span>
                       </div>
                       
+                      {/* Formatted Date Render UI matching device layout properties */}
                       <p className="hidden md:block text-white/20 text-[10px] font-bold uppercase mt-1">
-                        {new Date(payment.createdAt).toLocaleDateString('en-US', {
+                        {new Date(payment.createdAt).toLocaleDateString(lang?.lang === 'am' ? 'am-ET' : lang?.lang === 'or' ? 'om-ET' : 'en-US', {
                           month: 'short',
                           day: 'numeric',
                           year: 'numeric',

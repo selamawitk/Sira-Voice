@@ -34,8 +34,75 @@ api.interceptors.request.use(
 );
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // 🌐 LOW-DATA OFFLINE CACHING MANAGER
+    // Intercept successful GET operations on primary payload views
+    const cacheableEndpoints = [
+      '/users/profile',
+      '/contracts/worker/history',
+      '/jobs/nearby',
+      '/worker/profile'
+    ];
+
+    const matchesTarget = cacheableEndpoints.some((endpoint) => 
+      response.config.url?.includes(endpoint)
+    );
+
+    if (response.config.method === 'get' && matchesTarget) {
+      const cacheKey = `sira_cache_${response.config.url}`;
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify({
+          data: response.data,
+          timestamp: Date.now()
+        }));
+      } catch (storageError) {
+        console.warn('Local storage write limit reached. Caching bypassed.', storageError);
+      }
+    }
+
+    return response;
+  },
   (error) => {
+    const originalRequest = error.config;
+
+    // Detect if a network drop, timeout, or server failure has occurred
+    const isOfflineOrNetworkFailure = 
+      !error.response || 
+      error.code === 'ECONNABORTED' || 
+      error.response.status >= 500;
+
+    // Fallback gracefully to Localized Cache if offline
+    if (isOfflineOrNetworkFailure && originalRequest && originalRequest.method === 'get') {
+      const cacheKey = `sira_cache_${originalRequest.url}`;
+      const cachedString = localStorage.getItem(cacheKey);
+
+      if (cachedString) {
+        try {
+          const cachePackage = JSON.parse(cachedString);
+          console.warn(`🎯 serving offline fallback data cache payload for query: ${originalRequest.url}`);
+
+          // Decorate payload markers to optionally alert the UI layers of offline state fallback
+          if (cachePackage.data && typeof cachePackage.data === 'object') {
+            cachePackage.data._isOfflineCachedFallback = true;
+            cachePackage.data._cachedAt = cachePackage.timestamp;
+          }
+
+          // Force resolve response seamlessly down to the waiting view components
+          return Promise.resolve({
+            ...error,
+            status: 200,
+            statusText: 'OK (Offline Cache Fallback)',
+            headers: originalRequest.headers,
+            config: originalRequest,
+            data: cachePackage.data
+          });
+        } catch (parseError) {
+          console.error('Local backup string verification failed processing payload.', parseError);
+        }
+      }
+    }
+
+    // Retain original core edge logic parameters
     if (error.code === 'ECONNABORTED') {
       console.error('Request timed out');
     }

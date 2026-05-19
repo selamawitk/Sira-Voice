@@ -77,7 +77,8 @@ const Header = ({ onMobileMenuToggle }) => {
   };
 
   return (
-    <header className="px-6 md:px-10 py-6 flex justify-between items-center sticky top-0 bg-[#1A2E35]/70 backdrop-blur-md z-30 border-b border-white/5">
+    // Reverted to sticky top-0 and added w-full with relative limits so it honors your sidebar layout boundary
+    <header className="sticky top-0 w-full px-6 md:px-10 py-4 flex justify-between items-center bg-[#1A2E35]/80 backdrop-blur-md z-30 border-b border-white/5">
       <div className="flex items-center gap-4">
         <button className="md:hidden p-2 text-white/60" onClick={onMobileMenuToggle}>
           <Menu className="w-6 h-6" />
@@ -87,7 +88,7 @@ const Header = ({ onMobileMenuToggle }) => {
           <input
             type="text"
             placeholder={copy?.headerSearchPlaceholder ?? 'Search jobs by voice or text…'}
-            className="w-full bg-white/5 border border-white/10 rounded-2xl py-2.5 pl-12 pr-4 text-white text-sm outline-none focus:border-[#2BB8B8]/40 transition-all placeholder:text-white/30"
+            className="w-full bg-white/5 border border-white/10 rounded-2xl py-2 pl-12 pr-4 text-white text-sm outline-none focus:border-[#2BB8B8]/40 transition-all placeholder:text-white/30"
           />
         </div>
       </div>
@@ -98,7 +99,7 @@ const Header = ({ onMobileMenuToggle }) => {
           <select
             value={lang ?? 'en'}
             onChange={(e) => setLang?.(e.target.value)}
-            className="bg-[#1A2E35] border border-[#2BB8B8] text-[#2BB8B8] rounded-2xl px-4 py-2 text-sm font-bold outline-none shadow-inner shadow-[#2BB8B8]/10 focus:border-[#2BB8B8]"
+            className="bg-[#1A2E35] border border-[#2BB8B8] text-[#2BB8B8] rounded-2xl px-4 py-1.5 text-sm font-semibold outline-none shadow-inner shadow-[#2BB8B8]/10 focus:border-[#2BB8B8]"
           >
             {(options ?? []).map((opt) => (
               <option key={opt.key} value={opt.key} className="bg-[#1A2E35] text-[#2BB8B8]">
@@ -111,7 +112,7 @@ const Header = ({ onMobileMenuToggle }) => {
         <button
           type="button"
           onClick={clearNotifications}
-          className="relative p-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-[#2BB8B8] transition-all"
+          className="relative p-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-[#2BB8B8] transition-all"
         >
           <Bell className="w-5 h-5" />
           {hasUnread > 0 ? (
@@ -123,13 +124,13 @@ const Header = ({ onMobileMenuToggle }) => {
 
         <div className="flex items-center gap-3 pl-4 border-l border-white/10">
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-black text-white">{user?.fullName ?? 'Guest'}</p>
-            <p className="text-[10px] text-[#2BB8B8] font-black uppercase tracking-widest">
+            <p className="text-sm font-semibold text-white/90">{user?.fullName ?? 'Guest'}</p>
+            <p className="text-[10px] text-[#2BB8B8] font-medium uppercase tracking-widest mt-0.5">
               {user?.role ? `${user.role}` : 'Not signed in'}
             </p>
           </div>
-          <div className="w-10 h-10 rounded-2xl bg-linear-to-tr from-[#2BB8B8] to-cyan-400 p-0.5 shadow-lg shadow-[#2BB8B8]/10">
-            <div className="w-full h-full rounded-[14px] bg-[#1A2E35] flex items-center justify-center text-white font-black">
+          <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#2BB8B8] to-cyan-400 p-0.5 shadow-lg shadow-[#2BB8B8]/10">
+            <div className="w-full h-full rounded-[14px] bg-[#1A2E35] flex items-center justify-center text-white font-semibold text-sm">
               {(user?.fullName?.[0] ?? 'S').toUpperCase()}
             </div>
           </div>
@@ -137,7 +138,7 @@ const Header = ({ onMobileMenuToggle }) => {
             <button
               type="button"
               onClick={handleLogout}
-              className="ml-3 p-2 rounded-xl bg-[#1A2E35]/80 border border-white/10 text-white/70 hover:text-[#2BB8B8] transition-all"
+              className="ml-2 p-2 rounded-xl bg-[#1A2E35]/80 border border-white/10 text-white/70 hover:text-[#2BB8B8] transition-all"
             >
               <LogOut className="w-4 h-4" />
             </button>

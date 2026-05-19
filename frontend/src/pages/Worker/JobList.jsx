@@ -10,6 +10,7 @@ const JobList = () => {
   const [q, setQ] = useState('');
   const navigate = useNavigate();
   const lang = React.useContext(LanguageContext);
+  const copy = lang?.copy;
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -30,7 +31,7 @@ const JobList = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-black text-white">
-          {lang?.copy?.exploreJobsTitle ?? 'Explore Jobs'}
+          {copy?.exploreJobs ?? 'Explore Jobs'}
         </h2>
         
         <div className="flex gap-2 w-full md:w-auto">
@@ -40,7 +41,7 @@ const JobList = () => {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               className="bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:border-[#2BB8B8]/40 outline-none w-full placeholder:text-white/30"
-              placeholder={lang?.copy?.searchPlaceholder ?? "Search jobs..."}
+              placeholder={copy?.search ?? "Search jobs..."}
             />
           </div>
           
@@ -54,11 +55,11 @@ const JobList = () => {
         {loading ? (
           <div className="col-span-full py-10 text-center">
             <div className="inline-block w-6 h-6 border-2 border-[#2BB8B8]/20 border-t-[#2BB8B8] rounded-full animate-spin mb-2" />
-            <p className="text-white/50 text-sm font-medium">Loading jobs...</p>
+            <p className="text-white/50 text-sm font-medium">...</p>
           </div>
         ) : jobs.length === 0 ? (
           <div className="col-span-full py-20 text-center">
-            <p className="text-white/30 text-lg italic">No jobs found matching your criteria.</p>
+            <p className="text-white/30 text-lg italic">{copy?.noMatchesYet ?? 'No jobs found matching your criteria.'}</p>
           </div>
         ) : (
           jobs.map((job) => (
@@ -82,7 +83,7 @@ const JobList = () => {
                   {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : '—'}
                 </span>
                 <button className="text-[#2BB8B8] text-xs font-black uppercase tracking-widest group-hover:underline">
-                  Details →
+                  {copy?.detailsArrow ?? 'Details →'}
                 </button>
               </div>
             </div>

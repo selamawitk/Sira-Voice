@@ -16,6 +16,9 @@ const Ratings = () => {
   const user = auth?.user;
   const lang = useContext(LanguageContext);
 
+  const t = lang?.copy || {};
+  const activeLang = lang?.lang || 'en';
+
   const [loading, setLoading] = useState(true);
   const [apps, setApps] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -79,13 +82,14 @@ const Ratings = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-8">
+    /* Standardized global layout padding and max-width layout structure constraints */
+    <div className="max-w-7xl mx-auto px-4 pt-0 pb-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-semibold text-white">
-          {lang?.copy?.ratingsTitle || 'Ratings & Feedback'}
+        <h1 className="text-4xl font-semibold text-white tracking-tight normal-case">
+          {t.ratingsTitle || 'Ratings & Feedback'}
         </h1>
-        <p className="text-white/60 mt-2">
-          {lang?.copy?.ratingsSubtitle || 'Rate completed jobs to build trust and verified badges.'}
+        <p className="text-white/60 mt-2 font-medium text-sm normal-case">
+          {t.ratingsSubtitle || 'Rate completed jobs to build trust and verified badges.'}
         </p>
       </div>
 
@@ -95,13 +99,15 @@ const Ratings = () => {
         {loading ? (
           <div className="py-20 text-center">
             <div className="inline-block w-8 h-8 border-4 border-[#2BB8B8]/20 border-t-[#2BB8B8] rounded-full animate-spin mb-4" />
-            <p className="text-white/50 font-medium">Loading history...</p>
+            <p className="text-white/50 font-medium normal-case">
+              {activeLang === 'am' ? 'ታሪክ በመጫን ላይ...' : activeLang === 'or' ? 'Seenaa fe’aa jira...' : 'Loading history...'}
+            </p>
           </div>
         ) : completed.length === 0 ? (
           <div className="py-20 text-center">
             <Star className="w-12 h-12 text-white/20 mx-auto mb-4" />
-            <p className="text-white/40 text-lg">
-              {lang?.copy?.noCompletedJobs || 'No completed jobs to rate yet.'}
+            <p className="text-white/40 text-lg normal-case">
+              {activeLang === 'am' ? 'እስካሁን ደረጃ የሚሰጠው የተጠናቀቀ ስራ የለም።' : activeLang === 'or' ? 'Hojiin xumurame kan sadarkaan kennamuuf jiru ammallee hin jiru.' : 'No completed jobs to rate yet.'}
             </p>
           </div>
         ) : (
@@ -114,29 +120,39 @@ const Ratings = () => {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-white text-lg font-semibold">{a.job?.title || 'Untitled Job'}</p>
+                      <p className="text-white text-lg font-semibold capitalize">
+                        {a.job?.title || (activeLang === 'am' ? 'ያልተሰየመ ስራ' : activeLang === 'or' ? 'Hojii Mata-duree Hin Qabne' : 'Untitled Job')}
+                      </p>
                       {a.employer?.isVerified && (
-                        <span className="text-[#2BB8B8] text-xs font-medium">✓ Verified</span>
+                        <span className="text-[#2BB8B8] text-xs font-medium normal-case">
+                          ✓ {activeLang === 'am' ? 'የተረጋገጠ' : activeLang === 'or' ? 'Mirkanaa’e' : 'Verified'}
+                        </span>
                       )}
                     </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 normal-case">
                       <p className="text-white/60 text-sm">
-                        📍 {a.job?.location?.address || 'Addis Ababa'}
+                        📍 {a.job?.location?.address || (activeLang === 'am' ? 'አዲስ አበባ' : 'Addis Ababa')}
                       </p>
                       <p className="text-[#2BB8B8] text-sm font-semibold">
-                        💰 {(a.job?.salary || 0).toLocaleString()} ETB
+                        💰 {(a.job?.salary || 0).toLocaleString()} {activeLang === 'am' ? 'ብር' : 'ETB'}
                       </p>
                       <p className="text-white/60 text-xs uppercase">
-                        Status: <span className="text-white/80">{a.status}</span>
+                        {activeLang === 'am' ? 'ሁኔታ' : activeLang === 'or' ? 'Haala' : 'Status'}:{' '}
+                        <span className="text-white/80 lowercase">
+                          {a.status === 'completed' 
+                            ? (activeLang === 'am' ? 'ተጠናቋል' : activeLang === 'or' ? 'Xumurameera' : 'completed')
+                            : a.status
+                          }
+                        </span>
                       </p>
                     </div>
                   </div>
 
                   <button
                     onClick={() => openRate(a)}
-                    className="w-full md:w-auto px-8 py-3 rounded-2xl bg-[#2BB8B8] text-slate-950 font-semibold hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(43,184,184,0.2)]"
+                    className="w-full md:w-auto px-8 py-3 rounded-2xl bg-[#2BB8B8] text-slate-950 font-semibold hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(43,184,184,0.2)] normal-case"
                   >
-                    {lang?.copy?.rateButton || 'Rate Experience'}
+                    {t.rateButton || (activeLang === 'am' ? 'ደረጃ ስጥ' : activeLang === 'or' ? 'Sadarkaa Kenni' : 'Rate Experience')}
                   </button>
                 </div>
               </div>

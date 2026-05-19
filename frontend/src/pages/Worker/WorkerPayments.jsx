@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState, useMemo } from 'react';
-import { TrendingUp, Download, Eye, ArrowDownRight } from 'lucide-react';
+import { TrendingUp, Download, Eye, EyeOff, ArrowDownRight } from 'lucide-react';
 import api from '../../services/api.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
@@ -15,11 +15,15 @@ const WorkerPayments = () => {
   const auth = useContext(AuthContext);
   const user = auth?.user;
   const lang = useContext(LanguageContext);
+  const copy = lang?.copy;
   const toast = useContext(ToastContext);
 
   const [loading, setLoading] = useState(true);
   const [payments, setPayments] = useState([]);
   const [walletBalance, setWalletBalance] = useState(0);
+
+  // Visibility state for masking financial values
+  const [showBalances, setShowBalances] = useState(true);
 
   // Form input elements state for Chapa withdrawals
   const [showWithdrawForm, setShowWithdrawForm] = useState(false);
@@ -33,7 +37,6 @@ const WorkerPayments = () => {
     if (!user?._id) return;
     setLoading(true);
     try {
-      // Pointed to your unified transaction schema endpoint
       const res = await api.get('/transactions/worker/history');
       if (res.data?.success) {
         setPayments(res.data.data || []);
@@ -41,7 +44,7 @@ const WorkerPayments = () => {
       }
     } catch (error) {
       console.error('Failed to fetch worker payments:', error);
-      toast?.show?.('Failed to load transaction history', 'error');
+      toast?.show?.(copy?.failedToLoadTransactions || 'Failed to load transaction history', 'error');
     } finally {
       setLoading(false);
     }
@@ -51,7 +54,6 @@ const WorkerPayments = () => {
     fetchPayments();
   }, [user?._id, toast]);
 
-  // Compute stats safely directly out of your unified Transaction documents
   const stats = useMemo(() => {
     const successfulEarnings = payments.filter(p => p.status === 'success' && p.purpose.includes('Earning'));
     const pendingWithdrawals = payments.filter(p => p.status === 'pending' && p.purpose.includes('payout'));
@@ -88,7 +90,7 @@ const WorkerPayments = () => {
         setAccountNumber('');
         setBankCode('');
         setShowWithdrawForm(false);
-        fetchPayments(); // Refresh list balances and histories instantly
+        fetchPayments();
       }
     } catch (error) {
       console.error('Payout initiation failed:', error);
@@ -113,15 +115,15 @@ const WorkerPayments = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-8">
+    <div className="space-y-6">
       {/* Header with quick action button */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-semibold text-white">
-            {lang?.copy?.paymentsTitle || 'Your Wallet & Earnings'}
+          <h1 className="text-3xl font-black text-white">
+            {copy?.walletAndEarningsTitle || 'Your Wallet & Earnings'}
           </h1>
-          <p className="text-white/60 mt-2">
-            Track your balance, statement history, and request bank disbursements.
+          <p className="text-gray-400 mt-2">
+            {copy?.walletSubtitle || 'Track your balance, statement history, and request bank disbursements.'}
           </p>
         </div>
         <button
@@ -129,7 +131,7 @@ const WorkerPayments = () => {
           className="bg-[#2BB8B8] hover:bg-[#239696] text-white px-6 py-3 rounded-2xl font-medium shadow-lg shadow-[#2BB8B8]/10 transition-all flex items-center justify-center gap-2 self-start sm:self-center"
         >
           <ArrowDownRight className="w-5 h-5" />
-          {showWithdrawForm ? 'Close Withdrawal panel' : 'Withdraw Funds'}
+          {showWithdrawForm ? (copy?.close || 'Close') : (copy?.withdrawFunds || 'Withdraw Funds')}
         </button>
       </div>
 
@@ -140,7 +142,7 @@ const WorkerPayments = () => {
           <form onSubmit={handleWithdrawSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-white/60 mb-1">Amount (ETB)</label>
+                <label className="block text-xs font-medium text-white/60 mb-1">{copy?.fieldSalary || 'Salary (ETB)'}</label>
                 <input type="number" min="10" placeholder="e.g. 500" value={amount} onChange={e => setAmount(e.target.value)} required className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-white outline-none focus:border-[#2BB8B8]" />
               </div>
               <div>
@@ -163,7 +165,7 @@ const WorkerPayments = () => {
               <input type="text" placeholder="Enter matching bank account digits" value={accountNumber} onChange={e => setAccountNumber(e.target.value)} required className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-white outline-none focus:border-[#2BB8B8]" />
             </div>
             <button type="submit" disabled={submitLoading} className="w-full bg-[#2BB8B8] text-white p-3 rounded-xl font-medium hover:bg-[#239696] transition-all disabled:bg-white/10">
-              {submitLoading ? 'Authorizing Chapa Transfer...' : `Confirm & Withdraw ${amount ? amount + ' ETB' : ''}`}
+              {submitLoading ? 'Authorizing Chapa Transfer...' : `${copy?.withdrawFunds || 'Withdraw Funds'} ${amount ? amount + ' ETB' : ''}`}
             </button>
           </form>
         </GlassCard>
@@ -176,13 +178,13 @@ const WorkerPayments = () => {
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-teal-500 opacity-[0.05] blur-[80px] pointer-events-none" />
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-teal-400 font-medium text-sm">Available Balance</p>
+              <p className="text-teal-400 font-medium text-sm">{copy?.availableBalance || 'Available Balance'}</p>
               <TrendingUp className="w-5 h-5 text-teal-400" />
             </div>
             <p className="text-4xl font-bold text-white">
-              {walletBalance.toLocaleString()} <span className="text-xl font-light text-white/60">ETB</span>
+              {showBalances ? walletBalance.toLocaleString() : '••••'} <span className="text-xl font-light text-white/60">ETB</span>
             </p>
-            <p className="text-white/40 text-xs mt-2">Ready for immediate withdrawal</p>
+            <p className="text-white/40 text-xs mt-2">{copy?.readyForImmediateWithdrawal || 'Ready for immediate withdrawal'}</p>
           </div>
         </GlassCard>
 
@@ -191,31 +193,40 @@ const WorkerPayments = () => {
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-green-500 opacity-[0.03] blur-[80px] pointer-events-none" />
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-white/60 font-medium text-sm">Total Lifetime Earned</p>
+              <p className="text-white/60 font-medium text-sm">{copy?.totalLifetimeEarned || 'Total Lifetime Earned'}</p>
               <Download className="w-5 h-5 text-green-400" />
             </div>
             <p className="text-3xl font-semibold text-white">
-              {stats.totalReceived.toLocaleString()} ETB
+              {showBalances ? `${stats.totalReceived.toLocaleString()} ETB` : '•••• ETB'}
             </p>
             <p className="text-white/40 text-xs mt-2">
-              From {stats.totalPayments} completed job allocations
+              {(copy?.fromJobAllocations || 'From completed job allocations').replace('{count}', stats.totalPayments)}
             </p>
           </div>
         </GlassCard>
 
-        {/* Pending Processing Items */}
+        {/* Pending Processing Items with Functional Eye Toggle Button */}
         <GlassCard className="relative overflow-hidden">
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-yellow-500 opacity-[0.03] blur-[80px] pointer-events-none" />
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-white/60 font-medium text-sm">In Transfer Processing</p>
-              <Eye className="w-5 h-5 text-yellow-400" />
+              <p className="text-white/60 font-medium text-sm">{copy?.inTransferProcessing || 'In Transfer Processing'}</p>
+              <button 
+                onClick={() => setShowBalances(!showBalances)} 
+                className="p-1.5 rounded-xl hover:bg-white/10 transition-colors text-yellow-400 focus:outline-none"
+                aria-label="Toggle balance visibility"
+              >
+                {showBalances ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+              </button>
             </div>
             <p className="text-3xl font-semibold text-white">
-              {stats.pendingAmount.toLocaleString()} ETB
+              {showBalances ? `${stats.pendingAmount.toLocaleString()} ETB` : '•••• ETB'}
             </p>
             <p className="text-white/40 text-xs mt-2">
-              {stats.pendingPayments} cashout event{stats.pendingPayments !== 1 ? 's' : ''} awaiting transit
+              {stats.pendingPayments === 0 
+                ? (copy?.cashoutEventsAwaiting || '0 cashout events awaiting transit') 
+                : `${stats.pendingPayments} ${(copy?.inTransferProcessing || 'In Transfer Processing').toLowerCase()}`
+              }
             </p>
           </div>
         </GlassCard>
@@ -226,18 +237,18 @@ const WorkerPayments = () => {
         <div className="absolute -top-24 -left-24 w-64 h-64 bg-[#2BB8B8] opacity-[0.03] blur-[80px] pointer-events-none" />
         <div className="relative z-10">
           <h2 className="text-xl font-semibold text-white mb-6">
-            {lang?.copy?.paymentHistory || 'Statement Transaction Ledger'}
+            {copy?.statementLedger || 'Statement Transaction Ledger'}
           </h2>
 
           {loading ? (
             <div className="py-20 text-center">
               <div className="inline-block w-8 h-8 border-4 border-[#2BB8B8]/20 border-t-[#2BB8B8] rounded-full animate-spin mb-4" />
-              <p className="text-white/50 font-medium">Reading secure financial blocks...</p>
+              <p className="text-white/50 font-medium">{copy?.scanningDatabase || 'Scanning database...'}</p>
             </div>
           ) : payments.length === 0 ? (
             <div className="py-20 text-center">
               <p className="text-white/40 text-lg">
-                {lang?.copy?.noPaymentsYet || 'No transactions logged on this account yet.'}
+                {copy?.noTransactionsLogged || 'No transactions logged on this account yet.'}
               </p>
             </div>
           ) : (
@@ -245,7 +256,7 @@ const WorkerPayments = () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-white/10 text-left">
-                    <th className="py-3 px-4 text-white/60 font-medium text-sm">Description Purpose</th>
+                    <th className="py-3 px-4 text-white/60 font-medium text-sm">{copy?.fieldDescription || 'Description'}</th>
                     <th className="py-3 px-4 text-white/60 font-medium text-sm">Counterparty Target</th>
                     <th className="py-3 px-4 text-white/60 font-medium text-sm text-right">Transaction Amount</th>
                     <th className="py-3 px-4 text-white/60 font-medium text-sm text-center">Status</th>
@@ -272,7 +283,10 @@ const WorkerPayments = () => {
                         </td>
                         <td className="py-4 px-4 text-right">
                           <p className={`font-semibold ${isWithdrawal ? 'text-rose-400' : 'text-emerald-400'}`}>
-                            {isWithdrawal ? '-' : '+'}{payment.amount?.toLocaleString()} ETB
+                            {showBalances 
+                              ? `${isWithdrawal ? '-' : '+'}${payment.amount?.toLocaleString()} ETB`
+                              : '•••• ETB'
+                            }
                           </p>
                         </td>
                         <td className="py-4 px-4 text-center">

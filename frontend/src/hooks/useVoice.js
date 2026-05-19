@@ -42,6 +42,7 @@ export const useVoice = () => {
   };
 
   const startListening = async (onComplete, options = {}) => {
+    // Default action to 'voice-action' to support conversational matching endpoints
     const { action = 'voice-action', jobId = null } = options;
 
     if (isListening) return;
@@ -59,9 +60,16 @@ export const useVoice = () => {
         },
       });
 
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus',
-      });
+      // Unified cross-browser container parameters layout matching webm standards
+      let optionsMime = { mimeType: 'audio/webm;codecs=opus' };
+      if (!MediaRecorder.isTypeSupported(optionsMime.mimeType)) {
+        optionsMime = { mimeType: 'audio/ogg;codecs=opus' };
+        if (!MediaRecorder.isTypeSupported(optionsMime.mimeType)) {
+          optionsMime = { mimeType: 'audio/mp4' }; // Fallback container validation logic
+        }
+      }
+
+      const mediaRecorder = new MediaRecorder(stream, optionsMime);
 
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
@@ -81,7 +89,7 @@ export const useVoice = () => {
 
         try {
           const audioBlob = new Blob(audioChunksRef.current, {
-            type: 'audio/webm',
+            type: mediaRecorder.mimeType,
           });
 
           const formData = new FormData();
@@ -91,7 +99,7 @@ export const useVoice = () => {
           if (jobId) formData.append('jobId', jobId);
           if (action) formData.append('action', action);
 
-          // Choose endpoint based on action
+          // Route payloads between multi-factor auth files or parsing intents
           const endpoint = (action === 'register' || action === 'login') 
             ? '/auth/voice-auth' 
             : '/ai/voice-action';
@@ -105,16 +113,19 @@ export const useVoice = () => {
           );
 
           const response = await Promise.race([request, timeout]);
-
           const data = response.data;
 
-          setResult(data);
-          setTranscript(data.transcript || '');
+          // Normalize the structure so the hook seamlessly maps to your TalkToSira template layout
+          const normalizedResult = {
+            transcript: data.transcript || '',
+            actionTaken: data.result?.actionTaken || data.actionTaken || null,
+            data: data.result?.data || data.data || []
+          };
 
-          if (
-            (action === 'register' || action === 'login') &&
-            data.token
-          ) {
+          setResult(data);
+          setTranscript(normalizedResult.transcript);
+
+          if ((action === 'register' || action === 'login') && data.token) {
             authContext?.login?.(data);
 
             toastContext?.show?.(
@@ -125,8 +136,12 @@ export const useVoice = () => {
             );
           }
 
-          onComplete?.(data);
-} catch {
+          // Fires structural updates directly back into your UI state
+          if (onComplete && typeof onComplete === 'function') {
+            onComplete(normalizedResult);
+          }
+        } catch (err) {
+          console.error('Error handling recorded audio payload chunks:', err);
           setError('AI processing failed. Try again.');
 
           toastContext?.show?.(
@@ -135,7 +150,7 @@ export const useVoice = () => {
           );
         } finally {
           setIsProcessing(false);
-
+          // Kill active mic lines immediately on completion to clear mobile hardware bars
           stream.getTracks().forEach((t) => t.stop());
         }
       };
@@ -143,10 +158,12 @@ export const useVoice = () => {
       mediaRecorder.start();
       setIsListening(true);
 
+      // Auto-stop window configured for safety boundaries
       timeoutRef.current = setTimeout(() => {
         stopListening();
-      }, 12000);
-    } catch {
+      }, 10000);
+    } catch (err) {
+      console.error('Failed to open microphone capture streams:', err);
       setError('Microphone access denied');
 
       toastContext?.show?.(
