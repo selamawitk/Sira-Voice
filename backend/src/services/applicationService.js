@@ -11,7 +11,10 @@ export const processHiring = async (applicationId, status) => {
   await application.save();
 
   if (status === 'accepted') {
-    await Job.findByIdAndUpdate(application.job._id, { status: 'in-progress' });
+    await Job.findByIdAndUpdate(application.job._id, { 
+      status: 'in-progress',
+      worker: application.worker._id
+    });
 
     await Contract.create({
       employerId: application.job.employer,

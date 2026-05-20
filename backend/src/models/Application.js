@@ -1,52 +1,76 @@
 import mongoose from 'mongoose';
 
-const applicationSchema = new mongoose.Schema({
-  worker: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+const applicationSchema = new mongoose.Schema(
+  {
+    worker: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+    job: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Job',
+      required: true,
+      index: true,
+    },
+    employer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'accepted', 'rejected', 'completed', 'cancelled'],
+      default: 'pending',
+    },
+    appliedByAI: {
+      type: Boolean,
+      default: false,
+    },
+    matchScore: {
+      type: Number,
+      default: 0,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['unpaid', 'pending', 'paid', 'refunded'],
+      default: 'unpaid',
+    },
+    note: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    workerSnapshot: {
+      fullName: String,
+      profileImage: String,
+      skills: [String],
+      bio: String,
+      experienceYears: Number,
+      hourlyRate: Number,
+      location: {
+        city: String,
+        region: String,
+        country: String,
+      },
+      averageRating: Number,
+      totalRatings: Number,
+      completedJobs: Number,
+      availability: String,
+    },
+    employerSnapshot: {
+      fullName: String,
+      companyName: String,
+      profileImage: String,
+    },
   },
-  job: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Job',
-    required: true
-  },
-  employer: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  status: {
-    type: String,
-    enum: ['pending', 'accepted', 'rejected', 'completed', 'cancelled'],
-    default: 'pending'
-  },
-  // Tracks if the AI Agent automatically suggested this worker
-  appliedByAI: {
-    type: Boolean,
-    default: false
-  },
-  // The Gemini-calculated compatibility (0-100)
-  matchScore: {
-    type: Number,
-    default: 0
-  },
-  // Tracks the Chapa transaction status for this specific hire
-  paymentStatus: {
-    type: String,
-    enum: ['unpaid', 'pending', 'paid', 'refunded'],
-    default: 'unpaid'
-  },
-  note: {
-    type: String,
-    trim: true
+  {
+    timestamps: true,
   }
-}, { 
-  timestamps: true 
-});
+);
 
 applicationSchema.index({ worker: 1, job: 1 }, { unique: true });
 
-const Application = mongoose.model('Application', applicationSchema);
-
-export default Application;
+export default mongoose.model('Application', applicationSchema);

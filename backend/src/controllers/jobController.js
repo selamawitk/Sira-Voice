@@ -1,6 +1,6 @@
 import Job from '../models/Job.js';
 import User from '../models/User.js';
-import Transaction from '../models/Transaction.js'; // Added missing transaction ledger connection
+import Transaction from '../models/Transaction.js'; 
 import asyncHandler from '../utils/asyncHandler.js';
 import { findMatchingWorkers } from '../services/jobMatcher.js';
 import { analyzeJobForScam } from '../services/aiService.js';
@@ -46,7 +46,8 @@ const normalizeLocationCoordinates = (location) => {
 };
 
 export const processNewJobMatches = async (job, io) => {
-  const matches = await findMatchingWorkers(job);
+  // FIX: Passed io as the second parameter so notificationService can push matching updates
+  const matches = await findMatchingWorkers(job, io);
   const nonAutoMatches = [];
 
   for (const match of matches) {
@@ -183,7 +184,8 @@ export const getJobMatches = asyncHandler(async (req, res) => {
     throw new Error('Job not found');
   }
 
-  const rankedWorkers = await findMatchingWorkers(job);
+  // FIX: Passed req.io here as well to preserve real-time notification capability during programmatic checks
+  const rankedWorkers = await findMatchingWorkers(job, req.io);
   
   res.json({
     success: true,

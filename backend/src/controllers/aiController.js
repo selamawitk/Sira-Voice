@@ -9,15 +9,11 @@ import {
 import { transcribeAudio } from '../services/voiceService.js';
 import { createApplicationLogic } from './applicationController.js';
 import { processNewJobMatches } from './jobController.js';
+import { findMatchingWorkers } from '../services/jobMatcher.js';
 
 import Job from '../models/Job.js';
 import User from '../models/User.js';
 
-/**
- * 🎤 FAST VOICE PIPELINE
- * audio → transcription → AI (text only)
- * NO AUTH LOGIC
- */
 export const processVoiceAction = asyncHandler(async (req, res) => {
   let text = req.body.transcript;
   let detectedLang = req.body.language || 'unknown';
@@ -46,9 +42,6 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
     data: []
   };
 
-  /**
-   * 🟢 POST JOB (EMPLOYER ONLY)
-   */
   if (intent.intent === 'post' && req.user?.role === 'employer') {
     const job = await Job.create({
       employer: req.user._id,
@@ -67,14 +60,12 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
     });
 
     await processNewJobMatches(job, req.io);
+    await findMatchingWorkers(job);
 
     response.actionTaken = 'JOB_CREATED';
     response.data = job;
   }
 
-  /**
-   * 🟡 APPLY (WORKER ONLY)
-   */
   else if (intent.intent === 'apply' && req.user?.role === 'worker') {
     const jobId = req.body.jobId;
 
@@ -100,9 +91,6 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
     };
   }
 
-  /**
-   * 🔵 SEARCH JOBS
-   */
   else if (intent.intent === 'search') {
     const jobs = await Job.find({
       $or: [
@@ -127,9 +115,6 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
     response.data = jobs;
   }
 
-  /**
-   * 🟣 PROFILE UPDATE (VOICE CV ONLY)
-   */
   else if (intent.intent === 'profile' && req.user) {
     const user = await User.findById(req.user._id);
 
@@ -154,9 +139,6 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
   return res.json(response);
 });
 
-/**
- * 🔍 VOICE JOB SEARCH ONLY
- */
 export const voiceJobSearch = asyncHandler(async (req, res) => {
   let text = req.body.transcript;
 
@@ -199,9 +181,6 @@ export const voiceJobSearch = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * 🎤 VOICE CV BUILDER (ONLY FEATURE YOU KEEP)
- */
 export const processVoiceCV = asyncHandler(async (req, res) => {
   let text = req.body.transcript;
   let voiceUrl = '';
@@ -245,9 +224,6 @@ export const processVoiceCV = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * ⚠️ JOB SAFETY CHECK
- */
 export const checkJobSafety = asyncHandler(async (req, res) => {
   const job = await Job.findById(req.params.jobId);
 

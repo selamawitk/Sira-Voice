@@ -8,7 +8,17 @@ const notificationSchema = new mongoose.Schema({
   },
   type: { 
     type: String, 
-    enum: ['JOB_MATCH', 'HIRE', 'PAYMENT', 'RATING', 'SYSTEM'], 
+    enum: [
+      'JOB_MATCH', 
+      'HIRE', 
+      'PAYMENT', 
+      'RATING', 
+      'SYSTEM', 
+      'verification', 
+      'payment_success', 
+      'PAYMENT_RECEIVED', 
+      'PAYMENT_SENT'
+    ], 
     default: 'SYSTEM' 
   },
   title: { 

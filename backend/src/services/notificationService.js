@@ -1,8 +1,7 @@
 import Notification from '../models/Notification.js';
+import User from '../models/User.js';
+import { sendSms } from './smsService.js';
 
-/**
- * Send real-time notification and save to database
- */
 export const sendRealTimeNotification = async (io, userId, data) => {
   try {
     const notificationData = {
@@ -28,24 +27,19 @@ export const sendRealTimeNotification = async (io, userId, data) => {
         _id: newNotification._id,
         title: data.title,
         message: data.message,
-        type: data.type,
+        type: data.type || 'SYSTEM',
         metadata: newNotification.metadata,
         isRead: false,
         createdAt: newNotification.createdAt
       });
     }
 
-    console.log(`🔔 Notification sent to user: ${userId}`);
     return newNotification;
   } catch (error) {
-    console.error('❌ Notification Error:', error.message);
     throw error;
   }
 };
 
-/**
- * Send JOB_MATCH notification to worker
- */
 export const sendJobMatchNotification = async (io, workerId, jobId, jobTitle) => {
   return sendRealTimeNotification(io, workerId, {
     type: 'JOB_MATCH',
@@ -56,47 +50,64 @@ export const sendJobMatchNotification = async (io, workerId, jobId, jobTitle) =>
   });
 };
 
-/**
- * Send HIRE notification to worker
- */
+export const sendWorkerRankNotification = async (io, workerId, jobId, jobTitle, rank) => {
+  return sendRealTimeNotification(io, workerId, {
+    type: 'JOB_MATCH',
+    title: 'Top Ranked Match! 🚀',
+    message: `Great news! You have been ranked #${rank} for the job: "${jobTitle}".`,
+    jobId,
+    additionalData: { action: 'view_job', rank }
+  });
+};
+
 export const sendHireNotification = async (io, workerId, employerName, jobTitle, contractId) => {
   return sendRealTimeNotification(io, workerId, {
     type: 'HIRE',
-    title: 'You\'ve been hired! 🎉',
+    title: "You've been hired! 🎉",
     message: `${employerName} hired you for "${jobTitle}". Check your contracts.`,
     contractId,
     additionalData: { action: 'view_contract' }
   });
 };
 
-/**
- * Send PAYMENT notification to worker
- */
-export const sendPaymentNotification = async (io, workerId, amount, jobTitle, paymentId) => {
-  return sendRealTimeNotification(io, workerId, {
+export const sendPaymentNotification = async (io, workerId, amount, jobTitle, contractId, options = {}) => {
+  const notification = await sendRealTimeNotification(io, workerId, {
     type: 'PAYMENT',
     title: 'Payment Received! 💰',
     message: `You received ETB ${amount} for "${jobTitle}".`,
-    paymentId,
-    additionalData: { action: 'view_payment' }
+    contractId,
+    additionalData: { 
+      action: 'view_payment',
+      sendSMS: options.sendSMS || false
+    }
   });
+
+  if (options.sendSMS) {
+    try {
+      const worker = await User.findById(workerId).select('phone');
+      if (worker && worker.phone) {
+        await sendSms({
+          to: worker.phone,
+          message: `💵 Payment Received: You have been paid ETB ${amount} for "${jobTitle}". Check your Sira Voice dashboard.`
+        });
+      }
+    } catch (smsError) {
+      console.error(smsError.message);
+    }
+  }
+
+  return notification;
 };
 
-/**
- * Send RATING notification to worker
- */
 export const sendRatingNotification = async (io, workerId, raterName, score) => {
   return sendRealTimeNotification(io, workerId, {
     type: 'RATING',
-    title: 'You\'ve been rated! ⭐',
+    title: "You've been rated! ⭐",
     message: `${raterName} gave you ${score} stars.`,
     additionalData: { action: 'view_rating' }
   });
 };
 
-/**
- * Send system notification to user
- */
 export const sendSystemNotification = async (io, userId, title, message, metadata = {}) => {
   return sendRealTimeNotification(io, userId, {
     type: 'SYSTEM',
