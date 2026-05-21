@@ -1,30 +1,48 @@
 import Transaction from '../models/Transaction.js';
 import User from '../models/User.js';
 import asyncHandler from '../utils/asyncHandler.js';
-import axios from 'axios'; // Ensure axios is installed for API requests
+import axios from 'axios';
 
-// @desc    Get worker payment and payout withdrawal history
-// @route   GET /api/transactions/worker/history
-// @access  Protected/Worker
 export const getWorkerHistory = asyncHandler(async (req, res) => {
-  const history = await Transaction.find({ worker: req.user._id })
+  const targetWorkerId = req.params.id || req.user._id;
+
+  const history = await Transaction.find({ worker: targetWorkerId })
     .populate('employer', 'fullName')
     .populate('job', 'title category')
     .sort({ createdAt: -1 });
 
-  const walletBalance = req.user.workerProfile?.balance || 0;
+  let walletBalance = 0;
+  if (req.params.id) {
+    const targetUser = await User.findById(req.params.id);
+    walletBalance = targetUser?.workerProfile?.balance || 0;
+  } else {
+    walletBalance = req.user.workerProfile?.balance || 0;
+  }
+
+  const formattedHistory = history.map((tx) => {
+    let titleContext = tx.job?.title || 'System Transaction';
+    if (tx.purpose === 'worker_payout_withdrawal') {
+      titleContext = 'Wallet Payout Withdrawal';
+    }
+
+    return {
+      _id: tx._id,
+      title: titleContext,
+      employer: tx.employer?.fullName || 'Sira Platform Partner',
+      payout: tx.amount,
+      status: tx.status,
+      date: tx.paidAt ? new Date(tx.paidAt).toLocaleDateString() : new Date(tx.createdAt).toLocaleDateString(),
+    };
+  });
 
   res.json({
     success: true,
     balance: walletBalance,
-    count: history.length,
-    data: history
+    count: formattedHistory.length,
+    data: formattedHistory
   });
 });
 
-// @desc    Worker requests an automated withdrawal via Chapa Transfers API
-// @route   POST /api/transactions/worker/payout
-// @access  Protected/Worker
 export const requestPayout = asyncHandler(async (req, res) => {
   const { amount, account_name, account_number, bank_code } = req.body;
   const workerId = req.user._id;
@@ -45,13 +63,10 @@ export const requestPayout = asyncHandler(async (req, res) => {
 
   const tx_ref = `PAYOUT-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-  // 1. Deduct balance immediately to prevent double-withdrawal attacks
   user.workerProfile.balance -= numericAmount;
   await user.save();
 
   try {
-    // 2. Initiate Chapa Transfer Request
-    // Bank codes can be found in Chapa's documentation (e.g., CBE, Telebirr, Awash)
     const chapaResponse = await axios.post(
       'https://api.chapa.co/v1/transfers',
       {
@@ -70,7 +85,6 @@ export const requestPayout = asyncHandler(async (req, res) => {
       }
     );
 
-    // 3. Create a successful audit ledger if Chapa accepts the request
     const transaction = await Transaction.create({
       employer: workerId,
       worker: workerId,
@@ -91,11 +105,9 @@ export const requestPayout = asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
-    // 4. Rollback safety net: If Chapa rejects the API call, refund the worker's app wallet balance
     user.workerProfile.balance += numericAmount;
     await user.save();
 
-    // Log the failed transaction attempt for troubleshooting records
     await Transaction.create({
       employer: workerId,
       worker: workerId,

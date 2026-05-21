@@ -27,9 +27,7 @@ export const initCronJobs = (io) => {
         }).limit(10);
 
         for (const worker of matchingWorkers) {
-          const hasAutoApplyAccess = worker.isPremium === true;
-
-          if (hasAutoApplyAccess && worker.workerProfile.agentPreferences?.autoApply) {
+          if (worker.workerProfile.agentPreferences?.autoApply) {
             try {
               await createApplicationLogic(job._id, worker._id, io, true);
               console.log(`✅ Auto-Applied: Worker ${worker.fullName} to Job ${job.title}`);

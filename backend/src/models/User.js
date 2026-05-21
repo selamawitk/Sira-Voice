@@ -53,13 +53,22 @@ const userSchema = new mongoose.Schema(
       default: 'worker',
     },
     isVerified: { type: Boolean, default: false },
-    isPremium: { type: Boolean, default: false },
     totalEarnings: { type: Number, default: 0 },
     isAgentActive: { type: Boolean, default: false },
 
     // Profiles
     workerProfile: {
+      title: { type: String, default: '' },
+      headline: { type: String, default: '' },
+      category: { type: String, default: '' },
       skills: { type: [String], default: [] },
+      portfolioLinks: { type: [String], default: [] },
+      hourlyRate: { type: Number, default: 0 },
+      availability: {
+        type: String,
+        enum: ['immediate', 'within_week', 'within_month', 'not_available'],
+        default: 'immediate',
+      },
       bio: { type: String, default: '', maxlength: 1000 },
       experienceYears: { type: Number, default: 0 },
       preferredLanguage: {
@@ -82,8 +91,13 @@ const userSchema = new mongoose.Schema(
       totalJobsPosted: { type: Number, default: 0 },
     },
     location: {
-      type: { type: String, enum: ['Point'] },
-      coordinates: { type: [Number] },
+      type: { type: String, enum: ['Point'], default: 'Point' },
+      coordinates: { type: [Number], default: [0, 0] },
+      address: { type: String, default: '' },
+      city: { type: String, default: '' },
+      region: { type: String, default: '' },
+      country: { type: String, default: '' },
+      formattedAddress: { type: String, default: '' },
     },
   },
   { timestamps: true }

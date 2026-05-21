@@ -55,7 +55,7 @@ const paymentSchema = new mongoose.Schema(
 
     purpose: {
       type: String,
-      enum: ['job_payment', 'escrow_release', 'subscription', 'verification'],
+      enum: ['job_payment', 'escrow_release', 'verification'],
       default: 'job_payment',
     },
 

@@ -33,7 +33,6 @@ const PostJob = () => {
 
   const [activeTab, setActiveTab] = useState('form'); 
 
-  // Form State
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [address, setAddress] = useState('');
@@ -44,21 +43,17 @@ const PostJob = () => {
   
   const [loading, setLoading] = useState(false);
 
-  // --- Voice Agent Production State & Refs ---
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const [aiStatusMessage, setAiStatusMessage] = useState('');
 
-  // --- AI Fraud Check State ---
   const [isCheckingSecurity, setIsCheckingSecurity] = useState(false);
 
-  // --- Applicants Discovery State (Ranks & Trust System) ---
   const [applicants, setApplicants] = useState([]);
   const [loadingApplicants, setLoadingApplicants] = useState(false);
 
-  // --- Map Sync State ---
-  const [mapCenter, setMapCenter] = useState([8.9806, 38.7578]); // Default Addis Ababa coordinates
+  const [mapCenter, setMapCenter] = useState([8.9806, 38.7578]);
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -78,7 +73,6 @@ const PostJob = () => {
     };
   }, []);
 
-  // Haversine formula calculation for client-side sorting validation
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371; 
     const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -96,13 +90,11 @@ const PostJob = () => {
       const response = await api.get('/workers/discover'); 
       const workersData = response.data?.data || [];
 
-      // Client Side Smart Logic Pipeline: Distance Metrics & Category alignment mapping
       const processed = workersData.map((worker) => {
         const workerLat = worker.location?.coordinates?.[1] || 8.9806;
         const workerLng = worker.location?.coordinates?.[0] || 38.7578;
         const distance = calculateDistance(mapCenter[0], mapCenter[1], workerLat, workerLng);
 
-        // Score based on category matching string intersection tokens
         const hasSkillMatch = category 
           ? worker.skills?.some(skill => skill.toLowerCase().includes(category.toLowerCase()))
           : false;
@@ -119,7 +111,6 @@ const PostJob = () => {
         };
       });
 
-      // Structural Sorting implementation execution
       processed.sort((a, b) => b.matchScore - a.matchScore);
       setApplicants(processed);
     } catch (err) {
@@ -199,7 +190,6 @@ const PostJob = () => {
             if (data.description) setDescription(data.description);
             if (data.paymentType) setPaymentType(data.paymentType);
 
-            // Geocode location logic conversion emulation mapping if coordinates given back
             if (data.coordinates) {
               setMapCenter([data.coordinates[1], data.coordinates[0]]);
             }
@@ -283,7 +273,6 @@ const PostJob = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 pt-0 pb-8 relative">
       
-      {/* Immersive Global Sira Voice Processing Overlay */}
       {isProcessingVoice && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-4">
           <div className="p-8 bg-white/3 border border-white/10 rounded-4xl max-w-md w-full text-center space-y-6 shadow-2xl relative overflow-hidden">
@@ -300,7 +289,6 @@ const PostJob = () => {
         </div>
       )}
 
-      {/* 🛡️ Explicit AI Scam & Fraud Prevention System Overlay */}
       {isCheckingSecurity && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-4">
           <div className="p-8 bg-white/3 border border-white/10 rounded-4xl max-w-md w-full text-center space-y-5 shadow-2xl relative overflow-hidden">
@@ -321,7 +309,6 @@ const PostJob = () => {
         </div>
       )}
 
-      {/* Navigation Tab Panel for Dynamic Switching View Operations */}
       <div className="mb-6 flex gap-2 border-b border-white/10 pb-px">
         <button 
           onClick={() => setActiveTab('form')}
@@ -339,7 +326,6 @@ const PostJob = () => {
 
       {activeTab === 'form' ? (
         <>
-          {/* Header View */}
           <div className="mb-8 flex items-start justify-between">
             <div>
               <h1 className="text-4xl text-white italic tracking-tighter leading-none font-semibold pl-0">
@@ -355,7 +341,6 @@ const PostJob = () => {
             </div>
           </div>
 
-          {/* --- FLAGSHIP AUDIO RECORDING MODULE CONSOLE --- */}
           <div className={`mb-8 border transition-all duration-300 rounded-4xl p-8 flex flex-col items-center justify-center text-center relative overflow-hidden backdrop-blur-xl ${
             isRecording 
               ? 'bg-[#2BB8B8]/10 border-[#2BB8B8]/40 shadow-xl shadow-[#2BB8B8]/5' 
@@ -399,7 +384,6 @@ const PostJob = () => {
               </p>
             </div>
 
-            {/* Real-time Processing Transcript View Window */}
             {(isRecording || voiceTranscript) && (
               <div className="mt-6 w-full max-w-xl p-4 bg-slate-950/40 border border-white/5 rounded-2xl text-center backdrop-blur-md">
                 <p className="text-[10px] text-[#2BB8B8] font-bold uppercase tracking-wider mb-2.5 flex items-center justify-center gap-1.5">
@@ -415,7 +399,6 @@ const PostJob = () => {
             )}
           </div>
 
-          {/* Form Container */}
           <form onSubmit={submit} className="bg-white/3 border border-white/10 rounded-4xl p-6 space-y-5 backdrop-blur-md relative overflow-hidden text-left">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-1.5">
@@ -558,7 +541,6 @@ const PostJob = () => {
           </form>
         </>
       ) : (
-        /* Real-Time Leaflet Validation Map + Trust System Dashboard Integration */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
           <div className="lg:col-span-2 space-y-4">
             <div className="rounded-4xl overflow-hidden border border-white/10 h-[450px] relative z-10 shadow-xl">
@@ -569,14 +551,12 @@ const PostJob = () => {
                 />
                 <RecenterMap center={mapCenter} />
                 
-                {/* Employer Position Node mapping */}
                 <Marker position={mapCenter}>
                   <Popup>
                     <span className="font-bold text-slate-950">Your Specified Location</span>
                   </Popup>
                 </Marker>
 
-                {/* Worker Tracking GPS validation cluster render paths */}
                 {applicants.map((worker) => {
                   const lat = worker.location?.coordinates?.[1] || 8.9806;
                   const lng = worker.location?.coordinates?.[0] || 38.7578;
@@ -598,7 +578,6 @@ const PostJob = () => {
             </div>
           </div>
 
-          {/* Ranks Array Sidebar with integrated AI Recommended Badge & Ratings Verification */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-white font-semibold text-base tracking-tight">Matched Talent Pool</h3>
@@ -621,7 +600,6 @@ const PostJob = () => {
                     key={worker._id || worker.id}
                     className={`p-4 border transition-all rounded-2xl relative overflow-hidden bg-white/3 border-white/10 hover:bg-white/5`}
                   >
-                    {/* Intelligent Recommendation layout match assignment injection conditional verification */}
                     {(index === 0 || worker.matchScore > 65) && (
                       <div className="absolute top-0 right-0 bg-gradient-to-l from-[#2BB8B8] to-emerald-500 text-slate-950 font-black text-[9px] tracking-wider px-3 py-1 rounded-bl-xl uppercase flex items-center gap-1 shadow-md">
                         <Sparkles className="w-3 h-3 animate-spin" />
@@ -632,7 +610,6 @@ const PostJob = () => {
                     <div className="space-y-2 pt-1">
                       <div className="flex items-center gap-2">
                         <h4 className="text-white font-bold text-sm tracking-tight">{worker.name}</h4>
-                        {/* Trust System Visual Verification Indicators */}
                         {worker.verified && (
                           <span className="inline-flex items-center gap-0.5 text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.2 rounded-md font-semibold uppercase">
                             <ShieldCheck className="w-3 h-3" /> Verified

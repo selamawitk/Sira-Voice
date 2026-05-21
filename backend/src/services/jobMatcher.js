@@ -98,13 +98,12 @@ export const findMatchingWorkers = async (job) => {
 
       // D. Trust & Platform Status Bonuses (Max 10 points)
       const verifiedBonus = worker.isVerified ? 6 : 0;
-      const premiumBonus = worker.isPremium ? 4 : 0;
 
       // Compile final weighted match score (Guaranteed scale boundary between 0 - 100)
       const finalMatchScore = Math.min(
         100,
         Math.round(
-          totalRequirementsScore + proximityScore + experienceScore + ratingScore + verifiedBonus + premiumBonus
+          totalRequirementsScore + proximityScore + experienceScore + ratingScore + verifiedBonus
         )
       );
 

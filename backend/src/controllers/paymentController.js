@@ -3,7 +3,6 @@ import crypto from 'crypto';
 
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
-import Subscription from '../models/Subscription.js';
 import Contract from '../models/Contract.js';
 import Payment from '../models/Payment.js';
 
@@ -185,30 +184,7 @@ export const verifyChapaWebhook = asyncHandler(async (req, res) => {
     });
   }
 
-  // 2. SUBSCRIPTIONS
-  if (transaction.purpose.startsWith('subscription_')) {
-    const planType = transaction.purpose.split('_')[1];
-    const durationDays = planType === 'business' ? 90 : 30;
-    
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + durationDays);
-
-    await Subscription.findOneAndUpdate(
-      { user: transaction.employer },
-      { planType, status: 'active', endDate },
-      { upsert: true }
-    );
-
-    await User.findByIdAndUpdate(transaction.employer, { isPremium: true });
-
-    sendRealTimeNotification(io, transaction.employer, {
-      title: 'Subscription Activated 🎉',
-      message: `Your ${planType} plan is now active.`,
-      type: 'subscription'
-    });
-  }
-
-  // 3. JOB PAYMENTS (ESCROW RELEASE)
+  // 2. JOB PAYMENTS (ESCROW RELEASE)
   if (transaction.purpose === 'job_payment') {
     const contract = await Contract.findById(transaction.contract).populate('jobId', 'title');
     const worker = await User.findById(transaction.worker);

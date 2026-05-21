@@ -12,7 +12,6 @@ import Login from '../pages/Auth/Login.jsx';
 import ForgotPassword from '../pages/Auth/ForgotPassword.jsx';
 import ResetPassword from '../pages/Auth/ResetPassword.jsx';
 import ChooseRolePage from '../pages/Auth/ChooseRolePage.jsx';
-import SubscriptionSuccess from '../pages/Shared/SubscriptionSuccess.jsx';
 
 // Worker pages
 import Dashboard from '../pages/Worker/Dashboard.jsx';
@@ -22,7 +21,6 @@ import Map from '../pages/Worker/Map.jsx';
 import Profile from '../pages/Worker/Profile.jsx';
 import VoiceToCV from '../pages/Worker/VoiceToCV.jsx';
 import ApplicationHistory from '../pages/Worker/ApplicationHistory.jsx';
-import Subscription from '../pages/Worker/Subscription.jsx';
 import WorkerPayments from '../pages/Worker/WorkerPayments.jsx';
 
 // Employer pages
@@ -105,8 +103,6 @@ const AppRouter = () => {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/choose-role" element={<ChooseRolePage />} />
-          <Route path="/subscription-success" element={<SubscriptionSuccess />} />
-
           {/* ================= WORKER ================= */}
           <Route element={<WorkerSection />}>
             <Route path="/dashboard" element={<Dashboard />} />
@@ -116,7 +112,6 @@ const AppRouter = () => {
             <Route path="/profile" element={<Profile />} />
             <Route path="/voice-to-cv" element={<VoiceToCV />} />
             <Route path="/application-history" element={<ApplicationHistory />} />
-            <Route path="/subscription" element={<Subscription />} />
             
             {/* UPDATED: Matches the clean sidebar navigation pattern exactly */}
             <Route path="/payments" element={<WorkerPayments />} />

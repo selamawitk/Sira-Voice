@@ -284,7 +284,8 @@ const Applicants = () => {
           /* Standard Smart Ranking Applicant List View */
           <div className="divide-y divide-white/5">
             {sortedCandidates.map((c, index) => {
-              const isAiMatch = index === 0 && Number(c.score || 0) >= 70;
+              const scoreNum = Number(c.score ?? 0);
+              const isAiMatch = index === 0 && scoreNum >= 70;
 
               return (
                 <div
@@ -310,7 +311,7 @@ const Applicants = () => {
                           : 'bg-gradient-to-br from-[#2BB8B8]/20 to-transparent border-white/10'
                       }`}>
                         <span className={`text-lg font-semibold ${isAiMatch ? 'text-slate-950' : 'text-white'}`}>
-                          {c.fullName?.[0]}
+                          {c.fullName?.[0] || '?'}
                         </span>
                       </div>
                       <div>
@@ -325,10 +326,10 @@ const Applicants = () => {
                         <p className="text-white/40 text-xs mt-0.5 normal-case">
                           <span className="text-yellow-500 font-bold">⭐ {c.rating ? Number(c.rating).toFixed(1) : '4.8'}</span> •{' '}
                           <span className={isAiMatch ? 'text-[#2BB8B8] font-semibold' : ''}>
-                            {c.distance} {activeLang === 'am' ? 'ኪ.ሜ ርቀት' : activeLang === 'or' ? 'KM fagaa' : 'KM away'}
+                            {c.distance ?? 0} {activeLang === 'am' ? 'ኪ.ሜ ርቀት' : activeLang === 'or' ? 'KM fagaa' : 'KM away'}
                           </span>{' '}
                           • {activeLang === 'am' ? 'ተዛማጅነት' : activeLang === 'or' ? 'Madaalawaa' : 'Match'}:{' '}
-                          <span className="text-emerald-400 font-bold">{c.score}%</span>
+                          <span className="text-emerald-400 font-bold">{scoreNum}%</span>
                         </p>
                       </div>
                     </div>
@@ -399,9 +400,9 @@ const Applicants = () => {
                           )}
                         </div>
                         <div className="text-xs text-slate-600 space-y-0.5 font-medium">
-                          <div>⭐ {c.rating ? Number(c.rating).toFixed(1) : '4.8'} • {c.distance} KM away</div>
+                          <div>⭐ {c.rating ? Number(c.rating).toFixed(1) : '4.8'} • {c.distance ?? 0} KM away</div>
                           <div className="text-emerald-600 font-bold text-xs mt-1">
-                            {c.score}% Match Score
+                            {c.score ?? 0}% Match Score
                           </div>
                         </div>
                         <button

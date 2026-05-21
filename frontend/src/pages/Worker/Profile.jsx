@@ -1,69 +1,110 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { MapPin, Award, ShieldCheck, Edit3, Save, X, Sparkles, TrendingUp, History, ShieldAlert, CheckCircle, Briefcase, DollarSign } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { MapPin, Award, ShieldCheck, Edit3, Save, X, Sparkles, TrendingUp, History, ShieldAlert, CheckCircle, Briefcase, DollarSign, ArrowLeft } from 'lucide-react';
 import api from '../../services/api.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 import toast from 'react-hot-toast';
 
 const Profile = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  
   const auth = useContext(AuthContext);
-  const user = auth?.user;
+  const currentUser = auth?.user;
   const lang = useContext(LanguageContext);
   const copy = lang?.copy;
-  
+
+  const isPublicView = Boolean(id && id !== currentUser?._id);
+
+  const [profileUser, setProfileUser] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [jobHistory, setJobHistory] = useState([]);
+  
   const [formData, setFormData] = useState({
-    bio: user?.workerProfile?.bio || '',
-    skills: user?.workerProfile?.skills?.join(', ') || '',
-    experienceYears: user?.workerProfile?.experienceYears ?? 0,
-    preferredLanguage: user?.workerProfile?.preferredLanguage || 'amharic'
+    title: '',
+    headline: '',
+    category: '',
+    bio: '',
+    skills: '',
+    experienceYears: 0,
+    preferredLanguage: 'amharic'
   });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setFormData({
-      bio: user?.workerProfile?.bio || '',
-      skills: user?.workerProfile?.skills?.join(', ') || '',
-      experienceYears: user?.workerProfile?.experienceYears ?? 0,
-      preferredLanguage: user?.workerProfile?.preferredLanguage || 'amharic'
-    });
-  }, [user]);
+    const fetchTargetProfile = async () => {
+      if (!isPublicView) {
+        setProfileUser(currentUser);
+        setProfileLoading(false);
+        return;
+      }
 
-  // Fetch verified task history contracts to audit trust layers
+      try {
+        setProfileLoading(true);
+        const res = await api.get(`/users/worker/${id}`);
+        setProfileUser(res.data?.data || res.data);
+      } catch (err) {
+        console.error(err);
+        toast.error('Could not load worker profile');
+        navigate(-1);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    fetchTargetProfile();
+  }, [id, currentUser, isPublicView, navigate]);
+
+  useEffect(() => {
+    if (profileUser) {
+      setFormData({
+        title: profileUser?.workerProfile?.title || '',
+        headline: profileUser?.workerProfile?.headline || '',
+        category: profileUser?.workerProfile?.category || '',
+        bio: profileUser?.workerProfile?.bio || '',
+        skills: profileUser?.workerProfile?.skills?.join(', ') || '',
+        experienceYears: profileUser?.workerProfile?.experienceYears ?? 0,
+        preferredLanguage: profileUser?.workerProfile?.preferredLanguage || 'amharic'
+      });
+    }
+  }, [profileUser]);
+
   useEffect(() => {
     const fetchHistoryLogs = async () => {
       try {
-        const res = await api.get('/contracts/worker/history');
+        setHistoryLoading(true);
+        const endpoint = isPublicView 
+          ? `/transactions/worker/${id}/history` 
+          : '/transactions/worker/history';
+        const res = await api.get(endpoint);
         setJobHistory(res.data?.data || []);
       } catch (err) {
-        console.error('Failed fetching validation audit trails:', err);
-        // Fallback programmatic configuration checks for immediate layout visualization if routes are blank
-        setJobHistory([
-          { _id: 'c1', title: 'Residential Wiring & Circuit Installation', employer: 'Zewditu H.', status: 'completed', payout: 2400, date: 'May 12, 2026', rating: 5.0 },
-          { _id: 'c2', title: 'Emergency Plumbing Line Diagnosis', employer: 'Abdi K.', status: 'completed', payout: 1800, date: 'May 08, 2026', rating: 4.8 }
-        ]);
+        console.error(err);
+        setJobHistory([]);
       } finally {
         setHistoryLoading(false);
       }
     };
-    fetchHistoryLogs();
-  }, []);
+    
+    if (profileUser?._id) {
+      fetchHistoryLogs();
+    }
+  }, [id, isPublicView, profileUser?._id]);
 
-  const skills = user?.workerProfile?.skills ?? [];
-  const rating = user?.workerProfile?.averageRating ?? user?.workerProfile?.rating ?? 4.9;
+  const skills = profileUser?.workerProfile?.skills ?? [];
+  const rating = profileUser?.workerProfile?.averageRating ?? profileUser?.workerProfile?.rating ?? 4.9;
 
-  // 💰 Compute live aggregated metric analytics balances
-  const completedGigsCount = jobHistory.filter(h => h.status === 'completed').length;
+  const completedGigsCount = jobHistory.filter(h => h.status === 'success' || h.status === 'completed').length;
   const totalEarningsAccumulated = jobHistory
-    .filter(h => h.status === 'completed')
+    .filter(h => h.status === 'success' || h.status === 'completed')
     .reduce((sum, current) => sum + (current.payout || 0), 0);
 
-  // Read active state flags securely across unified data properties
   const isAutoApplyActive = !!(
-    user?.workerProfile?.autoApplyEnabled || 
-    user?.workerProfile?.agentPreferences?.autoApply
+    profileUser?.workerProfile?.autoApplyEnabled || 
+    profileUser?.workerProfile?.agentPreferences?.autoApply
   );
 
   const handleSave = async () => {
@@ -72,7 +113,10 @@ const Profile = () => {
       const skillsArray = formData.skills.split(',').map((s) => s.trim()).filter((s) => s !== '');
       await api.put('/users/profile', {
         workerProfile: {
-          ...user.workerProfile,
+          ...currentUser?.workerProfile,
+          title: formData.title,
+          headline: formData.headline,
+          category: formData.category,
           bio: formData.bio,
           skills: skillsArray,
           experienceYears: Number(formData.experienceYears) || 0,
@@ -92,20 +136,11 @@ const Profile = () => {
   };
 
   const toggleAutoApply = async () => {
-    if (loading) return;
+    if (loading || isPublicView) return;
     setLoading(true);
     try {
       const newStatus = !isAutoApplyActive;
-
-      // Fires unified payload updates to both schemas simultaneously to prevent route desyncs
-      await Promise.all([
-        api.put('/users/agent-preferences', { autoApply: newStatus }),
-        api.put('/worker/profile', { autoApplyEnabled: newStatus })
-      ]).catch(() => {
-        // Fallback execution logic for older environment targets
-        return api.put('/worker/profile', { autoApplyEnabled: newStatus });
-      });
-
+      await api.put('/users/agent-preferences', { autoApply: newStatus });
       await auth.fetchMe();
       toast.success(newStatus ? 'Auto-apply ON 🤖' : 'Auto-apply OFF');
     } catch (err) {
@@ -116,23 +151,41 @@ const Profile = () => {
     }
   };
 
+  if (profileLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <div className="w-8 h-8 border-4 border-[#2BB8B8] border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs font-black uppercase tracking-widest text-white/40">Loading profile workspace...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-5 animate-in fade-in duration-500 pb-10">
       
-      {/* HEADER HERO AREA WITH VERIFIED TRUST BADGE TOKENS */}
+      {isPublicView && (
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-xs font-bold text-white/60 hover:text-white transition-colors cursor-pointer mb-2 group"
+        >
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          <span>Back to Applicants</span>
+        </button>
+      )}
+
       <div className="relative bg-white/3 border border-white/10 rounded-4xl p-6 backdrop-blur-3xl overflow-hidden group">
         <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#2BB8B8]/10 blur-[80px] rounded-full"></div>
         
         <div className="flex flex-col md:flex-row items-center gap-6 relative z-10">
           <div className="relative">
             <div className={`w-24 h-24 rounded-[1.8rem] p-0.5 shadow-xl transition-all ${
-              user?.isVerified || rating >= 4.5 ? 'bg-gradient-to-tr from-emerald-500 to-[#2BB8B8]' : 'bg-gradient-to-tr from-amber-500 to-orange-500'
+              profileUser?.isVerified || rating >= 4.5 ? 'bg-gradient-to-tr from-emerald-500 to-[#2BB8B8]' : 'bg-gradient-to-tr from-amber-500 to-orange-500'
             }`}>
               <div className="w-full h-full rounded-[1.7rem] bg-[#1A2E35] flex items-center justify-center text-3xl font-black text-white">
-                {(user?.fullName?.[0] ?? 'W').toUpperCase()}
+                {(profileUser?.fullName?.[0] ?? 'W').toUpperCase()}
               </div>
             </div>
-            {!isEditing && (
+            {!isEditing && !isPublicView && (
               <button 
                 type="button"
                 onClick={() => setIsEditing(true)}
@@ -145,10 +198,9 @@ const Profile = () => {
 
           <div className="text-center md:text-left flex-1">
             <div className="flex items-center justify-center md:justify-start gap-2.5">
-              <h1 className="text-3xl font-black text-white tracking-tight">{user?.fullName ?? 'Profile'}</h1>
+              <h1 className="text-3xl font-black text-white tracking-tight">{profileUser?.fullName ?? 'Profile'}</h1>
               
-              {/* 🛡️ VERIFIED TRUST BADGE ACTIVATION MODULE */}
-              {(user?.isVerified || rating >= 4.5) ? (
+              {(profileUser?.isVerified || rating >= 4.5) ? (
                 <div className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 px-3 py-0.5 rounded-full text-emerald-400 text-[10px] font-black uppercase tracking-wider">
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>Verified Safe</span>
@@ -163,7 +215,7 @@ const Profile = () => {
             
             <div className="flex flex-wrap justify-center md:justify-start gap-3 mt-2.5">
               <span className="flex items-center gap-1.5 text-[10px] text-white/50 font-bold bg-white/5 px-3 py-1 rounded-full border border-white/5">
-                <MapPin className="w-3 h-3 text-[#2BB8B8]" /> {user?.location?.address ?? 'Addis Ababa'}
+                <MapPin className="w-3 h-3 text-[#2BB8B8]" /> {profileUser?.location?.address ?? 'Addis Ababa'}
               </span>
               <span className="flex items-center gap-1.5 text-[10px] text-white/50 font-bold bg-white/5 px-3 py-1 rounded-full border border-white/5">
                 <Award className="w-3 h-3 text-amber-400" /> {Number(rating).toFixed(1)} / 5.0 Rating Score
@@ -171,7 +223,7 @@ const Profile = () => {
             </div>
           </div>
 
-          {isEditing && (
+          {isEditing && !isPublicView && (
             <div className="flex gap-2">
               <button type="button" onClick={handleSave} className="bg-[#2BB8B8] text-slate-950 px-4 py-2 rounded-xl font-black text-xs flex items-center gap-2 cursor-pointer transition-transform hover:scale-105">
                 <Save className="w-4 h-4" /> {copy?.saveLabel ?? 'Save Changes'}
@@ -184,10 +236,7 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* 📊 INTEGRATED TRUST METRICS ANALYTICS PANEL (ANTI-DELALA MATRICES) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        
-        {/* METRIC 1: COMPREHENSIVE COMPLETED JOB COUNTER */}
         <div className="bg-white/3 border border-white/10 rounded-2xl p-5 flex items-center justify-between relative overflow-hidden group hover:border-[#2BB8B8]/30 transition-all">
           <div className="space-y-1 z-10">
             <p className="text-[10px] font-black uppercase tracking-wider text-white/40">Fulfilled Gigs</p>
@@ -197,7 +246,6 @@ const Profile = () => {
           <Briefcase className="w-12 h-12 text-white/5 absolute -right-2 -bottom-2 group-hover:scale-110 group-hover:text-[#2BB8B8]/10 transition-all duration-300" />
         </div>
 
-        {/* METRIC 2: AGGREGATED STAR RATING DISTRIBUTION */}
         <div className="bg-white/3 border border-white/10 rounded-2xl p-5 flex items-center justify-between relative overflow-hidden group hover:border-amber-500/30 transition-all">
           <div className="space-y-1 z-10">
             <p className="text-[10px] font-black uppercase tracking-wider text-white/40">Aggregated Rating</p>
@@ -211,7 +259,6 @@ const Profile = () => {
           <Award className="w-12 h-12 text-white/5 absolute -right-2 -bottom-2 group-hover:scale-110 group-hover:text-amber-500/10 transition-all duration-300" />
         </div>
 
-        {/* METRIC 3: REVENUE STREAM ACCUMULATION ACCUMULATOR */}
         <div className="bg-white/3 border border-white/10 rounded-2xl p-5 flex items-center justify-between relative overflow-hidden group hover:border-emerald-500/30 transition-all">
           <div className="space-y-1 z-10">
             <p className="text-[10px] font-black uppercase tracking-wider text-white/40">Accumulated Financial Volume</p>
@@ -224,7 +271,6 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* CORE PROFILE DESCRIPTORS CONFIGURATION FORM GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         
         <div className="bg-white/3 border border-white/10 rounded-3xl p-6">
@@ -237,7 +283,24 @@ const Profile = () => {
             />
           ) : (
             <p className="text-gray-400 text-xs leading-relaxed">
-              {user?.workerProfile?.bio || (copy?.noBioProvided ?? 'No validation bio profile configured.')}
+              {profileUser?.workerProfile?.bio || (copy?.noBioProvided ?? 'No validation bio profile configured.')}
+            </p>
+          )}
+        </div>
+
+        <div className="bg-white/3 border border-white/10 rounded-3xl p-6">
+          <h3 className="text-white font-bold text-sm mb-3">{copy?.headlineLabel ?? 'Profile Headline'}</h3>
+          {isEditing ? (
+            <input 
+              type="text"
+              value={formData.headline}
+              onChange={(e) => setFormData({ ...formData, headline: e.target.value })}
+              className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-[#2BB8B8]/50 transition-all"
+              placeholder="Experienced Local Professional Available Now"
+            />
+          ) : (
+            <p className="text-gray-400 text-xs leading-relaxed">
+              {profileUser?.workerProfile?.headline || (copy?.noHeadline ?? 'Add a short headline to make your profile stand out.')}
             </p>
           )}
         </div>
@@ -266,6 +329,23 @@ const Profile = () => {
         </div>
 
         <div className="bg-white/3 border border-white/10 rounded-3xl p-6">
+          <h3 className="text-white font-bold text-sm mb-3">{copy?.categoryLabel ?? 'Specialty Category'}</h3>
+          {isEditing ? (
+            <input 
+              type="text"
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-[#2BB8B8]/50 transition-all"
+              placeholder="Carpentry, Electrical, Plumbing..."
+            />
+          ) : (
+            <p className="text-gray-400 text-xs leading-relaxed">
+              {profileUser?.workerProfile?.category || (copy?.noCategory ?? 'No specialty category set.')}
+            </p>
+          )}
+        </div>
+
+        <div className="bg-white/3 border border-white/10 rounded-3xl p-6">
           <h3 className="text-white font-bold text-sm mb-3">{copy?.experienceLabel ?? 'Field Tenure Tracking'}</h3>
           {isEditing ? (
             <input
@@ -277,7 +357,7 @@ const Profile = () => {
             />
           ) : (
             <p className="text-gray-400 text-xs leading-relaxed font-semibold">
-              {user?.workerProfile?.experienceYears ?? 0} {copy?.yearsExperience ?? 'Years Active Professional Tenure'}
+              {profileUser?.workerProfile?.experienceYears ?? 0} {copy?.yearsExperience ?? 'Years Active Professional Tenure'}
             </p>
           )}
         </div>
@@ -296,41 +376,41 @@ const Profile = () => {
             </select>
           ) : (
             <p className="text-gray-400 text-xs leading-relaxed uppercase font-black tracking-widest text-[#2BB8B8]">
-              {user?.workerProfile?.preferredLanguage || 'Amharic'}
+              {profileUser?.workerProfile?.preferredLanguage || 'Amharic'}
             </p>
           )}
         </div>
 
-        {/* BACKGROUND PASSIVE AGENT PREFERENCES INTEGRATION SWITCH */}
-        <div className="bg-white/3 border border-white/10 rounded-3xl p-6 md:col-span-2">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-white font-bold text-sm flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#2BB8B8] animate-pulse" />
-                {copy?.aiAgentPreferences ?? 'AI Autonomous Agent Settings'}
-              </h3>
-              <p className="text-[10px] text-white/30">{copy?.autoMatchingSubtitle ?? 'Configures background matching telemetry and auto-apply engines'}</p>
-            </div>
-            
-            <div className="flex items-center gap-3 bg-white/5 px-4 py-2.5 rounded-2xl border border-white/5 w-full sm:w-auto justify-between">
-              <span className="text-gray-300 text-xs font-black uppercase tracking-wider text-[10px]">{copy?.autoApplyLabel ?? 'Background Auto-Apply'}</span>
-              <button
-                type="button"
-                disabled={loading}
-                onClick={toggleAutoApply}
-                className={`w-11 h-6 rounded-full transition-all relative ${
-                  isAutoApplyActive ? 'bg-[#2BB8B8]' : 'bg-white/10'
-                } ${loading ? 'opacity-50' : 'cursor-pointer'}`}
-              >
-                <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform duration-300 ${
-                  isAutoApplyActive ? 'translate-x-6 shadow-md shadow-black/40' : 'translate-x-1'
-                }`} />
-              </button>
+        {(!isPublicView || isAutoApplyActive) && (
+          <div className="bg-white/3 border border-white/10 rounded-3xl p-6 md:col-span-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-white font-bold text-sm flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#2BB8B8] animate-pulse" />
+                  {copy?.aiAgentPreferences ?? 'AI Autonomous Agent Settings'}
+                </h3>
+                <p className="text-[10px] text-white/30">{copy?.autoMatchingSubtitle ?? 'Configures background matching telemetry and auto-apply engines'}</p>
+              </div>
+              
+              <div className="flex items-center gap-3 bg-white/5 px-4 py-2.5 rounded-2xl border border-white/5 w-full sm:w-auto justify-between">
+                <span className="text-gray-300 text-xs font-black uppercase tracking-wider text-[10px]">{copy?.autoApplyLabel ?? 'Background Auto-Apply'}</span>
+                <button
+                  type="button"
+                  disabled={loading || isPublicView}
+                  onClick={toggleAutoApply}
+                  className={`w-11 h-6 rounded-full transition-all relative ${
+                    isAutoApplyActive ? 'bg-[#2BB8B8]' : 'bg-white/10'
+                  } ${loading || isPublicView ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform duration-300 ${
+                    isAutoApplyActive ? 'translate-x-6 shadow-md shadow-black/40' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* 📜 HISTORICAL CONTRACT AUDIT LOGS (ANTI-DELALA TRANSPARENT ARCHITECTURE) */}
         <div className="bg-white/3 border border-white/10 rounded-3xl p-6 md:col-span-2 space-y-4">
           <div className="flex items-center gap-2 border-b border-white/5 pb-3">
             <History className="w-4 h-4 text-[#2BB8B8]" />

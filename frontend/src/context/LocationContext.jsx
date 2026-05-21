@@ -1,21 +1,23 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { LocationContext } from './LocationContextInstance.jsx';
+import { AuthContext } from './AuthContextInstance.jsx';
 import { ToastContext } from '../components/ui/ToastContextInstance.jsx';
+import api from '../services/api.js';
 
 export const LocationProvider = ({ children }) => {
+  const isSupported = typeof window !== 'undefined' && !!navigator.geolocation;
+
   const [coords, setCoords] = useState({ lat: 8.9806, lng: 38.7578 });
-  const [permission, setPermission] = useState('unknown');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [permission, setPermission] = useState(isSupported ? 'unknown' : 'denied');
+  const [loading, setLoading] = useState(isSupported);
+  const [error, setError] = useState(isSupported ? null : 'Geolocation not supported');
+  const [hasSyncedLocation, setHasSyncedLocation] = useState(false);
+  
   const toast = useContext(ToastContext);
+  const auth = useContext(AuthContext);
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setPermission('denied');
-      setError('Geolocation not supported');
-      setLoading(false);
-      return;
-    }
+    if (!isSupported) return;
 
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
@@ -28,8 +30,6 @@ export const LocationProvider = ({ children }) => {
         setPermission('denied');
         setError(err.message || 'Location access denied');
         setLoading(false);
-        
-        // Use a silent fallback to Addis Ababa so the app stays functional
         setCoords({ lat: 8.9806, lng: 38.7578 });
         
         if (err.code === err.PERMISSION_DENIED) {
@@ -37,14 +37,35 @@ export const LocationProvider = ({ children }) => {
         }
       },
       { 
-        enableHighAccuracy: false, // Switching to false can be more reliable in some browsers
+        enableHighAccuracy: false, 
         maximumAge: 60000, 
         timeout: 15000 
       }
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [toast]);
+  }, [isSupported, toast]);
+
+  useEffect(() => {
+    const syncLocation = async () => {
+      if (!auth?.user || hasSyncedLocation) return;
+      
+      try {
+        await api.put('/users/location', {
+          longitude: coords.lng,
+          latitude: coords.lat,
+          formattedAddress: `${coords.lat}, ${coords.lng}`
+        });
+        setHasSyncedLocation(true);
+      } catch (err) {
+        console.warn('Unable to sync worker location to server:', err?.message || err);
+      }
+    };
+
+    if (permission === 'granted' && auth?.user) {
+      syncLocation();
+    }
+  }, [auth?.user, coords.lat, coords.lng, permission, hasSyncedLocation]);
 
   return (
     <LocationContext.Provider value={{ coords, permission, error, loading }}>
