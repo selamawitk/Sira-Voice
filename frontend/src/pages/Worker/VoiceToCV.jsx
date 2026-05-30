@@ -12,26 +12,45 @@ const SkillCard = ({ skill, extractedByText }) => (
 );
 
 const VoiceToCV = () => {
-  const { isListening, transcript, isProcessing, startListening, stopListening } = useVoice();
-  const [result, setResult] = useState(null);
+  // 1. Consume result, error, and processing directly from hook to stay synchronized
+  const { 
+    isListening, 
+    transcript, 
+    isProcessing: isVoiceProcessing, 
+    result, 
+    error: voiceError,
+    startListening, 
+    stopListening 
+  } = useVoice();
   
-  // Noisy environment fallback typing configuration states
+  // Local fallback typing configuration states
   const [showKeyboardFallback, setShowKeyboardFallback] = useState(false);
   const [manualText, setManualText] = useState('');
   const [isManualSubmitting, setIsManualSubmitting] = useState(false);
+  const [manualResult, setManualResult] = useState(null);
 
   // Consume language safely from core provider context stack
   const { copy } = useContext(LanguageContext);
 
+  // Combine either voice hook processing results or manual typing fallback states safely
+  const activeResult = manualResult || result;
+  const isProcessing = isVoiceProcessing || isManualSubmitting;
+
+  // Compute clean skills array based on the normalized data shape returning from useVoice / manual entry
   const extractedSkills = useMemo(() => {
-    const skillsFromIntent = result?.aiInterpreted?.skills;
-    const skillsFromData = result?.data?.skills;
+    if (!activeResult) return [];
+    
+    // Check all common response tree layers safely
+    const skillsFromIntent = activeResult.data?.aiInterpreted?.skills || activeResult.aiInterpreted?.skills;
+    const skillsFromData = activeResult.data?.skills || activeResult.skills;
+    
     const skills = (skillsFromIntent ?? skillsFromData ?? []).filter(Boolean);
     return Array.from(new Set(skills));
-  }, [result]);
+  }, [activeResult]);
 
+  // Sync profile variations directly to profile schema
   useEffect(() => {
-    if (extractedSkills.length > 0 && result) {
+    if (extractedSkills.length > 0 && activeResult) {
       api.put('/user/profile', { skills: extractedSkills })
         .then(() => {
           console.log('Profile updated with skills:', extractedSkills);
@@ -40,28 +59,29 @@ const VoiceToCV = () => {
           console.error('Failed to update profile:', err);
         });
     }
-  }, [extractedSkills, result]);
+  }, [extractedSkills, activeResult]);
 
   const onStart = async () => {
-    setResult(null);
-    await startListening((res) => setResult(res));
+    setManualResult(null); // Reset manual actions when running fresh voice intent captures
+    // 2. Critical fix: Specify profile action context so the hook uses the correct processing route 
+    await startListening(null, { action: 'profile' });
   };
 
-  // Manual fallback submissions for loud street locations or low bandwidth edge connections
+  // Manual fallback submissions for loud environments
   const handleManualSubmit = async (e) => {
     e.preventDefault();
     if (!manualText.trim() || isManualSubmitting) return;
 
     setIsManualSubmitting(true);
-    setResult(null);
+    setManualResult(null);
 
     try {
-      // Direct integration pipeline routing into matching natural processing architecture nodes
+      // Direct integration pipeline routing matching endpoint parser
       const response = await api.post('/ai/voice-action', { 
-        text: manualText,
-        intent: 'profile' 
+        transcript: manualText,
+        action: 'profile' 
       });
-      setResult(response.data);
+      setManualResult(response.data);
       setManualText('');
     } catch (err) {
       console.error('Failed processing manual typing entry node context:', err);
@@ -102,7 +122,7 @@ const VoiceToCV = () => {
                 <button
                   type="button"
                   onClick={isListening ? stopListening : onStart}
-                  disabled={isProcessing || isManualSubmitting}
+                  disabled={isProcessing}
                   className="relative w-40 h-40 rounded-full grid place-items-center bg-[#1A2E35] border border-white/10 group disabled:opacity-40 transition-all cursor-pointer"
                   aria-label={isListening ? 'Stop recording' : 'Start recording'}
                 >
@@ -126,7 +146,7 @@ const VoiceToCV = () => {
                   )}
                 </button>
 
-                {/* 🚨 Side-by-Side Low-Data Street Accessibility Typing Fallback Toggle */}
+                {/* Side-by-Side Low-Data Street Accessibility Typing Fallback Toggle */}
                 <button
                   type="button"
                   onClick={() => setShowKeyboardFallback(!showKeyboardFallback)}
@@ -145,10 +165,11 @@ const VoiceToCV = () => {
                 <p className="text-white font-black text-lg">
                   {isListening 
                     ? (copy?.listening || 'Listening… speak now') 
-                    : isProcessing || isManualSubmitting 
+                    : isProcessing 
                     ? (copy?.processingVoice || 'Sira is thinking…') 
                     : (copy?.tapMicAndSpeak || 'Tap the mic and speak')}
                 </p>
+                {voiceError && <p className="text-red-400 text-xs mt-1">{voiceError}</p>}
                 <p className="text-white/45 text-sm mt-1">
                   {copy?.speakThreeLanguagesHint ? 'አማርኛ • Afaan Oromoo • English' : 'Amharic • Afaan Oromo • English'}
                 </p>
@@ -164,11 +185,11 @@ const VoiceToCV = () => {
                   onChange={(e) => setManualText(e.target.value)}
                   placeholder={copy?.typeFallbackPlaceholder || "Type skills or experience manually..."}
                   className="flex-1 bg-black/40 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-[#2BB8B8]/50 transition-all"
-                  disabled={isListening || isProcessing || isManualSubmitting}
+                  disabled={isProcessing}
                 />
                 <button
                   type="submit"
-                  disabled={!manualText.trim() || isListening || isProcessing || isManualSubmitting}
+                  disabled={!manualText.trim() || isProcessing}
                   className="bg-[#1A2E35] border border-white/10 hover:border-[#2BB8B8]/40 text-[#2BB8B8] p-3 rounded-2xl transition-all cursor-pointer disabled:opacity-30"
                 >
                   <Send className="w-5 h-5" />
@@ -183,8 +204,8 @@ const VoiceToCV = () => {
             </label>
             <div className="bg-[#1A2E35]/70 border border-white/10 rounded-3xl p-4 min-h-[120px] flex flex-col justify-between">
               <p className="text-white/80 leading-relaxed text-sm">
-                {result?.transcript ?? transcript ?? ''}
-                {!result?.transcript && !transcript ? (
+                {activeResult?.transcript ?? transcript ?? ''}
+                {!activeResult?.transcript && !transcript ? (
                   <span className="text-white/30">
                     {copy?.micPlaceholder || 'Speak your skill, experience, and location…'}
                   </span>
@@ -194,13 +215,13 @@ const VoiceToCV = () => {
           </div>
         </div>
 
-        {/* Dynamic Skill Parsing Grid Block Component Matrix */}
+        {/* Dynamic Skill Parsing Grid Block */}
         <div className="bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md">
           <p className="text-xs font-black uppercase tracking-[0.24em] text-white/40 mb-4">
             {copy?.extractedSkills || 'Extracted Skills'}
           </p>
 
-          {isProcessing || isManualSubmitting ? (
+          {isProcessing ? (
             <div className="bg-[#1A2E35]/70 border border-white/10 rounded-3xl p-6">
               <p className="text-white font-black">
                 {copy?.transcribing ? `${copy.transcribing}` : 'Sira is building your profile…'}
@@ -235,13 +256,14 @@ const VoiceToCV = () => {
             </div>
           )}
 
-          {result?.aiInterpreted ? (
+          {/* AI Debugger Inspector Block */}
+          {(activeResult?.data?.aiInterpreted || activeResult?.aiInterpreted) ? (
             <div className="mt-6 bg-[#1A2E35]/70 border border-white/10 rounded-3xl p-5">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-white/40">
                 {copy?.aiAgentPreferences || 'AI Interpretation'}
               </p>
               <pre className="text-white/70 text-xs mt-3 whitespace-pre-wrap break-words font-mono bg-black/20 p-3 rounded-xl border border-white/5">
-                {JSON.stringify(result.aiInterpreted, null, 2)}
+                {JSON.stringify(activeResult.data?.aiInterpreted || activeResult.aiInterpreted, null, 2)}
               </pre>
             </div>
           ) : null}

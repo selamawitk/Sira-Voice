@@ -1,31 +1,73 @@
-import React, { useEffect, useState } from 'react';
-import { Search, Filter, Clock } from 'lucide-react';
+import React, { useEffect, useState, useContext } from 'react';
+import { Search, Filter, Clock, MessageSquare, Lock, Loader2 } from 'lucide-react';
 import api from '../../services/api.js';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
+import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import { useNavigate } from 'react-router-dom';
 
 const JobList = () => {
   const [jobs, setJobs] = useState([]);
+  const [applications, setApplications] = useState({});
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(null);
   const [q, setQ] = useState('');
+  
   const navigate = useNavigate();
-  const lang = React.useContext(LanguageContext);
+  const lang = useContext(LanguageContext);
+  const auth = useContext(AuthContext);
+  
   const copy = lang?.copy;
+  const currentUser = auth?.user;
 
   useEffect(() => {
-    const fetchJobs = async () => {
+    const fetchJobsAndApplications = async () => {
       setLoading(true);
       try {
-        const res = await api.get('/jobs', { params: q ? { category: q } : {} });
-        setJobs(res.data?.data ?? []);
+        const jobsRes = await api.get('/jobs', { params: q ? { category: q } : {} });
+        const fetchedJobs = jobsRes.data?.data ?? [];
+        setJobs(fetchedJobs);
+
+        if (currentUser?._id) {
+          const appsRes = await api.get('/applications/history');
+          if (appsRes.data?.success) {
+            const appMap = {};
+            appsRes.data.data.forEach((app) => {
+              const jobId = app.job?._id || app.job;
+              if (jobId) appMap[jobId] = app.status;
+            });
+            setApplications(appMap);
+          }
+        }
       } catch (error) {
-        console.error("Error fetching jobs:", error);
+        console.error("Error loading job feed dependencies:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchJobs();
-  }, [q]);
+    fetchJobsAndApplications();
+  }, [q, currentUser?._id]);
+
+  const handleMessageEmployer = async (e, job) => {
+    e.stopPropagation();
+    if (!job) return;
+    
+    setActionLoading(job._id);
+    try {
+      const response = await api.post('/chat/conversations', {
+        jobId: job._id,
+        workerId: currentUser._id,
+        employerId: job.employer?._id || job.employer
+      });
+
+      if (response.data?.success) {
+        navigate('/chat', { state: { autoSelectConversation: response.data.data } });
+      }
+    } catch (error) {
+      console.error('Failed to establish secured chat context path:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -62,32 +104,59 @@ const JobList = () => {
             <p className="text-white/30 text-lg italic">{copy?.noMatchesYet ?? 'No jobs found matching your criteria.'}</p>
           </div>
         ) : (
-          jobs.map((job) => (
-            <div 
-              key={job._id} 
-              onClick={() => navigate(`/jobs/${job._id}`)}
-              className="group cursor-pointer bg-white/[0.03] border border-white/10 p-6 rounded-[2rem] hover:border-[#2BB8B8]/30 hover:bg-white/[0.05] transition-all"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <span className="bg-[#2BB8B8]/10 text-[#2BB8B8] text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
-                  {job.location?.address ?? 'Addis Ababa'}
-                </span>
-                <span className="text-white font-black text-lg">{job.salary?.toLocaleString() ?? 0} ETB</span>
+          jobs.map((job) => {
+            const currentStatus = applications[job._id];
+            return (
+              <div 
+                key={job._id} 
+                onClick={() => navigate(`/jobs/${job._id}`)}
+                className="group cursor-pointer bg-white/[0.03] border border-white/10 p-6 rounded-[2rem] hover:border-[#2BB8B8]/30 hover:bg-white/[0.05] transition-all flex flex-col justify-between h-full"
+              >
+                <div>
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="bg-[#2BB8B8]/10 text-[#2BB8B8] text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
+                      {job.location?.address ?? 'Addis Ababa'}
+                    </span>
+                    <span className="text-white font-black text-lg">{job.salary?.toLocaleString() ?? 0} ETB</span>
+                  </div>
+                  
+                  <h4 className="text-white font-bold text-lg mb-2 line-clamp-1">{job.title}</h4>
+                  
+                  <div className="mb-4">
+                    {currentStatus === 'hired' ? (
+                      <button
+                        onClick={(e) => handleMessageEmployer(e, job)}
+                        disabled={actionLoading !== null}
+                        className="w-full flex items-center justify-center gap-2 bg-[#2BB8B8] text-slate-950 font-black text-[11px] py-2.5 px-4 rounded-xl shadow-md tracking-wider hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                      >
+                        {actionLoading === job._id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        )}
+                        MESSAGE EMPLOYER
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2 bg-slate-950/20 border border-white/5 rounded-xl py-2 px-3.5 text-white/40 text-[10px] font-bold uppercase tracking-wider">
+                        <Lock className="w-3 h-3 text-white/20 shrink-0" />
+                        <span className="truncate">Chat unlocks upon hiring status</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center pt-4 border-t border-white/5 mt-auto">
+                  <span className="flex items-center gap-1 text-[10px] text-gray-500 font-bold uppercase">
+                    <Clock className="w-3 h-3" /> 
+                    {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : '—'}
+                  </span>
+                  <button className="text-[#2BB8B8] text-xs font-black uppercase tracking-widest group-hover:underline">
+                    {copy?.detailsArrow ?? 'Details →'}
+                  </button>
+                </div>
               </div>
-              
-              <h4 className="text-white font-bold text-lg mb-4 line-clamp-1">{job.title}</h4>
-              
-              <div className="flex justify-between items-center pt-4 border-t border-white/5">
-                <span className="flex items-center gap-1 text-[10px] text-gray-500 font-bold uppercase">
-                  <Clock className="w-3 h-3" /> 
-                  {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : '—'}
-                </span>
-                <button className="text-[#2BB8B8] text-xs font-black uppercase tracking-widest group-hover:underline">
-                  {copy?.detailsArrow ?? 'Details →'}
-                </button>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
