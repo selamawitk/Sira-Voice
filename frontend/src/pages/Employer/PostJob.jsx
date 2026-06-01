@@ -1,8 +1,9 @@
-import React, { useContext, useState, useEffect, useRef } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; 
 import api from '../../services/api.js';
 import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
+import { useVoice } from '../../hooks/useVoice.js';
 import { Loader2, ShieldCheck, Info, Mic, MicOff, Sparkles, MapPin, Star } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -42,12 +43,6 @@ const PostJob = () => {
   const [useEscrow, setUseEscrow] = useState(true);
   
   const [loading, setLoading] = useState(false);
-
-  const [isRecording, setIsRecording] = useState(false);
-  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
-  const [voiceTranscript, setVoiceTranscript] = useState('');
-  const [aiStatusMessage, setAiStatusMessage] = useState('');
-
   const [isCheckingSecurity, setIsCheckingSecurity] = useState(false);
 
   const [applicants, setApplicants] = useState([]);
@@ -55,23 +50,45 @@ const PostJob = () => {
 
   const [mapCenter, setMapCenter] = useState([8.9806, 38.7578]);
 
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-  const streamRef = useRef(null);
+  const handleVoiceData = (data) => {
+    if (data.title) setTitle(data.title);
+    if (data.category) setCategory(data.category);
+    if (data.address || data.location) setAddress(data.address || data.location);
+    if (data.salary) setSalary(String(data.salary));
+    if (data.description) setDescription(data.description);
+    if (data.paymentType) setPaymentType(data.paymentType);
+
+    if (data.coordinates) {
+      setMapCenter([data.coordinates[1], data.coordinates[0]]);
+    }
+
+    toast?.show?.(
+      activeLang === 'am' ? 'የስራ ፎርሙ በድምፅዎ በራስ-ሰር ተሞልቷል!' : 
+      activeLang === 'or' ? 'Unkaan hojii sagalee keessaniin guutameera!' : 
+      'Job form auto-populated via Sira Voice Agent!', 
+      'success'
+    );
+  };
+
+  const {
+    isListening,
+    transcript,
+    error: voiceError,
+    startListening,
+    stopListening
+  } = useVoice(handleVoiceData, activeLang);
+
+  useEffect(() => {
+    if (voiceError) {
+      toast?.show?.(voiceError, 'error');
+    }
+  }, [voiceError, toast]);
 
   useEffect(() => {
     if (activeTab === 'applicants') {
       fetchAndRankApplicants();
     }
   }, [activeTab, category]);
-
-  useEffect(() => {
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, []);
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371; 
@@ -117,111 +134,6 @@ const PostJob = () => {
       console.error("Error loading candidate mapping profiles:", err);
     } finally {
       setLoadingApplicants(false);
-    }
-  };
-
-  const toggleVoiceRecording = async () => {
-    if (isRecording) {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-      setIsRecording(false);
-    } else {
-      setVoiceTranscript('');
-      audioChunksRef.current = [];
-      
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        streamRef.current = stream;
-        
-        const options = MediaRecorder.isTypeSupported('audio/webm') 
-          ? { mimeType: 'audio/webm' } 
-          : { mimeType: 'audio/ogg' };
-
-        const mediaRecorder = new MediaRecorder(stream, options);
-        mediaRecorderRef.current = mediaRecorder;
-
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data && event.data.size > 0) {
-            audioChunksRef.current.push(event.data);
-          }
-        };
-
-        mediaRecorder.onstop = async () => {
-          const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
-          
-          if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
-            streamRef.current = null;
-          }
-
-          if (audioBlob.size < 1000) {
-            toast?.show?.(
-              activeLang === 'am' ? 'ምንም ድምፅ አልተገኘም:: እባክዎ እንደገና ይሞክሩ::' : 
-              activeLang === 'or' ? 'Sagaleen hin argamne. Maaloo irra deebi’ii yaali.' : 
-              'Audio sampling captured no sound. Please try again.', 
-              'error'
-            );
-            return;
-          }
-
-          setIsProcessingVoice(true);
-          setAiStatusMessage(
-            activeLang === 'am' ? 'ሲራ AI የድምፅ መልእክቱን እየተነተነ ነው...' : 
-            activeLang === 'or' ? 'Sira AI sagalee keessan xiinxalaa jira...' : 
-            'Sira AI is parsing your voice command...'
-          );
-
-          try {
-            const formData = new FormData();
-            formData.append('voice', audioBlob, 'job-dictation.webm');
-
-            const response = await api.post('/jobs/process-voice', formData, {
-              headers: { 'Content-Type': 'multipart/form-data' }
-            });
-
-            const data = response.data?.data || {};
-            
-            if (data.transcript) setVoiceTranscript(data.transcript);
-            if (data.title) setTitle(data.title);
-            if (data.category) setCategory(data.category);
-            if (data.address || data.location) setAddress(data.address || data.location);
-            if (data.salary) setSalary(String(data.salary));
-            if (data.description) setDescription(data.description);
-            if (data.paymentType) setPaymentType(data.paymentType);
-
-            if (data.coordinates) {
-              setMapCenter([data.coordinates[1], data.coordinates[0]]);
-            }
-
-            toast?.show?.(
-              activeLang === 'am' ? 'የስራ ፎርሙ በድምፅዎ በራስ-ሰር ተሞልቷል!' : 
-              activeLang === 'or' ? 'Unkaan hojii sagalee keessaniin guutameera!' : 
-              'Job form auto-populated via Sira Voice Agent!', 
-              'success'
-            );
-          } catch (error) {
-            console.error('Sira AI voice pipeline processing error:', error);
-            toast?.show?.(
-              error.response?.data?.message || 'Failed to analyze voice data via Sira AI.', 
-              'error'
-            );
-          } finally {
-            setIsProcessingVoice(false);
-          }
-        };
-
-        mediaRecorder.start(250);
-        setIsRecording(true);
-      } catch (err) {
-        console.error('Audio capture permission rejected or failure structural error:', err);
-        toast?.show?.(
-          activeLang === 'am' ? 'ማይክሮፎን የመጠቀም ፍቃድ አልተሰጠም::' : 
-          activeLang === 'or' ? 'Eyyama Maayikitii dhorkameera.' : 
-          'Microphone input hardware access was denied or unavailable.', 
-          'error'
-        );
-      }
     }
   };
 
@@ -273,22 +185,6 @@ const PostJob = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 pt-0 pb-8 relative">
       
-      {isProcessingVoice && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-4">
-          <div className="p-8 bg-white/3 border border-white/10 rounded-4xl max-w-md w-full text-center space-y-6 shadow-2xl relative overflow-hidden">
-            <div className="absolute -top-12 -left-12 w-32 h-32 bg-[#2BB8B8] opacity-10 blur-2xl rounded-full" />
-            <div className="relative inline-flex items-center justify-center">
-              <div className="w-16 h-16 border-4 border-[#2BB8B8]/20 border-t-[#2BB8B8] rounded-full animate-spin" />
-              <Sparkles className="w-6 h-6 text-[#2BB8B8] absolute animate-pulse" />
-            </div>
-            <div className="space-y-2">
-              <h4 className="text-white font-semibold text-lg">Sira AI Engine</h4>
-              <p className="text-white/70 text-sm">{aiStatusMessage}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {isCheckingSecurity && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-4">
           <div className="p-8 bg-white/3 border border-white/10 rounded-4xl max-w-md w-full text-center space-y-5 shadow-2xl relative overflow-hidden">
@@ -342,7 +238,7 @@ const PostJob = () => {
           </div>
 
           <div className={`mb-8 border transition-all duration-300 rounded-4xl p-8 flex flex-col items-center justify-center text-center relative overflow-hidden backdrop-blur-xl ${
-            isRecording 
+            isListening 
               ? 'bg-[#2BB8B8]/10 border-[#2BB8B8]/40 shadow-xl shadow-[#2BB8B8]/5' 
               : 'bg-white/5 border-white/10'
           }`}>
@@ -350,7 +246,7 @@ const PostJob = () => {
             <div className="absolute -right-20 -bottom-20 w-48 h-48 bg-[#2BB8B8] opacity-[0.02] blur-3xl pointer-events-none" />
 
             <div className="relative flex items-center justify-center mb-4">
-              {isRecording && (
+              {isListening && (
                 <>
                   <div className="absolute w-28 h-28 rounded-full bg-red-500/20 animate-ping opacity-70" />
                   <div className="absolute w-36 h-36 rounded-full bg-red-500/10 animate-pulse opacity-40" />
@@ -359,14 +255,14 @@ const PostJob = () => {
               
               <button
                 type="button"
-                onClick={toggleVoiceRecording}
+                onClick={isListening ? stopListening : startListening}
                 className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 transform active:scale-95 shadow-xl relative z-10 ${
-                  isRecording 
+                  isListening 
                     ? 'bg-gradient-to-tr from-red-600 to-red-500 text-white shadow-red-500/30' 
                     : 'bg-[#2BB8B8] text-slate-950 hover:scale-105 shadow-[#2BB8B8]/20'
                 }`}
               >
-                {isRecording ? <MicOff className="w-10 h-10 animate-bounce" /> : <Mic className="w-10 h-10" />}
+                {isListening ? <MicOff className="w-10 h-10 animate-bounce" /> : <Mic className="w-10 h-10" />}
               </button>
             </div>
 
@@ -375,7 +271,7 @@ const PostJob = () => {
                 {activeLang === 'am' ? 'የሲራ ድምፅ ረዳት' : activeLang === 'or' ? 'Gargaara Sagalee Sira' : 'Sira Voice AI Agent'}
               </span>
               <h3 className="text-white font-semibold text-lg mt-2 normal-case">
-                {isRecording 
+                {isListening 
                   ? (activeLang === 'am' ? 'እያዳመጥኩ ነው... ለመጨረስ አዝራሩን ይጫኑ' : activeLang === 'or' ? 'Dhaggeeffachaan jira... Xumuruuf cuqaasi' : 'Listening... Click button to finalize') 
                   : (activeLang === 'am' ? 'በድምፅዎ በፍጥነት ስራ ለመለጠፍ ይጫኑ' : activeLang === 'or' ? 'Sagaleen hojii galchuuf cuqaasi' : 'Click microphone to dictate job description')}
               </h3>
@@ -384,16 +280,16 @@ const PostJob = () => {
               </p>
             </div>
 
-            {(isRecording || voiceTranscript) && (
+            {(isListening || transcript) && (
               <div className="mt-6 w-full max-w-xl p-4 bg-slate-950/40 border border-white/5 rounded-2xl text-center backdrop-blur-md">
                 <p className="text-[10px] text-[#2BB8B8] font-bold uppercase tracking-wider mb-2.5 flex items-center justify-center gap-1.5">
                   <span className="w-2 h-2 bg-[#2BB8B8] rounded-full animate-ping" />
                   {activeLang === 'am' ? 'የተቀዳ ፅሁፍ' : activeLang === 'or' ? 'Waraabbama Sagalee' : 'Voice Live Transcript'}
                 </p>
                 <p className="text-white/90 text-sm italic font-medium leading-relaxed">
-                  {isRecording 
+                  {isListening && !transcript
                     ? (activeLang === 'am' ? '"በቦሌ አዲስ አበባ ነገ የሚሰራ..."' : activeLang === 'or' ? '"Finfinnee Booleetti..."' : '"I need a professional plumber tomorrow..."') 
-                    : voiceTranscript}
+                    : transcript}
                 </p>
               </div>
             )}
