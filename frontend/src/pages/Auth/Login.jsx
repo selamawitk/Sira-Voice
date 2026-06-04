@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, LogIn, Fingerprint } from 'lucide-react';
 import AuthLayout from '../../components/ui/AuthLayout';
@@ -10,7 +10,7 @@ const translations = {
   en: {
     title: "Login",
     subtitle: "Find your next opportunity with Sira.",
-    identifier: "Phone Number",
+    identifier: "Email",
     password: "Password",
     forgot: "Forgot Password?",
     loginBtn: "Login",
@@ -20,7 +20,7 @@ const translations = {
     google: "Continue with Google",
     noAccount: "Don’t have an account?",
     registerLink: "Register here.",
-    toastError: "Please enter your phone and password.",
+    toastError: "Please enter your email and password.",
     toastSuccess: "Login successful.",
     toastOAuthFail: "Google authentication failed. Please try again.",
     toastProfileFail: "Failed to fetch user profile.",
@@ -29,7 +29,7 @@ const translations = {
   am: {
     title: "ይግቡ",
     subtitle: "በሲራ ቀጣይ እድልዎን ያግኙ።",
-    identifier: "ስልክ ቁጥር",
+    identifier: "ኢሜይል",
     password: "የይለፍ ቃል",
     forgot: "የይለፍ ቃል ረስተዋል?",
     loginBtn: "ይግቡ",
@@ -37,9 +37,9 @@ const translations = {
     processing: "በማከናወን ላይ...",
     or: "ወይም",
     google: "በጉግል ይቀጥሉ",
-    noAccount: "አካውንት የለዎትም?",
+    noAccount: "አካውንት ለዎትም?",
     registerLink: "እዚህ ይመዝገቡ።",
-    toastError: "እባክዎን ስልክ እና የይለፍ ቃል ያስገቡ።",
+    toastError: "እባክዎን ኢሜይል እና የይለፍ ቃል ያስገቡ።",
     toastSuccess: "በተሳካ ሁኔታ ገብተዋል።",
     toastOAuthFail: "የጉግል ማረጋገጫ አልተሳካም። እባክዎ እንደገና ይሞክሩ።",
     toastProfileFail: "የተጠቃሚ መገለጫ ማምጣት አልተቻለም።",
@@ -48,7 +48,7 @@ const translations = {
   or: {
     title: "Seeni",
     subtitle: "Carra kee itti aanu Sira wajjiin bari.",
-    identifier: "Lakkoofsa Bilbilaa",
+    identifier: "Imeelii",
     password: "Jecha Icchitii",
     forgot: "Jecha icchitii dagattee?",
     loginBtn: "Seeni",
@@ -58,7 +58,7 @@ const translations = {
     google: "Google'n itti fufi",
     noAccount: "Account hin qabduu?",
     registerLink: "Asitti galmaa'i.",
-    toastError: "Maaloo bilbila fi jecha icchitii galchi.",
+    toastError: "Maaloo imeelii fi jecha icchitii galchi.",
     toastSuccess: "Milkaa'inaan seenteetta.",
     toastOAuthFail: "Mirkaneessi Google hin milkoofne. Maaloo irra deebi'i yaali.",
     toastProfileFail: "Proofayilii fiduun hin danda'amne.",
@@ -70,23 +70,29 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const auth = useContext(AuthContext);
   const toast = useContext(ToastContext);
-  
+
   const [lang, setLang] = useState(localStorage.getItem('app_lang') || 'en');
   const t = translations[lang];
 
-  const [identifier, setIdentifier] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [biometricLoading, setBiometricLoading] = useState(false);
 
-  const getRedirectPath = (role) => {
-    if (role === 'employer') return '/employer-dashboard';
-    if (role === 'admin') return '/admin-dashboard';
-    return '/dashboard';
+  const normalizeRole = (role) => {
+    if (!role) return role;
+    return role === 'user' ? 'worker' : role;
   };
 
+  const getRedirectPath = useCallback((role) => {
+    const normalizedRole = normalizeRole(role);
+
+    if (normalizedRole === 'employer') return '/employer-dashboard';
+    if (normalizedRole === 'admin') return '/admin-dashboard';
+    return '/dashboard';
+  }, []);
+
   const getGoogleAuthUrl = () => {
-    let base = (import.meta.env.VITE_API_URL || 'http://localhost:5001');
+    let base = import.meta.env.VITE_API_URL || 'http://localhost:5001';
     base = base.replace(/\/$/, '').replace(/\/api$/, '');
     return `${base}/api/auth/google`;
   };
@@ -98,44 +104,44 @@ const LoginPage = () => {
 
   const handleLogin = async (e) => {
     if (e) e.preventDefault();
-    if (!identifier.trim() || !password.trim()) {
+
+    if (!email.trim() || !password.trim()) {
       toast?.show?.(t.toastError, 'error');
       return;
     }
 
     setLoading(true);
+
     try {
-      const data = await auth.login({ phone: identifier.trim(), password });
-      const role = data?.role || auth?.user?.role;
+      const data = await auth.login({
+        email: email.trim(),
+        password,
+      });
+
       toast?.show?.(t.toastSuccess, 'success');
-      navigate(getRedirectPath(role));
+
+      const loggedInUser = data?.user || auth?.user;
+      const userRole = normalizeRole(loggedInUser?.role);
+      const redirectPath = getRedirectPath(userRole);
+
+      navigate(redirectPath, {
+        replace: true,
+      });
     } catch (error) {
-      toast?.show?.(error?.response?.data?.message || error?.message || 'Login failed.', 'error');
+      toast?.show?.(
+        error?.response?.data?.message ||
+        error?.message ||
+        'Login failed.',
+        'error'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleBiometricLogin = async () => {
-    if (!identifier.trim()) {
-      toast?.show?.(t.identifier + " is required", 'error');
-      return;
-    }
-
-    setBiometricLoading(true);
-    try {
-      const data = await auth.loginWithPasskey(identifier.trim());
-      toast?.show?.(t.toastSuccess, 'success');
-      navigate(getRedirectPath(data?.role));
-    } catch (error) {
-      toast?.show?.(error?.response?.data?.message || t.biometricError, 'error');
-    } finally {
-      setBiometricLoading(false);
-    }
-  };
-
   useEffect(() => {
     let isMounted = true;
+
     const processOAuthResult = async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const token = urlParams.get('token');
@@ -152,8 +158,11 @@ const LoginPage = () => {
         try {
           localStorage.setItem('token', token);
           const user = await auth.fetchMe();
+
           if (isMounted) {
-            navigate(getRedirectPath(user?.role), { replace: true });
+            navigate(getRedirectPath(user?.role), {
+              replace: true,
+            });
           }
         } catch {
           localStorage.removeItem('token');
@@ -162,13 +171,17 @@ const LoginPage = () => {
         }
       }
     };
+
     processOAuthResult();
-    return () => { isMounted = false; };
-  }, [auth, navigate, toast, t.toastOAuthFail, t.toastProfileFail]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [auth, navigate, toast, t.toastOAuthFail, t.toastProfileFail, getRedirectPath]);
 
   return (
-    <AuthLayout 
-      title={t.title} 
+    <AuthLayout
+      title={t.title}
       subtitle={t.subtitle}
     >
       <div className="flex justify-center gap-2 mb-6">
@@ -177,37 +190,42 @@ const LoginPage = () => {
             key={l}
             onClick={() => handleLangChange(l)}
             className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${
-              lang === l 
-              ? 'bg-[#2BB8B8] text-slate-950 shadow-lg scale-105' 
-              : 'bg-white/5 text-gray-400 hover:bg-white/10'
+              lang === l
+                ? 'bg-[#2BB8B8] text-slate-950 shadow-lg scale-105'
+                : 'bg-white/5 text-gray-400 hover:bg-white/10'
             }`}
           >
-            {l === 'en' ? 'English' : l === 'am' ? 'አማርኛ' : 'Oromoo'}
+            {l === 'en'
+              ? 'English'
+              : l === 'am'
+              ? 'አማርኛ'
+              : 'Oromoo'}
           </button>
         ))}
       </div>
 
       <form className="space-y-3" onSubmit={handleLogin}>
-        <Input 
-          icon={Mail} 
-          type="text" 
+        <Input
+          icon={Mail}
+          type="email"
           placeholder={t.identifier}
-          value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           required
         />
-        
+
         <div className="space-y-1">
-          <Input 
-            icon={Lock} 
-            type="password" 
+          <Input
+            icon={Lock}
+            type="password"
             placeholder={t.password}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+
           <div className="flex justify-end px-1">
-            <button 
+            <button
               type="button"
               onClick={() => navigate('/forgot-password')}
               className="text-[10px] font-bold text-gray-500 hover:text-[#2BB8B8] transition-colors uppercase tracking-wider"
@@ -219,42 +237,48 @@ const LoginPage = () => {
 
         <button
           type="submit"
-          disabled={loading || biometricLoading}
+          disabled={loading}
           className="w-full bg-[#2BB8B8] text-slate-950 py-2 rounded-xl font-black text-md hover:brightness-110 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group mt-2 disabled:opacity-60"
         >
-          {loading ? t.processing : t.loginBtn} <LogIn className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          {loading ? t.processing : t.loginBtn}
+          <LogIn className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </button>
 
         <button
           type="button"
-          onClick={handleBiometricLogin}
-          disabled={loading || biometricLoading}
-          className="w-full bg-white/5 border border-white/10 text-white py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-white/10 transition disabled:opacity-50"
+          disabled
+          className="w-full bg-white/5 border border-white/10 text-white py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 opacity-50 cursor-not-allowed"
         >
           <Fingerprint className="w-4 h-4 text-[#2BB8B8]" />
-          {biometricLoading ? t.processing : t.biometricBtn}
+          {t.biometricBtn}
         </button>
 
         <div className="relative my-4 text-center">
-          <span className="bg-[#1A2E35] px-3 text-gray-600 text-[10px] font-black uppercase tracking-[0.2em] relative z-10">{t.or}</span>
+          <span className="bg-[#1A2E35] px-3 text-gray-600 text-[10px] font-black uppercase tracking-[0.2em] relative z-10">
+            {t.or}
+          </span>
           <hr className="absolute top-1/2 w-full border-white/5" />
         </div>
 
         <div className="space-y-3">
-          <a 
+          <a
             href={getGoogleAuthUrl()}
             className="w-full bg-white/5 border border-white/10 text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-3 hover:bg-white/10 transition shadow-xl"
           >
-            <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" className="w-4 h-4" alt="Google" />
+            <img
+              src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png"
+              className="w-4 h-4"
+              alt="Google"
+            />
             {t.google}
           </a>
         </div>
       </form>
 
       <p className="mt-6 text-center text-gray-500 text-[12px] font-medium">
-        {t.noAccount} 
-        <button 
-          onClick={() => navigate('/register')} 
+        {t.noAccount}
+        <button
+          onClick={() => navigate('/register')}
           className="text-[#2BB8B8] font-black ml-1 hover:underline underline-offset-4"
         >
           {t.registerLink}
