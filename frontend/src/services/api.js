@@ -19,13 +19,21 @@ const api = axios.create({
   },
 });
 
+const getCleanCacheKey = (url) => {
+  if (!url) return '';
+  const path = url.replace(/^.*\/\/.*?\//, '/');
+  return `sira_cache_${path}`;
+};
+
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
+    config.headers = config.headers || {};
 
     if (token) {
-      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      delete config.headers.Authorization;
     }
 
     return config;
@@ -35,28 +43,29 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
-    // 🌐 LOW-DATA OFFLINE CACHING MANAGER
-    // Intercept successful GET operations on primary payload views
     const cacheableEndpoints = [
       '/users/profile',
       '/contracts/worker/history',
       '/jobs/nearby',
-      '/worker/profile'
+      '/worker/profile',
     ];
 
-    const matchesTarget = cacheableEndpoints.some((endpoint) => 
+    const matchesTarget = cacheableEndpoints.some((endpoint) =>
       response.config.url?.includes(endpoint)
     );
 
     if (response.config.method === 'get' && matchesTarget) {
-      const cacheKey = `sira_cache_${response.config.url}`;
+      const cacheKey = getCleanCacheKey(response.config.url);
       try {
-        localStorage.setItem(cacheKey, JSON.stringify({
-          data: response.data,
-          timestamp: Date.now()
-        }));
+        localStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            data: response.data,
+            timestamp: Date.now(),
+          })
+        );
       } catch (storageError) {
-        console.warn('Local storage write limit reached. Caching bypassed.', storageError);
+        // Fallback silently
       }
     }
 
@@ -65,64 +74,54 @@ api.interceptors.response.use(
   (error) => {
     const originalRequest = error.config;
 
-    // Detect if a network drop, timeout, or server failure has occurred
-    const isOfflineOrNetworkFailure = 
-      !error.response || 
-      error.code === 'ECONNABORTED' || 
+    const isOfflineOrNetworkFailure =
+      !error.response ||
+      error.code === 'ECONNABORTED' ||
       error.response.status >= 500;
 
-    // Fallback gracefully to Localized Cache if offline
     if (isOfflineOrNetworkFailure && originalRequest && originalRequest.method === 'get') {
-      const cacheKey = `sira_cache_${originalRequest.url}`;
+      const cacheKey = getCleanCacheKey(originalRequest.url);
       const cachedString = localStorage.getItem(cacheKey);
 
       if (cachedString) {
         try {
           const cachePackage = JSON.parse(cachedString);
-          console.warn(`🎯 serving offline fallback data cache payload for query: ${originalRequest.url}`);
 
-          // Decorate payload markers to optionally alert the UI layers of offline state fallback
           if (cachePackage.data && typeof cachePackage.data === 'object') {
             cachePackage.data._isOfflineCachedFallback = true;
             cachePackage.data._cachedAt = cachePackage.timestamp;
           }
 
-          // Force resolve response seamlessly down to the waiting view components
           return Promise.resolve({
             ...error,
             status: 200,
             statusText: 'OK (Offline Cache Fallback)',
             headers: originalRequest.headers,
             config: originalRequest,
-            data: cachePackage.data
+            data: cachePackage.data,
           });
         } catch (parseError) {
-          console.error('Local backup string verification failed processing payload.', parseError);
+          // Fallback silently
         }
       }
     }
 
-    // Retain original core edge logic parameters
-    if (error.code === 'ECONNABORTED') {
-      console.error('Request timed out');
-    }
+    const isAuthRoute =
+      originalRequest?.url?.includes('/auth/login') ||
+      originalRequest?.url?.includes('/auth/register') ||
+      originalRequest?.url?.includes('/auth/me') ||
+      originalRequest?.url?.includes('/chat/conversations');
 
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !isAuthRoute) {
       localStorage.removeItem('token');
-
       delete api.defaults.headers.common.Authorization;
 
-      const isVoiceActive =
-        sessionStorage.getItem('sira_voice_active') === 'true';
+      const isVoiceActive = sessionStorage.getItem('sira_voice_active') === 'true';
 
       if (isVoiceActive) {
-        window.dispatchEvent(
-          new CustomEvent('auth_expired_during_voice')
-        );
+        window.dispatchEvent(new CustomEvent('auth_expired_during_voice'));
       } else {
-        if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
-        }
+        window.dispatchEvent(new Event('auth_logout'));
       }
     }
 
