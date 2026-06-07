@@ -64,7 +64,7 @@ api.interceptors.response.use(
             timestamp: Date.now(),
           })
         );
-      } catch (storageError) {
+      } catch  {
         // Fallback silently
       }
     }
@@ -100,7 +100,7 @@ api.interceptors.response.use(
             config: originalRequest,
             data: cachePackage.data,
           });
-        } catch (parseError) {
+        } catch  {
           // Fallback silently
         }
       }
