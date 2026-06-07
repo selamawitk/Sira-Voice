@@ -1,39 +1,56 @@
 import api from './api.js';
 
-export const transcribeVoice = async (audioBlob) => {
-  const formData = new FormData();
-  formData.append('audio', audioBlob, 'recording.webm');
-
-  const response = await api.post('/voice/transcribe', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+export const transcribeVoice = async (text, lang = 'en') => {
+  const response = await api.post('/voice/transcribe', {
+    text,
+    lang,
   });
 
   return response.data;
 };
 
-export const voiceHire = async (jobId, audioBlob) => {
-  const formData = new FormData();
-  formData.append('audio', audioBlob, 'hire-command.webm');
-
-  const response = await api.post(`/voice/hire/${jobId}`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+export const voiceHire = async (
+  jobId,
+  text,
+  lang = 'en'
+) => {
+  const response = await api.post(
+    `/voice/hire/${jobId}`,
+    {
+      text,
+      lang,
+    }
+  );
 
   return response.data;
 };
 
-export const searchVoiceTranscript = async (transcript) => {
-  const response = await api.post('/ai/voice-search', { transcript });
+export const searchVoiceTranscript = async (
+  transcript,
+  lang = 'en'
+) => {
+  const response = await api.post(
+    '/ai/voice-search',
+    {
+      transcript,
+      lang,
+    }
+  );
+
   return response.data;
 };
 
-export const processVoiceCV = async (audioBlob) => {
-  const formData = new FormData();
-  formData.append('audio', audioBlob, 'voice-cv.webm');
-
-  const response = await api.post('/ai/process-cv', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+export const processVoiceCV = async (
+  text,
+  lang = 'en'
+) => {
+  const response = await api.post(
+    '/ai/process-cv',
+    {
+      text,
+      lang,
+    }
+  );
 
   return response.data;
 };
