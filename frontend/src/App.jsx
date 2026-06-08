@@ -4,17 +4,21 @@ import { AuthProvider } from './context/AuthContext.jsx';
 import { LocationProvider } from './context/LocationContext.jsx';
 import { LanguageProvider } from './context/LanguageContext.jsx';
 import { ToastProvider } from './components/ui/ToastProvider.jsx';
+import { SocketProvider } from './context/SocketContext.jsx';
 
 const App = () => {
+  console.debug('[App render]');
   return (
     <AuthProvider>
-      <ToastProvider>
-        <LanguageProvider>
-          <LocationProvider>
-            <AppRouter />
-          </LocationProvider>
-        </LanguageProvider>
-      </ToastProvider>
+      <SocketProvider>
+        <ToastProvider>
+          <LanguageProvider>
+            <LocationProvider>
+              <AppRouter />
+            </LocationProvider>
+          </LanguageProvider>
+        </ToastProvider>
+      </SocketProvider>
     </AuthProvider>
   );
 };
