@@ -1,65 +1,98 @@
 import Job from '../models/Job.js';
 import User from '../models/User.js';
-import Transaction from '../models/Transaction.js'; 
+import Transaction from '../models/Transaction.js';
+import ScamAnalysis from '../models/ScamAnalysis.js';
+
 import asyncHandler from '../utils/asyncHandler.js';
+
 import { findMatchingWorkers } from '../services/jobMatcher.js';
 import { analyzeJobForScam } from '../services/aiService.js';
-import ScamAnalysis from '../models/ScamAnalysis.js';
+
 import { createApplicationLogic } from './applicationController.js';
 
+/* =========================
+   📍 DISTANCE HELPER
+========================= */
 const getDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371e3; // Earth's radius in meters
+  const R = 6371e3;
+
   const φ1 = (lat1 * Math.PI) / 180;
   const φ2 = (lat2 * Math.PI) / 180;
+
   const Δφ = ((lat2 - lat1) * Math.PI) / 180;
   const Δλ = ((lon2 - lon1) * Math.PI) / 180;
 
-  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-            Math.cos(φ1) * Math.cos(φ2) *
-            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const a =
+    Math.sin(Δφ / 2) ** 2 +
+    Math.cos(φ1) *
+      Math.cos(φ2) *
+      Math.sin(Δλ / 2) ** 2;
+
+  const c =
+    2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c;
 };
 
+/* =========================
+   📍 NORMALIZE LOCATION
+========================= */
 const normalizeLocationCoordinates = (location) => {
-  if (!location || !Array.isArray(location.coordinates) || location.coordinates.length !== 2) {
+  if (
+    !location ||
+    !Array.isArray(location.coordinates) ||
+    location.coordinates.length !== 2
+  ) {
     return location;
   }
 
-  const [first, second] = location.coordinates;
+  const [a, b] = location.coordinates;
+
   const looksLikeLatLng =
-    Number.isFinite(first) &&
-    Number.isFinite(second) &&
-    Math.abs(first) <= 90 &&
-    Math.abs(second) <= 90 &&
-    Math.abs(first) < Math.abs(second);
+    Number.isFinite(a) &&
+    Number.isFinite(b) &&
+    Math.abs(a) <= 90 &&
+    Math.abs(b) <= 90 &&
+    Math.abs(a) < Math.abs(b);
 
   if (looksLikeLatLng) {
     return {
       ...location,
-      coordinates: [second, first]
+      coordinates: [b, a], // fix swap → [lng, lat]
     };
   }
 
   return location;
 };
 
+/* =========================
+   🤖 AI MATCH PROCESSOR
+========================= */
 export const processNewJobMatches = async (job, io) => {
-  // FIX: Passed io as the second parameter so notificationService can push matching updates
   const matches = await findMatchingWorkers(job, io);
+
   const nonAutoMatches = [];
 
   for (const match of matches) {
     const worker = match.worker;
-    const canAutoApply = worker?.workerProfile?.agentPreferences?.autoApply;
 
-    if (canAutoApply) {
+    const autoApply =
+      worker?.workerProfile?.agentPreferences?.autoApply;
+
+    if (autoApply) {
       try {
-        await createApplicationLogic(job._id, worker._id, io, true);
+        await createApplicationLogic(
+          job._id,
+          worker._id,
+          io,
+          true
+        );
       } catch (err) {
         if (err.statusCode !== 400) {
-          console.error(`Auto-Apply failed for worker ${worker._id}:`, err.message);
+          console.error(
+            `Auto-apply failed for ${worker._id}:`,
+            err.message
+          );
         }
       }
     } else {
@@ -67,35 +100,54 @@ export const processNewJobMatches = async (job, io) => {
     }
   }
 
+  /* =========================
+     📡 REALTIME NOTIFICATIONS
+  ========================= */
   if (io) {
-    nonAutoMatches.forEach((match) => {
-      if (match.worker?._id) {
-        const userId = match.worker._id.toString();
-        const payload = {
-          title: 'Sira Agent: Match Found! 📍',
-          message: `A new ${job.category || 'matching'} job matches your profile. Check it out!`,
-          jobId: job._id,
-          score: match.score
-        };
-        io.to(userId).emit('new_job_match', payload);
-        io.to(userId).emit('new_match', payload);
-      }
-    });
+    for (const match of nonAutoMatches) {
+      const userId = match.worker?._id?.toString();
+      if (!userId) continue;
+
+      const payload = {
+        title: 'Sira Agent Match 📍',
+        message: `New ${job.category || 'job'} matches your profile`,
+        jobId: job._id,
+        score: match.score,
+      };
+
+      io.to(userId).emit('new_job_match', payload);
+      io.to(userId).emit('new_match', payload);
+    }
   }
 
   return matches;
 };
 
+/* =========================
+   🟢 CREATE JOB
+========================= */
 export const createJob = asyncHandler(async (req, res) => {
-  const { title, description, category, salary, location } = req.body;
-  
+  const {
+    title,
+    description,
+    category,
+    salary,
+    location,
+  } = req.body;
+
+  /* AI scam check */
   const scamAnalysis = await analyzeJobForScam(description, salary);
+
   if (!scamAnalysis.isSafe) {
-    res.status(400);
-    throw new Error(`Job posting flagged as potentially unsafe: ${scamAnalysis.reason}`);
+    return res.status(400).json({
+      success: false,
+      message: `Job flagged: ${scamAnalysis.reason}`,
+      analysis: scamAnalysis,
+    });
   }
-  
-  const normalizedLocation = normalizeLocationCoordinates(location);
+
+  const normalizedLocation =
+    normalizeLocationCoordinates(location);
 
   const job = await Job.create({
     employer: req.user._id,
@@ -103,201 +155,284 @@ export const createJob = asyncHandler(async (req, res) => {
     description,
     category,
     salary,
-    location: normalizedLocation
+    location: normalizedLocation,
+    isAiFlagged: !scamAnalysis.isSafe,
+    aiRiskScore: scamAnalysis.score,
+    aiAnalysis: scamAnalysis,
   });
 
-  const matches = await processNewJobMatches(job, req.io);
-  const matchCount = matches.length;
+  const matches = await processNewJobMatches(
+    job,
+    req.io
+  );
 
+  /* save scam analysis log */
   try {
     await ScamAnalysis.create({
       jobId: job._id,
-      isSafe: scamAnalysis.isSafe,
-      score: scamAnalysis.score,
-      reason: scamAnalysis.reason,
-      analyzedAt: new Date()
+      ...scamAnalysis,
+      analyzedAt: new Date(),
     });
   } catch (err) {
-    console.error('Failed to persist scam analysis:', err?.message || err);
+    console.error(
+      'Scam analysis save failed:',
+      err.message
+    );
   }
 
   res.status(201).json({
     success: true,
     data: job,
-    matchCount,
-    topMatches: matches.slice(0, 3)
+    matchCount: matches.length,
+    topMatches: matches.slice(0, 3),
   });
 });
 
+/* =========================
+   🔍 GET JOBS (SEARCH + GEO)
+========================= */
 export const getJobs = asyncHandler(async (req, res) => {
-  const { lat, lng, distance = 5, category } = req.query;
-  let query = {};
+  const {
+    lat,
+    lng,
+    distance = 5,
+    category,
+  } = req.query;
+
+  const query = {};
 
   if (lat && lng) {
     query.location = {
       $near: {
-        $geometry: { 
-          type: "Point", 
-          coordinates: [parseFloat(lng), parseFloat(lat)] 
+        $geometry: {
+          type: 'Point',
+          coordinates: [
+            parseFloat(lng),
+            parseFloat(lat),
+          ],
         },
-        $maxDistance: parseFloat(distance) * 1000 
-      }
+        $maxDistance: parseFloat(distance) * 1000,
+      },
     };
   }
 
   if (category) {
-    query.category = { $regex: category, $options: 'i' };
+    query.category = {
+      $regex: category,
+      $options: 'i',
+    };
   }
 
   const jobs = await Job.find(query)
-    .populate('employer', 'fullName employerProfile.employerRating')
+    .populate(
+      'employer',
+      'fullName employerProfile.employerRating'
+    )
     .limit(20);
 
   res.json({
     success: true,
     count: jobs.length,
-    data: jobs
+    data: jobs,
   });
 });
 
-export const getJobById = asyncHandler(async (req, res) => {
-  const job = await Job.findById(req.params.id)
-    .populate('employer', 'fullName employerProfile.employerRating')
-    .populate('worker', 'fullName phone workerProfile');
+/* =========================
+   📄 GET JOB BY ID
+========================= */
+export const getJobById = asyncHandler(
+  async (req, res) => {
+    const job = await Job.findById(req.params.id)
+      .populate(
+        'employer',
+        'fullName employerProfile.employerRating'
+      )
+      .populate(
+        'worker',
+        'fullName phone workerProfile'
+      );
 
-  if (!job) {
-    res.status(404);
-    throw new Error('Job not found');
-  }
-
-  res.json({
-    success: true,
-    data: job
-  });
-});
-
-export const getJobMatches = asyncHandler(async (req, res) => {
-  const job = await Job.findById(req.params.id);
-  
-  if (!job) {
-    res.status(404);
-    throw new Error('Job not found');
-  }
-
-  // FIX: Passed req.io here as well to preserve real-time notification capability during programmatic checks
-  const rankedWorkers = await findMatchingWorkers(job, req.io);
-  
-  res.json({
-    success: true,
-    jobTitle: job.title,
-    matches: rankedWorkers
-  });
-});
-
-export const startJob = asyncHandler(async (req, res) => {
-  const { lat, lng } = req.body; 
-  const job = await Job.findById(req.params.id);
-
-  if (!job) {
-    res.status(404);
-    throw new Error('Job not found');
-  }
-
-  if (job.worker?.toString() !== req.user._id.toString()) {
-    res.status(403);
-    throw new Error('You are not assigned to this job');
-  }
-
-  const [jobLng, jobLat] = job.location.coordinates;
-  const distance = getDistance(lat, lng, jobLat, jobLng);
-
-  if (distance > 200) {
-    res.status(403);
-    throw new Error(`Verification failed: You are ${Math.round(distance)}m away. Move closer to the site.`);
-  }
-
-  job.status = 'in-progress';
-  job.startedAt = Date.now();
-  await job.save();
-
-  res.json({
-    success: true,
-    message: 'GPS Verified. Job is now in-progress.',
-    job
-  });
-});
-
-// ==========================================================
-//  UPDATED FUNCTION: PROCESSES SAVING THROUGH TRANSACTION MODEL
-// ==========================================================
-export const completeJob = asyncHandler(async (req, res) => {
-  const job = await Job.findById(req.params.id);
-
-  if (!job) {
-    res.status(404);
-    throw new Error('Job not found');
-  }
-
-  if (job.employer.toString() !== req.user._id.toString()) {
-    res.status(403);
-    throw new Error('Unauthorized: Only the employer can mark this job as completed');
-  }
-
-  if (job.status !== 'in-progress') {
-    res.status(400);
-    throw new Error(`Job cannot be completed because its current status is: ${job.status}`);
-  }
-
-  if (!job.worker) {
-    res.status(400);
-    throw new Error('This job cannot be completed because no worker was ever assigned');
-  }
-
-  // 1. Update Job Status Lifecycle
-  job.status = 'completed';
-  job.completedAt = Date.now();
-  await job.save();
-
-  const payoutAmount = Number(job.salary) || 0;
-  const earningRef = `EARN-${job._id}-${Date.now()}`;
-
-  // 2. Create entry inside your separate Transaction collection schema
-  await Transaction.create({
-    employer: job.employer,
-    worker: job.worker,
-    job: job._id,
-    amount: payoutAmount,
-    currency: 'ETB',
-    tx_ref: earningRef,
-    status: 'success', 
-    purpose: `Job Execution Earning: ${job.title}`,
-    paidAt: new Date()
-  });
-
-  // 3. Update active worker digital wallet balance safely
-  const worker = await User.findById(job.worker);
-  if (worker) {
-    if (!worker.workerProfile) worker.workerProfile = {};
-    if (worker.workerProfile.balance === undefined) {
-      worker.workerProfile.balance = 0;
+    if (!job) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Not found' });
     }
 
-    worker.workerProfile.balance += payoutAmount;
-    await worker.save();
+    res.json({ success: true, data: job });
+  }
+);
 
-    // 4. Emit live update over WebSockets
-    if (req.io) {
-      req.io.to(worker._id.toString()).emit('payment_received', {
-        title: 'Payment Verified! 💸',
-        message: `You earned ${payoutAmount} ETB for completing "${job.title}".`,
-        balance: worker.workerProfile.balance
+/* =========================
+   🤝 GET MATCHES
+========================= */
+export const getJobMatches = asyncHandler(
+  async (req, res) => {
+    const job = await Job.findById(req.params.id);
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found',
       });
     }
-  }
 
-  res.json({
-    success: true,
-    message: 'Job successfully completed. Financial audit records updated.',
-    job
-  });
-});
+    const matches = await findMatchingWorkers(
+      job,
+      req.io
+    );
+
+    res.json({
+      success: true,
+      jobTitle: job.title,
+      matches,
+    });
+  }
+);
+
+/* =========================
+   🚀 START JOB (GPS VERIFY)
+========================= */
+export const startJob = asyncHandler(
+  async (req, res) => {
+    const { lat, lng } = req.body;
+
+    const job = await Job.findById(req.params.id);
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found',
+      });
+    }
+
+    if (
+      job.worker?.toString() !==
+      req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not assigned worker',
+      });
+    }
+
+    const [jobLng, jobLat] =
+      job.location.coordinates;
+
+    const distance = getDistance(
+      lat,
+      lng,
+      jobLat,
+      jobLng
+    );
+
+    if (distance > 200) {
+      return res.status(403).json({
+        success: false,
+        message: `Too far: ${Math.round(
+          distance
+        )}m away`,
+      });
+    }
+
+    job.status = 'in-progress';
+    job.startedAt = Date.now();
+
+    await job.save();
+
+    res.json({
+      success: true,
+      message: 'Job started',
+      job,
+    });
+  }
+);
+
+/* =========================
+   💰 COMPLETE JOB + PAYMENT
+========================= */
+export const completeJob = asyncHandler(
+  async (req, res) => {
+    const job = await Job.findById(req.params.id);
+
+    if (!job) {
+      return res
+        .status(404)
+        .json({ message: 'Job not found' });
+    }
+
+    if (
+      job.employer.toString() !==
+      req.user._id.toString()
+    ) {
+      return res
+        .status(403)
+        .json({ message: 'Unauthorized' });
+    }
+
+    if (job.status !== 'in-progress') {
+      return res.status(400).json({
+        message: `Invalid status: ${job.status}`,
+      });
+    }
+
+    if (!job.worker) {
+      return res.status(400).json({
+        message: 'No worker assigned',
+      });
+    }
+
+    /* mark completed */
+    job.status = 'completed';
+    job.completedAt = Date.now();
+    await job.save();
+
+    const amount = Number(job.salary) || 0;
+
+    const txRef = `EARN-${job._id}-${Date.now()}`;
+
+    /* transaction record */
+    await Transaction.create({
+      employer: job.employer,
+      worker: job.worker,
+      job: job._id,
+      amount,
+      currency: 'ETB',
+      tx_ref: txRef,
+      status: 'success',
+      purpose: `Job: ${job.title}`,
+      paidAt: new Date(),
+    });
+
+    /* update wallet */
+    const worker = await User.findById(job.worker);
+
+    if (worker) {
+      worker.workerProfile =
+        worker.workerProfile || {};
+
+      worker.workerProfile.balance =
+        worker.workerProfile.balance || 0;
+
+      worker.workerProfile.balance += amount;
+
+      await worker.save();
+
+      /* notify worker */
+      req.io?.to(worker._id.toString()).emit(
+        'payment_received',
+        {
+          title: 'Payment Received 💸',
+          message: `+${amount} ETB`,
+          balance:
+            worker.workerProfile.balance,
+        }
+      );
+    }
+
+    res.json({
+      success: true,
+      message: 'Job completed successfully',
+      job,
+    });
+  }
+);
