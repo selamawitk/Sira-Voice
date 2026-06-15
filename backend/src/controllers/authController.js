@@ -23,7 +23,7 @@ export const generatePasskeyRegistration = asyncHandler(async (req, res) => {
     rpName: 'Sira Platform',
     rpID: RP_ID,
     userID: isoUint8Array.fromUTF8String(user._id.toString()),
-    userName: user.phone || user.email || user.fullName,
+    userName: user.email || user.phone || user.fullName,
     attestationType: 'none',
     authenticatorSelection: {
       residentKey: 'required',
@@ -120,10 +120,13 @@ export const verifyPasskeyLogin = asyncHandler(async (req, res) => {
     await user.save();
 
     res.status(200).json({
-      _id: user._id,
-      fullName: user.fullName,
-      role: user.role,
-      token: generateToken(user),
+      success: true,
+      data: {
+        _id: user._id,
+        fullName: user.fullName,
+        role: user.role,
+        token: generateToken(user),
+      }
     });
   } else {
     res.status(400);
@@ -177,25 +180,34 @@ export const googleAuthSuccess = asyncHandler(async (req, res) => {
 });
 
 export const loginUser = asyncHandler(async (req, res) => {
-  const { phone, password } = req.body;
+  const { email, password } = req.body;
 
-  if (!phone || !password) {
+  if (!email || !password) {
     res.status(400);
-    throw new Error('Phone and password are required');
+    throw new Error('Email and password are required');
   }
 
-  const user = await User.findOne({ phone: phone.trim() }).select('+password');
+  const user = await User.findOne({
+    email: email.toLowerCase().trim(),
+  }).select('+password');
 
   if (!user || !(await user.matchPassword(password))) {
     res.status(401);
-    throw new Error('Invalid phone or password');
+    throw new Error('Invalid email or password');
   }
 
   res.status(200).json({
-    _id: user._id,
-    fullName: user.fullName,
-    role: user.role,
-    token: generateToken(user),
+    success: true,
+    data: {
+      token: generateToken(user),
+      user: {
+        _id: user._id,
+        fullName: user.fullName,
+        phone: user.phone,
+        email: user.email,
+        role: user.role,
+      },
+    },
   });
 });
 
@@ -237,10 +249,13 @@ export const registerUser = asyncHandler(async (req, res) => {
   });
 
   res.status(201).json({
-    _id: user._id,
-    fullName: user.fullName,
-    role: user.role,
-    token: generateToken(user),
+    success: true,
+    data: {
+      _id: user._id,
+      fullName: user.fullName,
+      role: user.role,
+      token: generateToken(user),
+    }
   });
 });
 
@@ -252,7 +267,7 @@ export const getProfile = asyncHandler(async (req, res) => {
     throw new Error('User not found');
   }
 
-  res.status(200).json(user);
+  res.status(200).json({ success: true, data: user });
 });
 
 export const setUserRole = asyncHandler(async (req, res) => {
@@ -275,7 +290,7 @@ export const setUserRole = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    role: user.role,
+    data: { role: user.role },
   });
 });
 
