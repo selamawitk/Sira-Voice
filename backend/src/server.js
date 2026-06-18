@@ -27,6 +27,7 @@ import ratingRoutes from './routes/ratingRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import chatRoutes from './routes/chatRoutes.js';
 
 dotenv.config();
 
@@ -58,7 +59,6 @@ const httpServer = createServer(app);
 await connectDB();
 
 const io = initSocket(httpServer);
-// Make socket available via app.get('io') for controllers and webhooks
 app.set('io', io);
 
 app.set('trust proxy', 1);
@@ -239,6 +239,7 @@ app.use('/api/ratings', ratingRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/chat', chatRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
