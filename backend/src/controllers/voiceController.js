@@ -6,27 +6,27 @@ import {
   processTextToData
 } from '../services/aiService.js';
 
-import { transcribeAudio } from '../services/voiceService.js';
-
 import { createApplicationLogic } from './applicationController.js';
 
 import Job from '../models/Job.js';
 import User from '../models/User.js';
 
 /**
- * 🎤 FAST VOICE PIPELINE
- * audio → transcription → AI (text only)
+ * 🎤 TEXT-BASED VOICE PIPELINE
+ * Browser SpeechRecognition → text → AI
  */
 export const processVoiceAction = asyncHandler(async (req, res) => {
-  let text = req.body.transcript;
-  let detectedLang = req.body.language || 'unknown';
+  const text =
+    req.body.text ||
+    req.body.transcript ||
+    '';
 
-  if (req.file) {
-    const transcription = await transcribeAudio(req.file.path);
-    text = transcription.text;
-  }
+  const detectedLang =
+    req.body.lang ||
+    req.body.language ||
+    'en';
 
-  if (!text) {
+  if (!text || !text.trim()) {
     return res.json({
       success: false,
       transcript: '',
@@ -35,9 +35,13 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
     });
   }
 
-  const intent = await processTextToData(text);
+  const intent = await processTextToData(
+    text,
+    detectedLang
+  );
 
   const response = {
+    success: true,
     transcript: text,
     language: detectedLang,
     aiInterpreted: intent,
@@ -46,31 +50,52 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
   };
 
   /**
-   * 🟢 POST JOB (EMPLOYER ONLY)
+   * 🟢 POST JOB
    */
-  if (intent.intent === 'post' && req.user?.role === 'employer') {
+  if (
+    intent.intent === 'post' &&
+    req.user?.role === 'employer'
+  ) {
     const job = await Job.create({
       employer: req.user._id,
-      title: intent.category ? `${intent.category} Job` : 'New Job',
-      category: intent.category || 'General',
-      description: text,
+      title: intent.title ||
+        (intent.category
+          ? `${intent.category} Job`
+          : 'New Job'),
+      category:
+        intent.category || 'General',
+      description:
+        intent.description || text,
       salary: intent.salary || 0,
+      paymentType:
+        intent.paymentType || 'daily',
       location: {
-        address: intent.location || 'Addis Ababa',
+        address:
+          intent.location ||
+          'Addis Ababa',
         type: 'Point',
-        coordinates: [38.7578, 8.9806]
+        coordinates:
+          intent.coordinates || [
+            38.7578,
+            8.9806
+          ]
       },
       status: 'open'
     });
 
-    response.actionTaken = 'JOB_CREATED';
+    response.actionTaken =
+      'JOB_CREATED';
+
     response.data = job;
   }
 
   /**
-   * 🟡 APPLY (WORKER ONLY)
+   * 🟡 APPLY JOB
    */
-  else if (intent.intent === 'apply' && req.user?.role === 'worker') {
+  else if (
+    intent.intent === 'apply' &&
+    req.user?.role === 'worker'
+  ) {
     const jobId = req.body.jobId;
 
     if (!jobId) {
@@ -81,16 +106,20 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
       });
     }
 
-    const application = await createApplicationLogic(
-      jobId,
-      req.user._id,
-      req.io,
-      false
-    );
+    const application =
+      await createApplicationLogic(
+        jobId,
+        req.user._id,
+        req.io,
+        false
+      );
 
-    response.actionTaken = 'JOB_APPLICATION_CREATED';
+    response.actionTaken =
+      'JOB_APPLICATION_CREATED';
+
     response.data = {
-      applicationId: application._id,
+      applicationId:
+        application._id,
       jobId
     };
   }
@@ -98,97 +127,145 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
   /**
    * 🔵 SEARCH JOBS
    */
-  else if (intent.intent === 'search') {
+  else if (
+    intent.intent === 'search'
+  ) {
     const jobs = await Job.find({
       $or: [
         {
           category: {
-            $regex: intent.category || '',
+            $regex:
+              intent.category || '',
             $options: 'i'
           }
         },
         {
           title: {
-            $regex: intent.category || '',
+            $regex:
+              intent.category || '',
             $options: 'i'
           }
         }
       ]
     })
       .limit(10)
-      .populate('employer', 'fullName');
+      .populate(
+        'employer',
+        'fullName'
+      );
 
-    response.actionTaken = 'JOB_SEARCH_RESULTS';
+    response.actionTaken =
+      'JOB_SEARCH_RESULTS';
+
     response.data = jobs;
   }
 
   /**
-   * 🟣 PROFILE UPDATE (VOICE CV ONLY)
+   * 🟣 PROFILE UPDATE
    */
-  else if (intent.intent === 'profile' && req.user) {
-    const user = await User.findById(req.user._id);
+  else if (
+    intent.intent === 'profile' &&
+    req.user
+  ) {
+    const user = await User.findById(
+      req.user._id
+    );
 
-    if (user && user.role === 'worker') {
+    if (
+      user &&
+      user.role === 'worker'
+    ) {
       user.workerProfile.skills = [
         ...new Set([
-          ...(user.workerProfile.skills || []),
+          ...(user.workerProfile
+            .skills || []),
           ...(intent.skills || [])
         ])
       ];
 
       user.workerProfile.bio =
-        intent.summary || user.workerProfile.bio;
+        intent.summary ||
+        user.workerProfile.bio;
+
+      user.workerProfile.rawVoiceTranscript =
+        text;
+
+      user.workerProfile.preferredLanguage =
+        detectedLang;
 
       await user.save();
 
-      response.actionTaken = 'PROFILE_UPDATED';
-      response.data = user.workerProfile;
+      response.actionTaken =
+        'PROFILE_UPDATED';
+
+      response.data =
+        user.workerProfile;
     }
+  }
+
+  /**
+   * 🟠 DEFAULT AI RESPONSE
+   */
+  else {
+    response.actionTaken =
+      'TEXT_PROCESSED';
   }
 
   return res.json(response);
 });
 
 /**
- * 🔍 VOICE JOB SEARCH ONLY
+ * 🔍 TEXT JOB SEARCH
  */
 export const voiceJobSearch = asyncHandler(async (req, res) => {
-  let text = req.body.transcript;
+  const text =
+    req.body.text ||
+    req.body.transcript ||
+    '';
 
-  if (req.file) {
-    const transcription = await transcribeAudio(req.file.path);
-    text = transcription.text;
-  }
+  const detectedLang =
+    req.body.lang ||
+    'en';
 
-  if (!text) {
+  if (!text.trim()) {
     return res.json({
       success: false,
       jobs: []
     });
   }
 
-  const intent = await processTextToData(text);
+  const intent = await processTextToData(
+    text,
+    detectedLang
+  );
 
   const jobs = await Job.find({
     $or: [
       {
         category: {
-          $regex: intent.category || '',
+          $regex:
+            intent.category || '',
           $options: 'i'
         }
       },
       {
         title: {
-          $regex: intent.category || '',
+          $regex:
+            intent.category || '',
           $options: 'i'
         }
       }
     ]
   })
     .limit(10)
-    .populate('employer', 'fullName');
+    .populate(
+      'employer',
+      'fullName'
+    );
 
   res.json({
+    success: true,
+    transcript: text,
     aiInterpreted: intent,
     jobs
   });
@@ -198,45 +275,54 @@ export const voiceJobSearch = asyncHandler(async (req, res) => {
  * 🎤 VOICE CV BUILDER
  */
 export const processVoiceCV = asyncHandler(async (req, res) => {
-  let text = req.body.transcript;
-  let voiceUrl = '';
+  const text =
+    req.body.text ||
+    req.body.transcript ||
+    '';
 
-  if (req.file) {
-    const transcription = await transcribeAudio(req.file.path);
-    text = transcription.text;
-    voiceUrl = `/uploads/${req.file.filename}`;
-  }
+  const detectedLang =
+    req.body.lang ||
+    'en';
 
-  if (!text) {
+  if (!text.trim()) {
     return res.json({
       success: false,
       message: 'No profile data'
     });
   }
 
-  const extracted = await extractProfileFromText(text);
+  const extracted =
+    await extractProfileFromText(
+      text,
+      detectedLang
+    );
 
   const update = {
-    'workerProfile.rawVoiceTranscript': text,
-    'workerProfile.skills': extracted.skills || [],
-    'workerProfile.bio': extracted.bio || '',
-    'workerProfile.preferredLanguage': 'amharic'
+    'workerProfile.rawVoiceTranscript':
+      text,
+
+    'workerProfile.skills':
+      extracted.skills || [],
+
+    'workerProfile.bio':
+      extracted.bio || '',
+
+    'workerProfile.preferredLanguage':
+      detectedLang
   };
 
-  if (voiceUrl) {
-    update['workerProfile.voiceUrl'] = voiceUrl;
-  }
-
-  const user = await User.findByIdAndUpdate(
-    req.user._id,
-    { $set: update },
-    { new: true }
-  );
+  const user =
+    await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: update },
+      { new: true }
+    );
 
   res.json({
     success: true,
     transcript: text,
-    profile: user.workerProfile
+    profile:
+      user.workerProfile
   });
 });
 
@@ -244,7 +330,9 @@ export const processVoiceCV = asyncHandler(async (req, res) => {
  * ⚠️ JOB SAFETY CHECK
  */
 export const checkJobSafety = asyncHandler(async (req, res) => {
-  const job = await Job.findById(req.params.jobId);
+  const job = await Job.findById(
+    req.params.jobId
+  );
 
   if (!job) {
     return res.status(404).json({
@@ -253,7 +341,10 @@ export const checkJobSafety = asyncHandler(async (req, res) => {
     });
   }
 
-  const report = await analyzeJobForScam(job.description);
+  const report =
+    await analyzeJobForScam(
+      job.description
+    );
 
   res.json({
     success: true,
