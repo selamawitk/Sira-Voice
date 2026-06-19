@@ -11,36 +11,62 @@ const model = genAI.getGenerativeModel({
 
 export { genAI, model };
 
+/* =========================
+   🧼 SAFE JSON PARSER
+========================= */
 const safeParse = (text) => {
   try {
     if (!text) return null;
 
-    const cleaned = text.replace(/```json|```/g, '').trim();
+    const cleaned = text
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
 
     return JSON.parse(cleaned);
-  } catch {
+  } catch (err) {
+    console.error('❌ SAFE PARSE ERROR:', err);
     return null;
   }
 };
 
+/* =========================
+   🧠 TEXT → INTENT ENGINE
+   (USED BY VOICE + TEXT PIPELINE)
+========================= */
 export const processTextToData = async (transcript = '') => {
   try {
-    const prompt = `
-You are Sira AI.
+    if (!transcript?.trim()) {
+      return null;
+    }
 
-Analyze this text:
-"${transcript}"
+    const prompt = `
+You are Sira AI assistant.
+
+Analyze the user input and extract structured intent.
+
+Supported intents:
+- search
+- post
+- profile
+- hire
+- apply
 
 Return ONLY valid JSON:
 
 {
-  "intent": "search | post | profile | hire",
+  "intent": "",
   "category": "",
   "location": "",
+  "salary": 0,
+  "paymentType": "daily",
   "skills": [],
   "summary": "",
-  "detectedLanguage": ""
+  "detectedLanguage": "auto"
 }
+
+User input:
+"${transcript}"
 `;
 
     const result = await model.generateContent(prompt);
@@ -48,28 +74,34 @@ Return ONLY valid JSON:
 
     const parsed = safeParse(raw);
 
-    return parsed;
-  } catch {
+    return parsed || null;
+  } catch (err) {
+    console.error('❌ PROCESS TEXT ERROR:', err);
     return null;
   }
 };
 
-export const extractProfileFromText = async (text) => {
+/* =========================
+   👤 PROFILE EXTRACTION ENGINE
+========================= */
+export const extractProfileFromText = async (text = '') => {
   try {
     const prompt = `
-Extract user profile from this text:
-"${text}"
+Extract structured user profile from this text.
 
-Return ONLY JSON:
+Return ONLY valid JSON:
 
 {
-  "name": "full name or null",
-  "phone": "phone or null",
-  "email": "email or null",
-  "skills": ["skill1"],
-  "bio": "short bio",
-  "location": "location or null"
+  "name": null,
+  "phone": null,
+  "email": null,
+  "skills": [],
+  "bio": "",
+  "location": ""
 }
+
+Input:
+"${text}"
 `;
 
     const result = await model.generateContent(prompt);
@@ -87,7 +119,9 @@ Return ONLY JSON:
         location: '',
       }
     );
-  } catch {
+  } catch (err) {
+    console.error('❌ PROFILE EXTRACTION ERROR:', err);
+
     return {
       name: 'User',
       phone: null,
@@ -99,24 +133,43 @@ Return ONLY JSON:
   }
 };
 
+/* =========================
+   ⚠️ JOB SAFETY ANALYZER
+========================= */
 export const analyzeJobForScam = async (description = '') => {
-  const risky = [
-    'pay before',
-    'deposit',
-    'send money',
-    'processing fee',
-    'advance payment',
-  ];
+  try {
+    const riskyKeywords = [
+      'pay before',
+      'deposit',
+      'send money',
+      'processing fee',
+      'advance payment',
+      'registration fee',
+      'telegram payment',
+    ];
 
-  const found = risky.filter((k) =>
-    description.toLowerCase().includes(k)
-  );
+    const lower = description.toLowerCase();
 
-  return {
-    isSafe: found.length === 0,
-    score: found.length ? 80 : 10,
-    reason: found.length
-      ? 'Suspicious payment request detected'
-      : 'Looks safe',
-  };
+    const found = riskyKeywords.filter((k) =>
+      lower.includes(k)
+    );
+
+    return {
+      isSafe: found.length === 0,
+      score: found.length ? 80 : 10,
+      reason: found.length
+        ? 'Suspicious payment or scam pattern detected'
+        : 'Looks safe',
+      flags: found,
+    };
+  } catch (err) {
+    console.error('❌ SCAM ANALYSIS ERROR:', err);
+
+    return {
+      isSafe: true,
+      score: 0,
+      reason: 'Analysis failed safely',
+      flags: [],
+    };
+  }
 };
