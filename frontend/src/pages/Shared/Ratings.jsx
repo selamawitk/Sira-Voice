@@ -3,7 +3,7 @@ import api from '../../services/api.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import RatingModal from '../../components/trust/RatingModal.jsx';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
-import { Star } from 'lucide-react';
+import { Star, MapPin, DollarSign } from 'lucide-react';
 
 const GlassCard = ({ children, className = '' }) => (
   <div className={`bg-white/[0.03] border border-white/10 rounded-3xl p-6 backdrop-blur-md ${className}`}>
@@ -131,10 +131,10 @@ const Ratings = () => {
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 normal-case">
                       <p className="text-white/60 text-sm">
-                        📍 {a.job?.location?.address || (activeLang === 'am' ? 'አዲስ አበባ' : 'Addis Ababa')}
+                        <MapPin className="w-3.5 h-3.5 inline-block mr-1" />{a.job?.location?.address || (activeLang === 'am' ? 'አዲስ አበባ' : 'Addis Ababa')}
                       </p>
                       <p className="text-[#2BB8B8] text-sm font-semibold">
-                        💰 {(a.job?.salary || 0).toLocaleString()} {activeLang === 'am' ? 'ብር' : 'ETB'}
+                        <DollarSign className="w-3.5 h-3.5 inline-block mr-0.5" />{(a.job?.salary || 0).toLocaleString()} {activeLang === 'am' ? 'ብር' : 'ETB'}
                       </p>
                       <p className="text-white/60 text-xs uppercase">
                         {activeLang === 'am' ? 'ሁኔታ' : activeLang === 'or' ? 'Haala' : 'Status'}:{' '}
