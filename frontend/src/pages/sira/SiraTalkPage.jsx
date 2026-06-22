@@ -3,7 +3,7 @@ import { useVoice } from '../../hooks/useVoice.js';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
-import { Mic, ZapOff, Copy, Trash2 } from 'lucide-react';
+import { Mic, MapPin, DollarSign, ZapOff, Copy, Trash2 } from 'lucide-react';
 
 const GlassCard = ({ children, className = '' }) => (
   <div className={`bg-white/[0.03] border border-white/10 rounded-3xl p-6 backdrop-blur-md ${className}`}>
@@ -99,8 +99,8 @@ const SiraTalkPage = () => {
               </>
             )}
 
-            <div className="relative z-10 text-5xl group-hover:scale-110 transition-transform">
-              {isListening ? '🎤' : '🎙️'}
+            <div className="relative z-10 group-hover:scale-110 transition-transform">
+              <Mic className={`w-12 h-12 ${isListening ? 'text-[#2BB8B8]' : 'text-white/80'}`} />
             </div>
           </button>
 
@@ -179,10 +179,10 @@ const SiraTalkPage = () => {
                         {job.title || 'Untitled Job'}
                       </h3>
                       <p className="text-white/60 text-sm mt-1">
-                        📍 {job.location?.address || 'Addis Ababa'}
+                        <MapPin className="w-3.5 h-3.5 inline-block mr-1" />{job.location?.address || 'Addis Ababa'}
                       </p>
                       <p className="text-[#2BB8B8] font-semibold mt-2">
-                        💰 {(job.salary || 0).toLocaleString()} ETB
+                        <DollarSign className="w-3.5 h-3.5 inline-block mr-0.5" />{(job.salary || 0).toLocaleString()} ETB
                       </p>
                     </div>
                     {user?.role === 'worker' && (
