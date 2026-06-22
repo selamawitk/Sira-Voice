@@ -51,9 +51,9 @@ const AuthLayout = ({ children, title, subtitle }) => {
           </div>
         </div>
 
-        {/* ✅ RIGHT SIDE: CARD - Full width on mobile, fills available space on desktop */}
-        <div className="relative z-50 mt-0 md:mt-2 flex justify-center w-full md:flex-1">
-          <div className="w-full max-w-[95vw] sm:max-w-[540px] md:max-w-[640px] bg-[#1A2E35]/70 backdrop-blur-3xl border border-white/10 rounded-[1.5rem] md:rounded-[2.5rem] p-5 sm:p-8 shadow-[0_30px_50px_rgba(0,0,0,0.6)] border-b-white/20">
+        {/* ✅ RIGHT SIDE: CARD */}
+        <div className="relative z-50 mt-0 md:mt-2 flex justify-center w-full md:w-auto md:-translate-x-5">
+          <div className="w-full max-w-[540px] bg-[#1A2E35]/70 backdrop-blur-3xl border border-white/10 rounded-[1.5rem] md:rounded-[2.5rem] p-5 sm:p-8 shadow-[0_30px_50px_rgba(0,0,0,0.6)] border-b-white/20">
              
              <div className="mb-6">
                <h2 className="text-2xl font-black -mt-4 text-center text-white mb-1 tracking-tight">{title}</h2>
