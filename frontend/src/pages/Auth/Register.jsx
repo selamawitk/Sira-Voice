@@ -7,77 +7,77 @@ import api from '../../services/api.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
 
-const translations = {
-  en: {
-    title: "Create Account",
-    subtitle: "Join Sira and find your match today.",
-    roleWorker: "I am a Worker",
-    roleEmployer: "I am an Employer",
-    fullName: "Full Name",
-    identifier: "Phone Number",
-    password: "Password",
-    confirm: "Confirm",
-    registerBtn: "Create Account",
-    biometricBtn: "Register Passkey",
-    processing: "Processing...",
-    or: "or",
-    google: "Sign up with Google",
-    hasAccount: "Already have an account?",
-    loginLink: "Login here.",
-    toastErrorFields: "Please complete all required fields.",
-    toastErrorMatch: "Passwords do not match.",
-    toastSuccess: "Account created successfully.",
-    toastOAuthFail: "Google registration failed. Please try again.",
-    biometricSuccess: "Passkey registered! You can now login with biometrics.",
-    biometricError: "Failed to register passkey."
-  },
-  am: {
-    title: "አካውንት ይፍጠሩ",
-    subtitle: "ሲራን በመቀላቀል ስራዎን ዛሬ ያግኙ።",
-    roleWorker: "እኔ ሰራተኛ ነኝ",
-    roleEmployer: "እኔ አሰሪ ነኝ",
-    fullName: "ሙሉ ስም",
-    identifier: "ስልክ ቁጥር",
-    password: "የይለፍ ቃል",
-    confirm: "ያረጋግጡ",
-    registerBtn: "አካውንት ይፍጠሩ",
-    biometricBtn: "የጣት አሻራ መመዝገቢያ",
-    processing: "በማከናወን ላይ...",
-    or: "ወይም",
-    google: "በጉግል ይመዝገቡ",
-    hasAccount: "አካውንት አለዎት?",
-    loginLink: "እዚህ ይግቡ።",
-    toastErrorFields: "እባክዎን ሁሉንም መስኮች ይሙሉ::",
-    toastErrorMatch: "የይለፍ ቃሉ አይዛመድም::",
-    toastSuccess: "አካውንትዎ በተሳካ ሁኔታ ተፈጥሯል።",
-    toastOAuthFail: "የጉግል ምዝገባ አልተሳካም። እባክዎ እንደገና ይሞክሩ።",
-    biometricSuccess: "የጣት አሻራ ተመዝግቧል! አሁን በጣት አሻራዎ መግባት ይችላሉ።",
-    biometricError: "የጣት አሻራ መመዝገብ አልተቻለም።"
-  },
-  or: {
-    title: "Account Uumi",
-    subtitle: "Sira'n walitti makamuun hojii kee har'a argadhu.",
-    roleWorker: "Ani Hojjataadha",
-    roleEmployer: "Ani Qaxaraadha",
-    fullName: "Maqaa Guutuu",
-    identifier: "Lakkoofsa Bilbilaa",
-    password: "Jecha Icchitii",
-    confirm: "Mirkaneessi",
-    registerBtn: "Account Uumi",
-    biometricBtn: "Mallattoo Qubaa Galmeessi",
-    processing: "Hojjechaa jira...",
-    or: "ykn",
-    google: "Google'n galmaa'i",
-    hasAccount: "Account qabduu?",
-    loginLink: "Asitti seeni.",
-    toastErrorFields: "Maaloo hunda guuti.",
-    toastErrorMatch: "Jechi iccitii wal hin fakkaatu.",
-    toastSuccess: "Milkaa'inaan galmoofteetta.",
-    toastOAuthFail: "Galmeen Google hin milkoofne. Maaloo irra deebi'i yaali.",
-    biometricSuccess: "Mallattoon qubaa galmaa'eera! Amma kanaan seenuu dandeessa.",
-    biometricError: "Mallattoo qubaa galmeessuun hin danda'amne."
-  }
-};
+  const translations = {
+    en: {
+      title: "Create Account",
+      subtitle: "Join Sira and find your match today.",
+      roleWorker: "I am a Worker",
+      roleEmployer: "I am an Employer",
+      fullName: "Full Name",
+      identifier: "Phone Number",
+      password: "Password",
+      confirm: "Confirm",
+      registerBtn: "Create Account",
+      biometricBtn: "Register Biometric",
+      processing: "Processing...",
+      or: "or",
+      google: "Sign up with Google",
+      hasAccount: "Already have an account?",
+      loginLink: "Login here.",
+      toastErrorFields: "Please complete all required fields.",
+      toastErrorMatch: "Passwords do not match.",
+      toastSuccess: "Account created successfully.",
+      toastOAuthFail: "Google registration failed. Please try again.",
+      biometricSuccess: "Biometric registered! You can now login with your face or fingerprint.",
+      biometricError: "Failed to register biometric."
+    },
+    am: {
+      title: "አካውንት ይፍጠሩ",
+      subtitle: "ሲራን በመቀላቀል ስራዎን ዛሬ ያግኙ።",
+      roleWorker: "እኔ ሰራተኛ ነኝ",
+      roleEmployer: "እኔ አሰሪ ነኝ",
+      fullName: "ሙሉ ስም",
+      identifier: "ስልክ ቁጥር",
+      password: "የይለፍ ቃል",
+      confirm: "ያረጋግጡ",
+      registerBtn: "አካውንት ይፍጠሩ",
+      biometricBtn: "የጣት አሻራ/ፊት ይመዝገቡ",
+      processing: "በማከናወን ላይ...",
+      or: "ወይም",
+      google: "በጉግል ይመዝገቡ",
+      hasAccount: "አካውንት አለዎት?",
+      loginLink: "እዚህ ይግቡ።",
+      toastErrorFields: "እባክዎን ሁሉንም መስኮች ይሙሉ::",
+      toastErrorMatch: "የይለፍ ቃሉ አይዛመድም::",
+      toastSuccess: "አካውንትዎ በተሳካ ሁኔታ ተፈጥሯል።",
+      toastOAuthFail: "የጉግል ምዝገባ አልተሳካም። እባክዎ እንደገና ይሞክሩ።",
+      biometricSuccess: "የጣት አሻራ/ፊት ተመዝግቧል! አሁን በፊትዎ ወይም በጣት አሻራዎ መግባት ይችላሉ።",
+      biometricError: "የጣት አሻራ/ፊት መመዝገብ አልተቻለም።"
+    },
+    or: {
+      title: "Account Uumi",
+      subtitle: "Sira'n walitti makamuun hojii kee har'a argadhu.",
+      roleWorker: "Ani Hojjataadha",
+      roleEmployer: "Ani Qaxaraadha",
+      fullName: "Maqaa Guutuu",
+      identifier: "Lakkoofsa Bilbilaa",
+      password: "Jecha Icchitii",
+      confirm: "Mirkaneessi",
+      registerBtn: "Account Uumi",
+      biometricBtn: "Mallattoo qubaa/fuulaa galmeessi",
+      processing: "Hojjechaa jira...",
+      or: "ykn",
+      google: "Google'n galmaa'i",
+      hasAccount: "Account qabduu?",
+      loginLink: "Asitti seeni.",
+      toastErrorFields: "Maaloo hunda guuti.",
+      toastErrorMatch: "Jechi iccitii wal hin fakkaatu.",
+      toastSuccess: "Milkaa'inaan galmoofteetta.",
+      toastOAuthFail: "Galmeen Google hin milkoofne. Maaloo irra deebi'i yaali.",
+      biometricSuccess: "Mallatoon qubaa/fuulaa galmaa'eera! Amma fuula kee ykn mallattoo qubaatiin seenuu dandeessa.",
+      biometricError: "Mallattoo qubaa/fuulaa galmeessuun hin danda'amne."
+    }
+  };
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -275,7 +275,7 @@ const RegisterPage = () => {
           {loading ? t.processing : t.registerBtn} <LogIn className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </button>
 
-        {/* Optional: Passkey setup during registration flow */}
+        {/* Biometric registration (fingerprint/face) */}
         <button
           type="button"
           onClick={handleBiometricRegister}

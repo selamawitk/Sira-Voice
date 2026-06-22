@@ -14,7 +14,7 @@ const translations = {
     password: "Password",
     forgot: "Forgot Password?",
     loginBtn: "Login",
-    biometricBtn: "Sign in with Passkey",
+    biometricBtn: "Sign in with Biometrics",
     processing: "Processing...",
     or: "or",
     google: "Continue with Google",
@@ -33,7 +33,7 @@ const translations = {
     password: "የይለፍ ቃል",
     forgot: "የይለፍ ቃል ረስተዋል?",
     loginBtn: "ይግቡ",
-    biometricBtn: "በጣት አሻራ ይግቡ",
+    biometricBtn: "በጣት አሻራ/ፊት ይግቡ",
     processing: "በማከናወን ላይ...",
     or: "ወይም",
     google: "በጉግል ይቀጥሉ",
@@ -52,7 +52,7 @@ const translations = {
     password: "Jecha Icchitii",
     forgot: "Jecha icchitii dagattee?",
     loginBtn: "Seeni",
-    biometricBtn: "Mallattoo qubaatiin seeni",
+    biometricBtn: "Mallattoo qubaa/fuulaan seeni",
     processing: "Hojjechaa jira...",
     or: "ykn",
     google: "Google'n itti fufi",
@@ -140,14 +140,12 @@ const LoginPage = () => {
   };
 
   const handleBiometricLogin = async () => {
-    if (!email.trim()) {
-      toast?.show?.(t.toastError, 'error');
-      return;
-    }
-
     setLoading(true);
     try {
-      const result = await auth.loginWithPasskey(email);
+      const result = email.trim()
+        ? await auth.loginWithPasskey(email.trim())
+        : await auth.loginWithPasskeyDiscoverable();
+
       if (result?.token) {
         toast?.show?.(t.toastSuccess, 'success');
         const userRole = normalizeRole(result?.user?.role || auth?.user?.role);

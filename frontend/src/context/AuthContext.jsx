@@ -313,6 +313,58 @@ export const AuthProvider = ({ children }) => {
     [fetchMe]
   );
 
+  const loginWithPasskeyDiscoverable = useCallback(async () => {
+    const { data: rawOptions } = await api.post('/auth/passkey/login-options', {});
+    const { state, ...options } = rawOptions;
+    const assertionResponse = await startAuthentication(options);
+    const response = await api.post('/auth/passkey/verify-login', {
+      state,
+      body: assertionResponse,
+    });
+
+    const payload = resolveResponsePayload(response);
+    const token = resolveToken(payload);
+    const loginUser = resolveUserPayload(payload);
+
+    if (!token) {
+      throw new Error('Authentication token missing');
+    }
+
+    setAuthToken(token);
+
+    const normalizedUser = loginUser
+      ? {
+          ...loginUser,
+          role: normalizeRole(loginUser.role),
+        }
+      : null;
+
+    if (normalizedUser) {
+      setUser(normalizedUser);
+    }
+
+    fetchMe({ logoutOnFailure: false })
+      .then((me) => {
+        if (me) {
+          setUser(me);
+        }
+      })
+      .catch((error) => {
+        console.warn('Passkey discoverable login background profile refresh failed:', error);
+      });
+
+    return {
+      token,
+      user: normalizedUser
+        ? {
+            _id: normalizedUser._id,
+            fullName: normalizedUser.fullName,
+            role: normalizedUser.role,
+          }
+        : null,
+    };
+  }, [fetchMe]);
+
   const normalizedRole = normalizeRole(user?.role);
 
   const authValue = useMemo(
@@ -327,10 +379,11 @@ export const AuthProvider = ({ children }) => {
       fetchMe,
       registerPasskey,
       loginWithPasskey,
+      loginWithPasskeyDiscoverable,
       isAuthenticated: !!user?._id,
       role: normalizedRole || null,
     }),
-    [user, loading, initializing, login, register, logout, fetchMe, registerPasskey, loginWithPasskey, normalizedRole]
+    [user, loading, initializing, login, register, logout, fetchMe, registerPasskey, loginWithPasskey, loginWithPasskeyDiscoverable, normalizedRole]
   );
 
   return <AuthContext.Provider value={authValue}>{children}</AuthContext.Provider>;
