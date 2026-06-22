@@ -5,7 +5,9 @@ import {
   getJobById,
   getJobMatches,
   startJob,
-  completeJob
+  completeJob,
+  updateJob,
+  deleteJob
 } from '../controllers/jobController.js';
 import { protect, employerOnly, workerOnly } from '../middleware/authMiddleware.js';
 
@@ -24,6 +26,8 @@ router.patch('/:id/start', protect, workerOnly, startJob);
 router.patch('/:id/complete', protect, employerOnly, completeJob);
 
 router.route('/:id')
-  .get(getJobById);
+  .get(getJobById)
+  .put(protect, employerOnly, updateJob)
+  .delete(protect, employerOnly, deleteJob);
 
 export default router;

@@ -53,4 +53,8 @@ const contractSchema = new mongoose.Schema(
   }
 );
 
+contractSchema.index({ employerId: 1, status: 1 });
+contractSchema.index({ workerId: 1 });
+contractSchema.index({ jobId: 1 });
+
 export default mongoose.model('Contract', contractSchema);

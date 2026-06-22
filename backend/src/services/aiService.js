@@ -6,75 +6,157 @@ dotenv.config();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const model = genAI.getGenerativeModel({
-  model: 'gemini-1.5-flash',
+  model: 'gemini-2.5-flash-preview-04-17',
 });
 
 export { genAI, model };
 
 /* =========================
-   🧼 SAFE JSON PARSER
+   🧼 STRICT JSON PARSER
+   No markdown. No prose.
+   No hallucinated fields.
 ========================= */
+const STRICT_SCHEMAS = {
+  workerProfile: {
+    skill: '',
+    experienceYears: 0,
+    location: '',
+    language: '',
+  },
+  jobPost: {
+    jobTitle: '',
+    quantity: 0,
+    location: '',
+    urgency: '',
+    salary: 0,
+    paymentType: 'daily',
+    description: '',
+  },
+  intent: {
+    intent: '',
+    category: '',
+    location: '',
+    salary: 0,
+    paymentType: 'daily',
+    skills: [],
+    summary: '',
+    language: '',
+  },
+  translation: {
+    translatedText: '',
+    sourceLanguage: '',
+  },
+};
+
 const safeParse = (text) => {
   try {
     if (!text) return null;
-
     const cleaned = text
-      .replace(/```json/g, '')
+      .replace(/```json/gi, '')
       .replace(/```/g, '')
+      .replace(/^[^{]*/, '')
+      .replace(/[^}]*$/, '')
       .trim();
-
     return JSON.parse(cleaned);
   } catch (err) {
-    console.error('❌ SAFE PARSE ERROR:', err);
+    console.error('❌ SAFE PARSE ERROR:', err.message);
     return null;
+  }
+};
+
+const validateAgainstSchema = (parsed, schema) => {
+  if (!parsed || typeof parsed !== 'object') return null;
+  const validated = { ...schema };
+  for (const key of Object.keys(schema)) {
+    if (key in parsed) {
+      const expectedType = typeof schema[key];
+      const actualType = typeof parsed[key];
+      if (expectedType === actualType || Array.isArray(schema[key])) {
+        validated[key] = parsed[key];
+      }
+    }
+  }
+  return validated;
+};
+
+/* =========================
+   🌐 TRANSLATION ENGINE
+   Amharic/Oromo → English
+========================= */
+export const translateText = async (text, sourceLanguage) => {
+  if (!text?.trim()) return null;
+  if (sourceLanguage === 'en') {
+    return { translatedText: text, sourceLanguage: 'en' };
+  }
+
+  const langName = sourceLanguage === 'am' ? 'Amharic' : 'Afaan Oromo';
+
+  try {
+    const prompt = `Translate the following ${langName} text to English. Return ONLY valid JSON:
+
+{
+  "translatedText": "",
+  "sourceLanguage": "${sourceLanguage}"
+}
+
+Input: "${text}"`;
+
+    const result = await model.generateContent(prompt);
+    const raw = (await result.response).text();
+    const parsed = safeParse(raw);
+    const validated = validateAgainstSchema(parsed, STRICT_SCHEMAS.translation);
+
+    return validated?.translatedText
+      ? { translatedText: validated.translatedText, sourceLanguage }
+      : { translatedText: text, sourceLanguage };
+  } catch (err) {
+    console.error('❌ TRANSLATION ERROR:', err);
+    return { translatedText: text, sourceLanguage };
   }
 };
 
 /* =========================
    🧠 TEXT → INTENT ENGINE
-   (USED BY VOICE + TEXT PIPELINE)
+   Detects what user wants to do
 ========================= */
-export const processTextToData = async (transcript = '') => {
+export const processTextToData = async (transcript = '', language = 'am') => {
   try {
-    if (!transcript?.trim()) {
-      return null;
-    }
+    if (!transcript?.trim()) return null;
 
-    const prompt = `
-You are Sira AI assistant.
+    const prompt = `You are Sira AI for Ethiopian job marketplace.
+Input language detected: ${language}
 
-Analyze the user input and extract structured intent.
+Analyze the input and extract structured intent.
 
 Supported intents:
-- search
-- post
-- profile
-- hire
-- apply
+- search (looking for jobs)
+- post (want to post a job)
+- profile (update profile/skills)
+- hire (want to hire someone)
+- apply (apply for a job)
 
 Return ONLY valid JSON:
-
 {
-  "intent": "",
+  "intent": "search|post|profile|hire|apply",
   "category": "",
   "location": "",
   "salary": 0,
-  "paymentType": "daily",
+  "paymentType": "daily|weekly|monthly|fixed",
   "skills": [],
   "summary": "",
-  "detectedLanguage": "auto"
+  "language": "${language}"
 }
 
-User input:
-"${transcript}"
-`;
+NO markdown. NO extra text. ONLY JSON.
+
+Input: "${transcript}"`;
 
     const result = await model.generateContent(prompt);
     const raw = (await result.response).text();
-
     const parsed = safeParse(raw);
+    const validated = validateAgainstSchema(parsed, STRICT_SCHEMAS.intent);
 
-    return parsed || null;
+    return validated;
   } catch (err) {
     console.error('❌ PROCESS TEXT ERROR:', err);
     return null;
@@ -82,55 +164,88 @@ User input:
 };
 
 /* =========================
-   👤 PROFILE EXTRACTION ENGINE
+   👤 WORKER PROFILE EXTRACTION
+   Voice/CV → Structured Profile
 ========================= */
-export const extractProfileFromText = async (text = '') => {
+export const extractWorkerProfileFromText = async (text = '', language = 'am') => {
   try {
-    const prompt = `
-Extract structured user profile from this text.
+    const prompt = `Extract worker profile from this text.
+Language: ${language}
 
 Return ONLY valid JSON:
-
 {
-  "name": null,
-  "phone": null,
-  "email": null,
-  "skills": [],
-  "bio": "",
-  "location": ""
+  "skill": "",
+  "experienceYears": 0,
+  "location": "",
+  "language": "${language}"
 }
 
-Input:
-"${text}"
-`;
+NO markdown. NO extra text. ONLY JSON.
+
+Input: "${text}"`;
 
     const result = await model.generateContent(prompt);
     const raw = (await result.response).text();
-
     const parsed = safeParse(raw);
+    const validated = validateAgainstSchema(parsed, STRICT_SCHEMAS.workerProfile);
 
-    return (
-      parsed || {
-        name: 'User',
-        phone: null,
-        email: null,
-        skills: [],
-        bio: text,
-        location: '',
-      }
-    );
+    return validated || { skill: '', experienceYears: 0, location: '', language };
   } catch (err) {
-    console.error('❌ PROFILE EXTRACTION ERROR:', err);
+    console.error('❌ WORKER PROFILE EXTRACTION ERROR:', err);
+    return { skill: '', experienceYears: 0, location: '', language };
+  }
+};
 
+/* =========================
+   💼 EMPLOYER JOB EXTRACTION
+   Voice → Structured Job Post
+========================= */
+export const extractJobFromText = async (text = '', language = 'am') => {
+  try {
+    const prompt = `Extract job posting details from this employer's request.
+Language: ${language}
+
+Return ONLY valid JSON:
+{
+  "jobTitle": "",
+  "quantity": 1,
+  "location": "",
+  "urgency": "tomorrow|this week|flexible",
+  "salary": 0,
+  "paymentType": "daily|weekly|monthly|fixed",
+  "description": ""
+}
+
+NO markdown. NO extra text. ONLY JSON.
+
+Input: "${text}"`;
+
+    const result = await model.generateContent(prompt);
+    const raw = (await result.response).text();
+    const parsed = safeParse(raw);
+    const validated = validateAgainstSchema(parsed, STRICT_SCHEMAS.jobPost);
+
+    return validated || {
+      jobTitle: '', quantity: 1, location: '',
+      urgency: 'flexible', salary: 0,
+      paymentType: 'daily', description: '',
+    };
+  } catch (err) {
+    console.error('❌ JOB EXTRACTION ERROR:', err);
     return {
-      name: 'User',
-      phone: null,
-      email: null,
-      skills: [],
-      bio: text,
-      location: '',
+      jobTitle: '', quantity: 1, location: '',
+      urgency: 'flexible', salary: 0,
+      paymentType: 'daily', description: '',
     };
   }
+};
+
+/* =========================
+   👤 LEGACY PROFILE EXTRACTION
+   (Kept for backward compat)
+========================= */
+export const extractProfileFromText = async (text = '') => {
+  return extractWorkerProfileFromText(text, 'am');
 };
 
 /* =========================
@@ -139,20 +254,13 @@ Input:
 export const analyzeJobForScam = async (description = '') => {
   try {
     const riskyKeywords = [
-      'pay before',
-      'deposit',
-      'send money',
-      'processing fee',
-      'advance payment',
-      'registration fee',
-      'telegram payment',
+      'pay before', 'deposit', 'send money',
+      'processing fee', 'advance payment',
+      'registration fee', 'telegram payment',
     ];
 
     const lower = description.toLowerCase();
-
-    const found = riskyKeywords.filter((k) =>
-      lower.includes(k)
-    );
+    const found = riskyKeywords.filter((k) => lower.includes(k));
 
     return {
       isSafe: found.length === 0,
@@ -164,12 +272,6 @@ export const analyzeJobForScam = async (description = '') => {
     };
   } catch (err) {
     console.error('❌ SCAM ANALYSIS ERROR:', err);
-
-    return {
-      isSafe: true,
-      score: 0,
-      reason: 'Analysis failed safely',
-      flags: [],
-    };
+    return { isSafe: true, score: 0, reason: 'Analysis failed safely', flags: [] };
   }
 };

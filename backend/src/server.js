@@ -8,6 +8,8 @@ import fs from 'fs';
 import session from 'express-session';
 import passport from 'passport';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import mongoSanitize from 'express-mongo-sanitize';
 import MongoStore from 'connect-mongo';
 
 import './config/passport.js';
@@ -27,7 +29,10 @@ import ratingRoutes from './routes/ratingRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import contractRoutes from './routes/contractRoutes.js';
+import transactionRoutes from './routes/transactionRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
+import pushRoutes from './routes/pushRoutes.js';
 
 dotenv.config();
 
@@ -166,6 +171,8 @@ app.use(
   })
 );
 
+app.use(mongoSanitize());
+
 app.use(
   session({
     name: 'sira.sid',
@@ -220,6 +227,24 @@ app.use((req, res, next) => {
 
 initCronJobs(io);
 
+const createJobLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: 'Too many jobs posted, please try again later' },
+});
+
+const voiceLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 6,
+  message: { success: false, message: 'Too many voice requests, please slow down' },
+});
+
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { success: false, message: 'Too many AI requests, please slow down' },
+});
+
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
@@ -231,14 +256,17 @@ app.get('/', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/jobs', jobRoutes);
-app.use('/api/applications', applicationRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/voice', voiceRoutes);
+app.use('/api/jobs', createJobLimiter, jobRoutes);
+app.use('/api/applications', createJobLimiter, applicationRoutes);
+app.use('/api/ai', aiLimiter, aiRoutes);
+app.use('/api/voice', voiceLimiter, voiceRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/contracts', contractRoutes);
+app.use('/api/transactions', transactionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/push', pushRoutes);
 app.use('/api/chat', chatRoutes);
 
 app.use((req, res) => {

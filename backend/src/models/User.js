@@ -53,6 +53,7 @@ const userSchema = new mongoose.Schema(
       default: 'worker',
     },
     isVerified: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
     totalEarnings: { type: Number, default: 0 },
     isAgentActive: { type: Boolean, default: false },
 
@@ -107,6 +108,7 @@ const userSchema = new mongoose.Schema(
 userSchema.index({ location: '2dsphere' }, { sparse: true });
 userSchema.index({ role: 1 });
 userSchema.index({ 'workerProfile.skills': 1 });
+userSchema.index({ role: 1, isAgentActive: 1 });
 
 // Password Match Method
 userSchema.methods.matchPassword = async function (enteredPassword) {

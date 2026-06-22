@@ -1,5 +1,4 @@
-const mongoose = require('mongoose');
-
+import mongoose from 'mongoose'; 
 const ConversationSchema = new mongoose.Schema(
   {
     employer: {
@@ -29,4 +28,4 @@ const ConversationSchema = new mongoose.Schema(
 
 ConversationSchema.index({ employer: 1, worker: 1, job: 1 }, { unique: true });
 
-module.exports = mongoose.model('Conversation', ConversationSchema);
+export default mongoose.model('Conversation', ConversationSchema);

@@ -1,64 +1,139 @@
 import mongoose from 'mongoose';
 
-const jobSchema = new mongoose.Schema({
-    title: { 
-        type: String, 
-        required: [true, 'Please add a job title'],
-        trim: true 
+const jobSchema = new mongoose.Schema(
+  {
+    /* =========================
+       🧾 BASIC JOB INFO
+    ========================= */
+    title: {
+      type: String,
+      required: [true, 'Please add a job title'],
+      trim: true,
     },
-    category: { 
-        type: String, 
-        required: [true, 'Category is required for AI matching'],
-        index: true // Helps the Cron Job find matches faster
+
+    category: {
+      type: String,
+      required: [true, 'Category is required for AI matching'],
+      index: true,
+      lowercase: true,
+      trim: true,
     },
-    description: { type: String },
+
+    description: {
+      type: String,
+      default: '',
+    },
+
+    /* =========================
+       📍 GEO LOCATION (MAP + MATCHING)
+    ========================= */
     location: {
-        address: { type: String, required: true }, // e.g., "Bole, near Edna Mall"
-        type: { 
-            type: String, 
-            enum: ['Point'], 
-            default: 'Point' 
-        },
-        coordinates: { 
-            type: [Number], // [longitude, latitude]
-            required: true 
-        }
-    },
-    employer: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'User', 
-        required: true 
-    },
-    worker: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'User' 
-    },
-    salary: { 
-        type: Number, 
-        required: [true, 'Please add a salary amount'] 
-    },
-    status: { 
-        type: String, 
-        enum: ['open', 'in-progress', 'completed', 'cancelled'], 
-        default: 'open' 
-    },
-    voiceMemoUrl: { type: String }, // For the Employer's spoken description
-    isAiFlagged: { type: Boolean, default: false } // For fake job detection
-}, { 
-    timestamps: true 
-});
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point',
+      },
 
-// CRITICAL for Map Integration: This enables distance-based searching
-jobSchema.index({ location: "2dsphere" });
+      address: {
+        type: String,
+        required: true,
+        trim: true,
+      },
 
-// Compound index for high-throughput job searches by location and category
-jobSchema.index({ "location.coordinates": "2dsphere", category: 1, status: 1 });
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true,
+        index: '2dsphere',
+      },
+    },
 
-// Index for salary range queries
+    /* =========================
+       👤 RELATIONS
+    ========================= */
+    employer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+
+    worker: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+
+    /* =========================
+       💰 PAYMENT INFO
+    ========================= */
+    salary: {
+      type: Number,
+      required: [true, 'Please add a salary amount'],
+      index: true,
+    },
+
+    paymentType: {
+      type: String,
+      enum: ['daily', 'weekly', 'monthly', 'fixed'],
+      default: 'daily',
+    },
+
+    escrowEnabled: {
+      type: Boolean,
+      default: true,
+    },
+
+    /* =========================
+       📊 STATUS FLOW
+    ========================= */
+    status: {
+      type: String,
+      enum: ['open', 'in-progress', 'completed', 'cancelled'],
+      default: 'open',
+      index: true,
+    },
+
+    /* =========================
+       🎤 VOICE + AI FEATURES
+    ========================= */
+    voiceMemoUrl: {
+      type: String,
+      default: null,
+    },
+
+    isAiFlagged: {
+      type: Boolean,
+      default: false,
+    },
+
+    aiRiskScore: {
+      type: Number,
+      default: 0, // 0 = safe, 100 = risky
+    },
+
+    aiAnalysis: {
+      type: Object,
+      default: null,
+    },
+  },
+
+  {
+    timestamps: true,
+  }
+);
+
+/* =========================
+   ⚡ GEO INDEX (CRITICAL)
+========================= */
+jobSchema.index({ location: '2dsphere' });
+
+/* =========================
+   ⚡ PERFORMANCE INDEXES
+========================= */
+jobSchema.index({ category: 1 });
+jobSchema.index({ category: 1, status: 1 });
+jobSchema.index({ status: 1, createdAt: -1 });
 jobSchema.index({ salary: 1 });
-
-// Index for employer lookups
 jobSchema.index({ employer: 1, status: 1 });
 
-// Use export default for ESM
 export default mongoose.model('Job', jobSchema);
