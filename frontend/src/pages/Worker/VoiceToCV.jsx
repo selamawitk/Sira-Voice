@@ -1,112 +1,138 @@
 import React, { useContext, useMemo, useState, useEffect } from 'react';
 import { useVoice } from '../../hooks/useVoice.js';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
+import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
 import api from '../../services/api.js';
-import { Keyboard, Send, Mic, Square } from 'lucide-react';
+import { Keyboard, Send, Mic, Square, CheckCircle2, Pencil, MapPin } from 'lucide-react';
 
-const SkillCard = ({ skill, extractedByText }) => (
-  <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-5 backdrop-blur-md shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-    <p className="text-white font-black text-lg">{skill}</p>
-    <p className="text-white/50 text-sm mt-1">{extractedByText || 'Extracted by Sira Agent'}</p>
+const SkillsExtracted = ({ skills, experience, location }) => (
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    {skills?.filter(Boolean).map((s, i) => (
+      <div key={i} className="bg-white/[0.03] border border-white/10 rounded-3xl p-5 backdrop-blur-md">
+        <p className="text-white font-black text-lg">{s}</p>
+        {experience > 0 && (
+          <p className="text-[#2BB8B8] text-sm mt-1">{experience} year{experience > 1 ? 's' : ''} experience</p>
+        )}
+        {location && <p className="text-white/50 text-sm mt-1"><MapPin className="w-3.5 h-3.5 inline-block mr-1" />{location}</p>}
+      </div>
+    ))}
   </div>
 );
 
 const VoiceToCV = () => {
-  // 1. Consume result, error, and processing directly from hook to stay synchronized
-  const { 
-    isListening, 
-    transcript, 
-    isProcessing: isVoiceProcessing, 
-    result, 
+  const {
+    isListening,
+    transcript,
+    isProcessing: isVoiceProcessing,
+    result,
     error: voiceError,
-    startListening, 
-    stopListening 
+    startListening,
+    stopListening,
   } = useVoice();
-  
-  // Local fallback typing configuration states
+
   const [showKeyboardFallback, setShowKeyboardFallback] = useState(false);
   const [manualText, setManualText] = useState('');
   const [isManualSubmitting, setIsManualSubmitting] = useState(false);
-  const [manualResult, setManualResult] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  // Consume language safely from core provider context stack
+  const [editableProfile, setEditableProfile] = useState({
+    skill: '',
+    experienceYears: 0,
+    location: '',
+  });
+
   const { copy } = useContext(LanguageContext);
+  const toast = useContext(ToastContext);
 
-  // Combine either voice hook processing results or manual typing fallback states safely
-  const activeResult = manualResult || result;
-  const isProcessing = isVoiceProcessing || isManualSubmitting;
-
-  // Compute clean skills array based on the normalized data shape returning from useVoice / manual entry
-  const extractedSkills = useMemo(() => {
-    if (!activeResult) return [];
-    
-    // Check all common response tree layers safely
-    const skillsFromIntent = activeResult.data?.aiInterpreted?.skills || activeResult.aiInterpreted?.skills;
-    const skillsFromData = activeResult.data?.skills || activeResult.skills;
-    
-    const skills = (skillsFromIntent ?? skillsFromData ?? []).filter(Boolean);
-    return Array.from(new Set(skills));
-  }, [activeResult]);
-
-  // Sync profile variations directly to profile schema
-  useEffect(() => {
-    if (extractedSkills.length > 0 && activeResult) {
-      api.put('/user/profile', { skills: extractedSkills })
-        .then(() => {
-          console.log('Profile updated with skills:', extractedSkills);
-        })
-        .catch((err) => {
-          console.error('Failed to update profile:', err);
-        });
+  const handleVoiceResult = (voiceResult) => {
+    if (voiceResult?.profile) {
+      setPreview(voiceResult);
+      setEditableProfile({
+        skill: voiceResult.profile.skill || '',
+        experienceYears: voiceResult.profile.experienceYears || 0,
+        location: voiceResult.profile.location || '',
+      });
+      setSaved(false);
     }
-  }, [extractedSkills, activeResult]);
-
-  const onStart = async () => {
-    setManualResult(null); // Reset manual actions when running fresh voice intent captures
-    // 2. Critical fix: Specify profile action context so the hook uses the correct processing route 
-    await startListening(null, { action: 'profile' });
   };
 
-  // Manual fallback submissions for loud environments
+  const onStart = async () => {
+    setPreview(null);
+    setSaved(false);
+    setManualResult(null);
+    await startListening(handleVoiceResult, { action: 'profile' });
+  };
+
+  const [manualResult, setManualResult] = useState(null);
+
   const handleManualSubmit = async (e) => {
     e.preventDefault();
     if (!manualText.trim() || isManualSubmitting) return;
 
     setIsManualSubmitting(true);
-    setManualResult(null);
-
     try {
-      // Direct integration pipeline routing matching endpoint parser
-      const response = await api.post('/ai/voice-action', { 
-        transcript: manualText,
-        action: 'profile' 
+      const response = await api.post('/voice/cv-preview', {
+        text: manualText,
+        lang: 'am',
       });
-      setManualResult(response.data);
-      setManualText('');
+      const data = response.data;
+      if (data?.profile) {
+        setPreview(data);
+        setEditableProfile({
+          skill: data.profile.skill || '',
+          experienceYears: data.profile.experienceYears || 0,
+          location: data.profile.location || '',
+        });
+        setSaved(false);
+      }
     } catch (err) {
-      console.error('Failed processing manual typing entry node context:', err);
+      console.error(err);
+      toast?.show?.('Failed to process text', 'error');
     } finally {
       setIsManualSubmitting(false);
     }
   };
 
+  const handleSave = async () => {
+    if (!preview) return;
+    setIsSaving(true);
+    try {
+      await api.post('/voice/cv-save', {
+        transcript: preview.transcript || '',
+        translatedText: preview.translatedText || '',
+        profile: editableProfile,
+        detectedLanguage: preview.detectedLanguage || 'am',
+      });
+      setSaved(true);
+      toast?.show?.('Profile saved successfully!', 'success');
+    } catch (err) {
+      console.error(err);
+      toast?.show?.('Failed to save profile', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const activeResult = manualResult || result;
+  const isProcessing = isVoiceProcessing || isManualSubmitting;
+  const hasPreview = preview && preview.profile;
+
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-0">
-      
-      {/* Dynamic Header Section Layer */}
       <div className="text-center mb-10">
         <h1 className="text-4xl md:text-5xl font-black text-white leading-tight">
           {copy?.voiceBecomesCvTitle?.split('CV')[0] || 'Your Voice becomes your '}
           <span className="text-[#2BB8B8] drop-shadow-[0_0_18px_rgba(43,184,184,0.25)]">CV</span>
         </h1>
         <p className="mt-4 text-white/65 text-lg max-w-2xl mx-auto">
-          {copy?.magicLine || 'Just speak — Sira finds, applies, and manages jobs for you.'}
+          {copy?.magicLine || 'Just speak — Sira extracts your skills, experience, and location.'}
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Voice Capture Container Block */}
+        {/* Voice Capture */}
         <div className="bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-6 md:p-8 relative overflow-hidden backdrop-blur-md flex flex-col justify-between">
           <div className="absolute -top-40 -right-40 w-[520px] h-[520px] bg-[#2BB8B8] opacity-[0.07] blur-[140px] pointer-events-none" />
 
@@ -117,8 +143,6 @@ const VoiceToCV = () => {
 
             <div className="flex flex-col items-center gap-6 py-4">
               <div className="flex items-center gap-4 w-full justify-center">
-                
-                {/* Microphoned System Input Button Node */}
                 <button
                   type="button"
                   onClick={isListening ? stopListening : onStart}
@@ -138,7 +162,6 @@ const VoiceToCV = () => {
                       isListening ? 'animate-ping bg-red-500/20' : 'bg-transparent'
                     }`}
                   />
-
                   {isListening ? (
                     <Square className="w-12 h-12 text-red-500 fill-red-500" />
                   ) : (
@@ -146,13 +169,12 @@ const VoiceToCV = () => {
                   )}
                 </button>
 
-                {/* Side-by-Side Low-Data Street Accessibility Typing Fallback Toggle */}
                 <button
                   type="button"
                   onClick={() => setShowKeyboardFallback(!showKeyboardFallback)}
                   className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-                    showKeyboardFallback 
-                      ? 'bg-[#2BB8B8]/20 border-[#2BB8B8] text-[#2BB8B8]' 
+                    showKeyboardFallback
+                      ? 'bg-[#2BB8B8]/20 border-[#2BB8B8] text-[#2BB8B8]'
                       : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
                   }`}
                   title="Switch to Typing Input"
@@ -163,10 +185,10 @@ const VoiceToCV = () => {
 
               <div className="text-center">
                 <p className="text-white font-black text-lg">
-                  {isListening 
-                    ? (copy?.listening || 'Listening… speak now') 
-                    : isProcessing 
-                    ? (copy?.processingVoice || 'Sira is thinking…') 
+                  {isListening
+                    ? (copy?.listening || 'Listening… speak now')
+                    : isProcessing
+                    ? (copy?.processingVoice || 'Sira is thinking…')
                     : (copy?.tapMicAndSpeak || 'Tap the mic and speak')}
                 </p>
                 {voiceError && <p className="text-red-400 text-xs mt-1">{voiceError}</p>}
@@ -176,14 +198,13 @@ const VoiceToCV = () => {
               </div>
             </div>
 
-            {/* Dynamic Sliding Keyboard Input Form Tray Panel */}
             {showKeyboardFallback && (
               <form onSubmit={handleManualSubmit} className="mb-6 flex gap-2 animate-in slide-in-from-top-2 duration-200">
                 <input
                   type="text"
                   value={manualText}
                   onChange={(e) => setManualText(e.target.value)}
-                  placeholder={copy?.typeFallbackPlaceholder || "Type skills or experience manually..."}
+                  placeholder={copy?.typeFallbackPlaceholder || 'Type skills or experience manually...'}
                   className="flex-1 bg-black/40 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-[#2BB8B8]/50 transition-all"
                   disabled={isProcessing}
                 />
@@ -204,71 +225,109 @@ const VoiceToCV = () => {
             </label>
             <div className="bg-[#1A2E35]/70 border border-white/10 rounded-3xl p-4 min-h-[120px] flex flex-col justify-between">
               <p className="text-white/80 leading-relaxed text-sm">
-                {activeResult?.transcript ?? transcript ?? ''}
-                {!activeResult?.transcript && !transcript ? (
-                  <span className="text-white/30">
-                    {copy?.micPlaceholder || 'Speak your skill, experience, and location…'}
-                  </span>
+                {preview?.transcript ?? transcript ?? ''}
+                {!preview?.transcript && !transcript ? (
+                  <span className="text-white/30">{copy?.micPlaceholder || 'Speak your skill, experience, and location…'}</span>
                 ) : null}
               </p>
+              {preview?.translatedText && preview.translatedText !== preview.transcript && (
+                <p className="text-[#2BB8B8]/70 text-xs mt-2 italic">Translated: {preview.translatedText}</p>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Dynamic Skill Parsing Grid Block */}
+        {/* Preview & Edit */}
         <div className="bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md">
           <p className="text-xs font-black uppercase tracking-[0.24em] text-white/40 mb-4">
-            {copy?.extractedSkills || 'Extracted Skills'}
+            {saved ? '✓ Saved Profile' : hasPreview ? 'Preview & Edit' : 'Extracted Profile'}
           </p>
 
           {isProcessing ? (
             <div className="bg-[#1A2E35]/70 border border-white/10 rounded-3xl p-6">
-              <p className="text-white font-black">
-                {copy?.transcribing ? `${copy.transcribing}` : 'Sira is building your profile…'}
-              </p>
-              <p className="text-white/50 text-sm mt-2">
-                {copy?.autoStopHint || 'This usually takes a few seconds.'}
-              </p>
+              <p className="text-white font-black">{copy?.transcribing || 'Sira is building your profile…'}</p>
+              <p className="text-white/50 text-sm mt-2">{copy?.autoStopHint || 'This usually takes a few seconds.'}</p>
             </div>
-          ) : extractedSkills.length === 0 ? (
+          ) : saved ? (
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-3xl p-6 text-center">
+              <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
+              <p className="text-white font-black text-lg">Profile Saved!</p>
+              <p className="text-white/50 text-sm mt-1">Your skills and experience are now on your profile.</p>
+            </div>
+          ) : hasPreview ? (
+            <div className="space-y-4">
+              {/* Skill */}
+              <div>
+                <label className="text-xs font-black uppercase tracking-[0.2em] text-white/40 mb-1 block">Skill</label>
+                <input
+                  type="text"
+                  value={editableProfile.skill}
+                  onChange={(e) => setEditableProfile({ ...editableProfile, skill: e.target.value })}
+                  className="w-full bg-[#1A2E35]/60 border border-white/10 rounded-2xl px-4 py-3 text-white outline-none focus:border-[#2BB8B8]/50 transition-all"
+                />
+              </div>
+              {/* Experience */}
+              <div>
+                <label className="text-xs font-black uppercase tracking-[0.2em] text-white/40 mb-1 block">Experience (years)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editableProfile.experienceYears}
+                  onChange={(e) => setEditableProfile({ ...editableProfile, experienceYears: parseInt(e.target.value) || 0 })}
+                  className="w-full bg-[#1A2E35]/60 border border-white/10 rounded-2xl px-4 py-3 text-white outline-none focus:border-[#2BB8B8]/50 transition-all"
+                />
+              </div>
+              {/* Location */}
+              <div>
+                <label className="text-xs font-black uppercase tracking-[0.2em] text-white/40 mb-1 block">Location</label>
+                <input
+                  type="text"
+                  value={editableProfile.location}
+                  onChange={(e) => setEditableProfile({ ...editableProfile, location: e.target.value })}
+                  className="w-full bg-[#1A2E35]/60 border border-white/10 rounded-2xl px-4 py-3 text-white outline-none focus:border-[#2BB8B8]/50 transition-all"
+                />
+              </div>
+
+              <SkillsExtracted
+                skills={[editableProfile.skill]}
+                experience={editableProfile.experienceYears}
+                location={editableProfile.location}
+              />
+
+              <button
+                onClick={handleSave}
+                disabled={isSaving || !editableProfile.skill}
+                className="w-full bg-[#2BB8B8] text-slate-950 font-black py-4 rounded-2xl hover:brightness-110 transition-all disabled:opacity-30 flex items-center justify-center gap-2"
+              >
+                {isSaving ? 'Saving...' : '✓ Save to Profile'}
+              </button>
+            </div>
+          ) : (
             <div className="bg-[#1A2E35]/70 border border-white/10 rounded-3xl p-6">
               <p className="text-white/70 font-semibold">
                 {copy?.speakExampleHint1 ? 'Example hints:' : 'Speak something like:'}
               </p>
               <div className="mt-3 space-y-2 text-sm">
                 <p className="text-white/50 italic">
-                  “{copy?.speakExampleHint1 || 'I am a plumber with 3 years experience in Megenagna.'}”
+                  "{copy?.speakExampleHint1 || 'I am a plumber with 3 years experience in Megenagna.'}"
                 </p>
                 <p className="text-white/50 italic">
-                  “{copy?.speakExampleHint2 || 'እኔ የቤት ሰራተኛ ነኝ፣ ቦሌ እኖራለሁ…'}”
+                  "{copy?.speakExampleHint2 || 'እኔ የቤት ሰራተኛ ነኝ፣ ቦሌ እኖራለሁ…'}"
                 </p>
               </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {extractedSkills.map((s) => (
-                <SkillCard 
-                  key={s} 
-                  skill={s} 
-                  extractedByText={copy?.liveFromHistory ? `${copy.liveFromHistory}` : undefined} 
-                />
-              ))}
-            </div>
           )}
 
-          {/* AI Debugger Inspector Block */}
-          {(activeResult?.data?.aiInterpreted || activeResult?.aiInterpreted) ? (
+          {/* Debug info */}
+          {hasPreview && (
             <div className="mt-6 bg-[#1A2E35]/70 border border-white/10 rounded-3xl p-5">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-white/40">
-                {copy?.aiAgentPreferences || 'AI Interpretation'}
-              </p>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-white/40">AI Interpretation</p>
               <pre className="text-white/70 text-xs mt-3 whitespace-pre-wrap break-words font-mono bg-black/20 p-3 rounded-xl border border-white/5">
-                {JSON.stringify(activeResult.data?.aiInterpreted || activeResult.aiInterpreted, null, 2)}
+                {JSON.stringify(preview, null, 2)}
               </pre>
             </div>
-          ) : null}
+          )}
         </div>
-
       </div>
     </div>
   );
