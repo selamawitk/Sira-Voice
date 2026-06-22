@@ -13,6 +13,15 @@ import {
 } from '@simplewebauthn/server';
 import { isoUint8Array } from '@simplewebauthn/server/helpers';
 
+const passkeyChallengeStore = new Map();
+
+setInterval(() => {
+  const cutoff = Date.now() - 5 * 60 * 1000;
+  for (const [key, entry] of passkeyChallengeStore) {
+    if (entry.createdAt < cutoff) passkeyChallengeStore.delete(key);
+  }
+}, 60_000);
+
 const RP_ID = process.env.RP_ID || 'localhost';
 const ORIGIN = process.env.ORIGIN || `http://${RP_ID}:5173`;
 
@@ -67,8 +76,23 @@ export const verifyPasskeyRegistration = asyncHandler(async (req, res) => {
 });
 
 export const generatePasskeyLoginOptions = asyncHandler(async (req, res) => {
-  const { phone } = req.body;
-  const user = await User.findOne({ phone: phone.trim() });
+  const { email, phone } = req.body;
+  const identifier = email || phone;
+
+  if (!identifier) {
+    const options = await generateAuthenticationOptions({
+      rpID: RP_ID,
+      allowCredentials: [],
+      userVerification: 'required',
+    });
+    const state = crypto.randomUUID();
+    passkeyChallengeStore.set(state, { challenge: options.challenge, createdAt: Date.now() });
+    res.status(200).json({ ...options, state });
+    return;
+  }
+
+  const query = email ? { email: email.trim().toLowerCase() } : { phone: phone.trim() };
+  const user = await User.findOne(query);
 
   if (!user || !user.passkey || !user.passkey.credentialID) {
     res.status(404);
@@ -92,15 +116,55 @@ export const generatePasskeyLoginOptions = asyncHandler(async (req, res) => {
 });
 
 export const verifyPasskeyLogin = asyncHandler(async (req, res) => {
-  const { phone, body } = req.body;
-  const user = await User.findOne({ phone: phone.trim() });
-  
-  if (!user) {
-    res.status(404);
-    throw new Error('User not found');
+  const { email, phone, body, state } = req.body;
+
+  let user;
+  let expectedChallenge;
+
+  if (state && passkeyChallengeStore.has(state)) {
+    const entry = passkeyChallengeStore.get(state);
+    expectedChallenge = entry.challenge;
+    passkeyChallengeStore.delete(state);
+
+    if (body?.response?.userHandle) {
+      const raw = body.response.userHandle;
+      const decoded = Buffer.from(
+        typeof raw === 'string' ? raw : Array.from(raw).map(b => String.fromCharCode(b)).join(''),
+        typeof raw === 'string' ? 'base64url' : undefined
+      ).toString('utf-8');
+      user = await User.findById(decoded);
+    }
+
+    if (!user) {
+      res.status(400);
+      throw new Error('Could not identify user from discoverable credential');
+    }
+  } else {
+    const identifier = email || phone;
+    if (!identifier) {
+      res.status(400);
+      throw new Error('Email or phone is required');
+    }
+    const query = email ? { email: email.trim().toLowerCase() } : { phone: phone.trim() };
+    user = await User.findOne(query);
+
+    if (!user) {
+      res.status(404);
+      throw new Error('User not found');
+    }
+
+    if (!user.passkey || !user.passkey.credentialID) {
+      res.status(404);
+      throw new Error('No biometric credentials found for this user');
+    }
+
+    expectedChallenge = user.currentChallenge;
   }
 
-  const expectedChallenge = user.currentChallenge;
+  if (!expectedChallenge) {
+    res.status(400);
+    throw new Error('Authentication challenge not found or expired');
+  }
 
   const verification = await verifyAuthenticationResponse({
     response: body,
