@@ -6,6 +6,9 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
       registerType: 'autoUpdate',
       includeAssets: ['icon-192.png', 'icon-512.png', 'manifest.json'],
       manifest: {
@@ -35,7 +38,7 @@ export default defineConfig({
             options: {
               cacheName: 'jobs-cache',
               expiration: {
-                maxEntries: 10,
+                maxEntries: 20,
                 maxAgeSeconds: 60 * 60 * 24,
               },
             },
@@ -45,6 +48,50 @@ export default defineConfig({
             handler: 'NetworkOnly',
             options: {
               cacheName: 'ai-cache',
+            },
+          },
+          {
+            urlPattern: /^https?:\/\/.*\/api\/users/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'users-cache',
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 60 * 60,
+              },
+            },
+          },
+          {
+            urlPattern: /^https?:\/\/.*\/api\/notifications/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'notifications-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 5,
+              },
+            },
+          },
+          {
+            urlPattern: /^https?:\/\/.*\/api\/ratings/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'ratings-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60,
+              },
+            },
+          },
+          {
+            urlPattern: /^https?:\/\/.*\/api\/contracts/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'contracts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60,
+              },
             },
           },
         ],
