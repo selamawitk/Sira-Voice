@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { Mic, TrendingUp, Star, CheckCircle2, Map as MapIcon, Mic2, Sparkles, Zap, ZapOff } from 'lucide-react';
+import { Mic, TrendingUp, Star, CheckCircle2, Map as MapIcon, Mic2, Sparkles, Zap, ZapOff, MapPin, DollarSign, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useVoice } from '../../hooks/useVoice.js';
 import api from '../../services/api.js';
@@ -265,8 +265,8 @@ const Dashboard = () => {
                       <div className="min-w-0 pr-12">
                         <h4 className="text-white font-bold group-hover:text-[#2BB8B8] transition-colors truncate text-base">{job.title}</h4>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-[11px] font-bold text-gray-500 uppercase tracking-tighter">
-                          <span className="text-emerald-400">💰 {job.salary ?? 0} ETB</span>
-                          <span className="truncate">📍 {job.location?.address ?? 'Addis Ababa'}</span>
+                          <span className="text-emerald-400"><DollarSign className="w-3 h-3 inline-block mr-0.5" />{job.salary ?? 0} ETB</span>
+                          <span className="truncate"><MapPin className="w-3 h-3 inline-block mr-0.5" />{job.location?.address ?? 'Addis Ababa'}</span>
                         </div>
                         {job.employer?.employerProfile?.isVerified && (
                           <div className="flex items-center gap-1 mt-2">
@@ -367,14 +367,14 @@ const Dashboard = () => {
                 onClick={() => setVoiceApplyJob(null)}
                 className="text-gray-400 hover:text-white transition-colors p-1"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="mb-4 bg-white/5 p-4 rounded-2xl border border-white/5">
               <p className="text-white/50 text-xs uppercase tracking-widest font-bold">Target Position</p>
               <p className="text-white font-bold text-lg mt-1">{voiceApplyJob.title}</p>
-              <p className="text-white/60 text-sm mt-0.5">📍 {voiceApplyJob.location?.address}</p>
+              <p className="text-white/60 text-sm mt-0.5"><MapPin className="w-3.5 h-3.5 inline-block mr-1" />{voiceApplyJob.location?.address}</p>
             </div>
 
             <VoiceActionComponent
