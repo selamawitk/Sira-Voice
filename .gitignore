@@ -6,3 +6,8 @@ frontend/build/
 frontend/node_modules/
 backend/node_modules/
 backend/dist/
+
+# Environment files (contain secrets)
+.env
+.env.*
+!.env.example
