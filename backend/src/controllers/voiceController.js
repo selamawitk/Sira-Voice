@@ -14,10 +14,6 @@ import { createApplicationLogic } from './applicationController.js';
 import Job from '../models/Job.js';
 import User from '../models/User.js';
 
-/**
- * 🎤 TEXT-BASED VOICE ACTION
- * Browser SpeechRecognition → text → AI
- */
 export const processVoiceAction = asyncHandler(async (req, res) => {
   const text = req.body.text || req.body.transcript || '';
   const detectedLang = req.body.lang || req.body.language || 'en';
@@ -37,7 +33,6 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
     data: [],
   };
 
-  // 🟢 POST JOB
   if (intent?.intent === 'post' && req.user?.role === 'employer') {
     const job = await Job.create({
       employer: req.user._id,
@@ -58,7 +53,6 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
     response.data = job;
   }
 
-  // 🟡 APPLY JOB
   else if (intent?.intent === 'apply' && req.user?.role === 'worker') {
     const jobId = req.body.jobId;
     if (!jobId) {
@@ -70,7 +64,6 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
     response.data = { applicationId: application._id, jobId };
   }
 
-  // 🔵 SEARCH JOBS
   else if (intent?.intent === 'search') {
     const jobs = await Job.find({
       $or: [
@@ -85,7 +78,6 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
     response.data = jobs;
   }
 
-  // 🟣 PROFILE UPDATE
   else if (intent?.intent === 'profile' && req.user) {
     const user = await User.findById(req.user._id);
     if (user && user.role === 'worker') {
@@ -99,7 +91,6 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
     }
   }
 
-  // 🟠 DEFAULT
   else {
     response.actionTaken = 'TEXT_PROCESSED';
   }
@@ -107,9 +98,6 @@ export const processVoiceAction = asyncHandler(async (req, res) => {
   return res.json(response);
 });
 
-/**
- * 🔍 TEXT JOB SEARCH
- */
 export const voiceJobSearch = asyncHandler(async (req, res) => {
   const text = req.body.text || req.body.transcript || '';
   const detectedLang = req.body.lang || 'en';
@@ -132,16 +120,11 @@ export const voiceJobSearch = asyncHandler(async (req, res) => {
   res.json({ success: true, transcript: text, aiInterpreted: intent, jobs });
 });
 
-/**
- * 🎤 VOICE → CV PIPELINE (with preview)
- * Step 1: Process audio → return transcript + extracted profile
- */
 export const processVoiceCVPreview = asyncHandler(async (req, res) => {
   const filePath = req.file?.path;
   const text = req.body.text || req.body.transcript || '';
 
   if (filePath) {
-    // Audio upload path
     const result = await processWorkerVoiceToCV(filePath);
     return res.json({
       success: true,
@@ -157,7 +140,6 @@ export const processVoiceCVPreview = asyncHandler(async (req, res) => {
     return res.json({ success: false, message: 'No audio or text provided' });
   }
 
-  // Text path (manual keyboard fallback)
   const profile = await extractWorkerProfileFromText(text, req.body.lang || 'en');
   return res.json({
     success: true,
@@ -169,10 +151,6 @@ export const processVoiceCVPreview = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * 🎤 VOICE → CV SAVE
- * Step 2: After preview/edit, save to user profile
- */
 export const processVoiceCVSave = asyncHandler(async (req, res) => {
   const { transcript, translatedText, profile, detectedLanguage } = req.body;
 
@@ -202,10 +180,6 @@ export const processVoiceCVSave = asyncHandler(async (req, res) => {
   res.json({ success: true, transcript, profile: user.workerProfile });
 });
 
-/**
- * 🎤 VOICE → JOB POSTING PREVIEW
- * Step 1: Process audio → return transcript + extracted job
- */
 export const processVoiceJobPreview = asyncHandler(async (req, res) => {
   const filePath = req.file?.path;
   const text = req.body.text || req.body.transcript || '';
@@ -237,10 +211,6 @@ export const processVoiceJobPreview = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * 🎤 VOICE → JOB POSTING CREATE
- * Step 2: After preview/edit, create the job
- */
 export const processVoiceJobCreate = asyncHandler(async (req, res) => {
   const { transcript, job: jobData, detectedLanguage } = req.body;
 
@@ -267,9 +237,7 @@ export const processVoiceJobCreate = asyncHandler(async (req, res) => {
   res.json({ success: true, job });
 });
 
-/**
- * 🎤 LEGACY VOICE CV (kept for backward compat)
- */
+// Legacy: kept for backward compat
 export const processVoiceCV = asyncHandler(async (req, res) => {
   const filePath = req.file?.path;
   const text = req.body.text || req.body.transcript || '';
@@ -316,9 +284,6 @@ export const processVoiceCV = asyncHandler(async (req, res) => {
   res.json({ success: true, transcript: text, profile: user.workerProfile });
 });
 
-/**
- * ⚠️ JOB SAFETY CHECK
- */
 export const checkJobSafety = asyncHandler(async (req, res) => {
   const job = await Job.findById(req.params.jobId);
   if (!job) {

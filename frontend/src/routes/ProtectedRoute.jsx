@@ -14,7 +14,6 @@ const ProtectedRoute = ({ children }) => {
     userExists: !!user,
   });
 
-  // 1. If we are still checking the token or completing auth bootstrap, show loading
   if (!isReady || loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#1A2E35] text-white">
@@ -26,12 +25,10 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  // 2. If finished loading and not authenticated, redirect to login
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  // 3. Otherwise, render the protected content
   return children;
 };
 

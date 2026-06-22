@@ -95,7 +95,7 @@ const Profile = () => {
   }, [id, isPublicView, profileUser?._id]);
 
   const skills = profileUser?.workerProfile?.skills ?? [];
-  const rating = profileUser?.workerProfile?.averageRating ?? profileUser?.workerProfile?.rating ?? 4.9;
+  const rating = profileUser?.workerProfile?.averageRating ?? profileUser?.workerProfile?.rating ?? 0;
 
   const completedGigsCount = jobHistory.filter(h => h.status === 'success' || h.status === 'completed').length;
   const totalEarningsAccumulated = jobHistory

@@ -1,9 +1,6 @@
 import User from '../models/User.js';
 import asyncHandler from '../utils/asyncHandler.js';
 
-// @desc    Get worker profile by ID
-// @route   GET /api/users/workers/:id
-// @access  Protected
 export const getWorkerProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id).select('-password');
 
@@ -15,9 +12,6 @@ export const getWorkerProfile = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Update worker live GPS location coordinates
-// @route   PUT /api/users/location
-// @access  Protected/Worker
 export const updateLiveLocation = asyncHandler(async (req, res) => {
   const { longitude, latitude, address, city, region, country, formattedAddress } = req.body;
   const user = await User.findById(req.user._id);
@@ -45,9 +39,6 @@ export const updateLiveLocation = asyncHandler(async (req, res) => {
   await user.save();
   res.json({ message: 'Location updated successfully', location: user.location });
 });
-// @desc    Toggle general Sira Agent tracking availability state
-// @route   PUT /api/users/toggle-agent
-// @access  Protected/Worker
 export const toggleAgentMode = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
 
@@ -70,9 +61,6 @@ export const toggleAgentMode = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Explicitly update autonomous application values
-// @route   PUT /api/users/agent-preferences
-// @access  Protected/Worker
 export const updateAgentPreferences = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
 
@@ -95,7 +83,6 @@ export const updateAgentPreferences = asyncHandler(async (req, res) => {
       minSalary: req.body.minSalary ?? currentPrefs.minSalary,
     };
 
-    // Keep top-level agent flag mirrored seamlessly 
     user.isAgentActive = user.workerProfile.agentPreferences.autoApply;
 
     const updatedUser = await user.save();
@@ -106,9 +93,6 @@ export const updateAgentPreferences = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Universal Profile modification handling client form payloads
-// @route   PUT /api/users/profile
-// @access  Protected
 export const updateProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
 
@@ -121,7 +105,6 @@ export const updateProfile = asyncHandler(async (req, res) => {
     if (!user.workerProfile) user.workerProfile = {};
     const profileUpdates = req.body.workerProfile || {};
 
-    // 1. Parse and sanitize headline and category
     if (profileUpdates.title !== undefined) {
       user.workerProfile.title = String(profileUpdates.title).trim();
     }
@@ -132,14 +115,12 @@ export const updateProfile = asyncHandler(async (req, res) => {
       user.workerProfile.category = String(profileUpdates.category).trim();
     }
 
-    // 2. Parse and sanitize worker Bio info
     if (profileUpdates.bio !== undefined) {
       user.workerProfile.bio = String(profileUpdates.bio).trim();
     } else if (req.body.bio !== undefined) {
       user.workerProfile.bio = String(req.body.bio).trim();
     }
 
-    // 3. Process skills matrices ensuring text structures remain intact
     if (profileUpdates.skills !== undefined) {
       user.workerProfile.skills = Array.isArray(profileUpdates.skills)
         ? profileUpdates.skills.map((s) => String(s).trim()).filter(Boolean)
@@ -150,7 +131,6 @@ export const updateProfile = asyncHandler(async (req, res) => {
         : String(req.body.skills).split(',').map((s) => s.trim()).filter(Boolean);
     }
 
-    // 4. Update portfolio and work availability details
     if (profileUpdates.portfolioLinks !== undefined) {
       user.workerProfile.portfolioLinks = Array.isArray(profileUpdates.portfolioLinks)
         ? profileUpdates.portfolioLinks.map((link) => String(link).trim()).filter(Boolean)
@@ -166,7 +146,6 @@ export const updateProfile = asyncHandler(async (req, res) => {
       user.workerProfile.availability = String(profileUpdates.availability).trim();
     }
 
-    // 5. Update core Experience timelines
     if (profileUpdates.experienceYears !== undefined) {
       const years = Number(profileUpdates.experienceYears);
       if (!Number.isNaN(years) && years >= 0) {
@@ -174,12 +153,10 @@ export const updateProfile = asyncHandler(async (req, res) => {
       }
     }
 
-    // 6. Update user language specifications
     if (profileUpdates.preferredLanguage !== undefined) {
       user.workerProfile.preferredLanguage = String(profileUpdates.preferredLanguage).trim();
     }
 
-    // 7. Deep merge nested preference objects avoiding accidental structural wipes
     if (profileUpdates.agentPreferences !== undefined) {
       user.workerProfile.agentPreferences = {
         ...user.workerProfile.agentPreferences,
@@ -207,7 +184,6 @@ export const updateProfile = asyncHandler(async (req, res) => {
     }
   }
 
-  // Handle baseline generic user profile elements
   if (req.body.fullName !== undefined) {
     user.fullName = String(req.body.fullName).trim();
   }

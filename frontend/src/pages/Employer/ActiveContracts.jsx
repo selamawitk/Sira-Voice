@@ -3,24 +3,23 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../../services/api.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
-import { LanguageContext } from '../../context/LanguageContextInstance.jsx'; // 👈 Imported Language Context
+import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 import { Loader2, CheckCircle2, Clock, CreditCard, PartyPopper } from 'lucide-react';
 
 const ActiveContracts = () => {
   const auth = useContext(AuthContext);
   const toast = useContext(ToastContext);
-  const lang = useContext(LanguageContext); // 👈 Access localization brain
+  const lang = useContext(LanguageContext);
   const location = useLocation();
   const navigate = useNavigate();
   
-  const t = lang?.copy || {}; // 👈 Translation helper object mappings
+  const t = lang?.copy || {};
 
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [payingId, setPayingId] = useState('');
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
 
-  // 1. Standardized Load Function
   const loadContracts = useCallback(async () => {
     if (!auth?.user?._id) return;
     try {
@@ -35,7 +34,6 @@ const ActiveContracts = () => {
     }
   }, [auth?.user?._id, toast]);
 
-  // 2. Handle Chapa Redirect Return & Initial Load
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('payment') === 'success') {
@@ -47,7 +45,6 @@ const ActiveContracts = () => {
     loadContracts();
   }, [location.search, loadContracts, navigate]);
 
-  // 3. Prevent Double Payment Logic
   const payWorker = async (contract) => {
     if (payingId || contract.status === 'paid') return;
 
@@ -87,7 +84,6 @@ const ActiveContracts = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* SUCCESS BANNER */}
       {showSuccessBanner && (
         <div className="mb-6 flex items-center justify-between p-4 bg-green-500/10 border border-green-500/20 rounded-2xl animate-in fade-in slide-in-from-top-4">
           <div className="flex items-center gap-3 text-green-400 font-bold">
@@ -175,7 +171,6 @@ const ActiveContracts = () => {
                   </div>
 
                   <div className="flex flex-wrap gap-3">
-                    {/* PAY BUTTON */}
                     {contract.status !== 'paid' && (
                       <button
                         onClick={() => payWorker(contract)}
@@ -195,7 +190,6 @@ const ActiveContracts = () => {
                       </button>
                     )}
 
-                    {/* COMPLETION BUTTON */}
                     {contract.status === 'active' && (
                       <button
                         onClick={() => completeContract(contract._id)}
@@ -207,7 +201,6 @@ const ActiveContracts = () => {
                       </button>
                     )}
                     
-                    {/* PAID ESCROW STATE */}
                     {contract.status === 'paid' && (
                       <div className="flex items-center gap-2 text-green-400 font-black italic text-sm bg-green-500/10 px-5 py-3 rounded-2xl border border-green-500/20">
                         <CheckCircle2 className="w-4 h-4" />

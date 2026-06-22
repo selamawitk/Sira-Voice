@@ -25,7 +25,6 @@ const WorkerPayments = () => {
   // Visibility state for masking financial values
   const [showBalances, setShowBalances] = useState(true);
 
-  // Form input elements state for Chapa withdrawals
   const [showWithdrawForm, setShowWithdrawForm] = useState(false);
   const [amount, setAmount] = useState('');
   const [bankCode, setBankCode] = useState('');
@@ -116,7 +115,6 @@ const WorkerPayments = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header with quick action button */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-white">
@@ -135,7 +133,6 @@ const WorkerPayments = () => {
         </button>
       </div>
 
-      {/* Hidden Collapsible Slide Form */}
       {showWithdrawForm && (
         <GlassCard className="border-[#2BB8B8]/30 max-w-xl animate-fadeIn">
           <h2 className="text-xl font-semibold text-white mb-4">Request Chapa Payout</h2>
@@ -171,9 +168,7 @@ const WorkerPayments = () => {
         </GlassCard>
       )}
 
-      {/* Stats Cards Display Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Active Cashable Balance */}
         <GlassCard className="relative overflow-hidden border-teal-500/20 bg-gradient-to-br from-teal-500/[0.05] to-transparent">
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-teal-500 opacity-[0.05] blur-[80px] pointer-events-none" />
           <div className="relative z-10">
@@ -188,7 +183,6 @@ const WorkerPayments = () => {
           </div>
         </GlassCard>
 
-        {/* Total Lifetime Earnings */}
         <GlassCard className="relative overflow-hidden">
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-green-500 opacity-[0.03] blur-[80px] pointer-events-none" />
           <div className="relative z-10">
@@ -205,7 +199,6 @@ const WorkerPayments = () => {
           </div>
         </GlassCard>
 
-        {/* Pending Processing Items with Functional Eye Toggle Button */}
         <GlassCard className="relative overflow-hidden">
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-yellow-500 opacity-[0.03] blur-[80px] pointer-events-none" />
           <div className="relative z-10">
@@ -232,7 +225,6 @@ const WorkerPayments = () => {
         </GlassCard>
       </div>
 
-      {/* Unified Transaction Table History Display */}
       <GlassCard className="relative overflow-hidden">
         <div className="absolute -top-24 -left-24 w-64 h-64 bg-[#2BB8B8] opacity-[0.03] blur-[80px] pointer-events-none" />
         <div className="relative z-10">

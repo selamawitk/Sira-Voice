@@ -47,7 +47,6 @@ const SiraTalkPage = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-semibold text-white">
           {lang?.copy?.siraTalkTitle || 'Talk to Sira'}
@@ -58,7 +57,6 @@ const SiraTalkPage = () => {
         </p>
       </div>
 
-      {/* Mode Selector */}
       <div className="flex flex-wrap gap-3 mb-8">
         {[
           { id: 'general', label: 'General Chat', icon: '💬' },
@@ -80,18 +78,15 @@ const SiraTalkPage = () => {
         ))}
       </div>
 
-      {/* Main Voice Interface */}
       <GlassCard className="relative overflow-hidden mb-8">
         <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#2BB8B8] opacity-[0.03] blur-[80px] pointer-events-none" />
 
         <div className="relative z-10 flex flex-col items-center gap-8 py-8">
-          {/* Mic Button */}
           <button
             onClick={isListening ? stopListening : start}
             className="relative w-40 h-40 rounded-full bg-gradient-to-br from-[#2BB8B8]/20 to-[#2BB8B8]/5 border-2 border-[#2BB8B8]/40 grid place-items-center hover:border-[#2BB8B8]/60 transition-all group"
             aria-label={isListening ? 'Stop recording' : 'Start recording'}
           >
-            {/* Animated pulse ring */}
             {isListening && (
               <>
                 <span className="absolute inset-0 rounded-full animate-pulse bg-[#2BB8B8]/20" />
@@ -104,7 +99,6 @@ const SiraTalkPage = () => {
             </div>
           </button>
 
-          {/* Status Text */}
           <div className="text-center">
             <p className="text-lg font-semibold text-white">
               {isListening
@@ -120,7 +114,6 @@ const SiraTalkPage = () => {
         </div>
       </GlassCard>
 
-      {/* Transcript Editor */}
       {(editable || transcript) && (
         <GlassCard className="relative overflow-hidden mb-8">
           <div className="absolute -top-24 -left-24 w-64 h-64 bg-cyan-400 opacity-[0.03] blur-[80px] pointer-events-none" />
@@ -158,7 +151,6 @@ const SiraTalkPage = () => {
         </GlassCard>
       )}
 
-      {/* Jobs Results */}
       {jobs.length > 0 && (
         <GlassCard className="relative overflow-hidden">
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-yellow-500 opacity-[0.03] blur-[80px] pointer-events-none" />
@@ -198,7 +190,6 @@ const SiraTalkPage = () => {
         </GlassCard>
       )}
 
-      {/* Empty State */}
       {!editable && !transcript && jobs.length === 0 && (
         <GlassCard className="text-center py-12">
           <Mic className="w-12 h-12 text-white/20 mx-auto mb-4" />

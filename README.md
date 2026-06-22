@@ -1,53 +1,198 @@
+# Sira-Voice
 
-Sira-Voice  
-AI Job Agent for the Informal Workforce
-“Just speak — Sira finds, applies, and manages jobs for you.”
+**AI Job Agent for the Informal Workforce** — *Just speak — Sira finds, applies, and manages jobs for you.*
 
-Finding everyday work or hiring reliable local labor shouldn't depend on expensive, unregulated brokers (Delalas). Sira-Voice is an agency-grade, voice-first AI job agent engineered specifically for the informal workforce in Ethiopia.
+Sira-Voice is a voice-first AI job agent for Ethiopia's informal workforce. Workers speak in Amharic, Afaan Oromo, or English; an AI agent builds their CV, matches them to jobs, auto-applies, and manages contracts — all by voice.
 
-Instead of forcing users to navigate complex forms or type out resumes, Sira-Voice uses a Voice-First, Not Voice-Only infrastructure. Workers simply speak their skills in their native language—Amharic, Afan Oromo, or English—and an intelligent AI background agent handles profile generation, real-time localized job matching, and automatic application workflows.
+---
 
- The Big Shift
-Before: Workers spend hours manually searching listings ➔ filling out static text forms ➔ paying hefty middleman broker cuts ➔ dealing with unverified, risky job postings.
+## Tech Stack
 
-Now: Workers just speak naturally ➔ the AI agent instantly parses skills and updates their voice-CV ➔ applications are automated in the background ➔ localized trust systems completely replace the broker network.
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | React 19 + Vite 8 + Tailwind CSS 4 (PWA, mobile-first) |
+| **Backend** | Node.js + Express (ESM) |
+| **Database** | MongoDB (Mongoose ODM) |
+| **AI** | Google Gemini API (intent parsing, matching, scam detection) |
+| **Speech** | Groq Whisper (STT) |
+| **Auth** | Passkey (WebAuthn), Google OAuth, JWT |
+| **Maps** | Leaflet.js + OpenStreetMap |
+| **Real-time** | Socket.io (notifications, messaging, typing indicators) |
+| **Push** | Web Push API (VAPID) |
+| **Payments** | Chapa (Ethiopian payment gateway) |
+| **SMS** | Africa's Talking (OTP, alerts) |
 
- Killer Features
-1. Autonomous AI Job Agent & Dynamic Voice-to-CV
-The crown jewel of the platform. A worker says, "I'm a plumber with 3 years of experience living in Megenagna." The system processes the audio through a speech-to-text pipeline (Whisper/Google STT APIs) into the Gemini API, which extracts structural metadata { skill: "Plumber", experience: "3 years", location: "Megenagna" } to build a robust profile instantly with zero typing.
+---
 
-2. Smart Dual-Sided Matching Engine
-For Workers: Continuously scans incoming listings in the background, matching profiles dynamically so jobs seamlessly "come to the worker."
+## Features
 
-For Employers: Allows fast voice-based job postings ("Need 2 cleaners tomorrow in Bole"). The engine instantaneously ranks nearby matching talent by distance, ratings, and explicit skills for a 1-click hire experience.
+### For Workers
+- **Voice-to-CV** — Speak your skills, Sira builds your profile
+- **AI Job Matching** — Background agent scans listings and notifies you
+- **Auto-Apply** — Optional; agent applies to matching jobs automatically
+- **Biometric Login** — Face/fingerprint passkey auth, no passwords needed
+- **Messaging & Contracts** — Chat with employers, sign digital contracts
+- **Wallet & Payments** — Track earnings, request withdrawals via Chapa
 
-3. Biometric Identity & Delala-Replacement Trust Layer
-Biometric Authentication: Replaced traditional, clunky password/voice auth with fast, low-data biometric device check-ins to secure worker profiles instantly.
+### For Employers
+- **Voice Job Posting** — Speak job details, Sira creates the listing
+- **AI Candidate Ranking** — Workers ranked by skills, distance, rating
+- **GPS Job Verification** — Workers check in at the job site
+- **Trust System** — Star ratings, reviews, verified worker badges
+- **Scam Detection** — AI analyzes postings for fraudulent content
 
-Trust Framework: Features bidirectional star ratings, complete historical ledgers, verified worker badges, and secure GPS job validation.
+### Platform
+- **Push Notifications** — Real-time alerts via Service Worker + Web Push
+- **Offline Resilience** — Service Worker caching + retry logic
+- **Multi-language** — Amharic, Afaan Oromo, English
+- **PWA** — Installable on mobile, works offline
+- **Admin Dashboard** — User management, scam logs, system oversight
 
-4. Localized Location Intelligence (100% Free Open Source)
-Utilizes Leaflet.js and OpenStreetMap to map out available opportunities and worker spreads dynamically. Includes distance-based candidate ranking and hardware-level GPS tracking to ensure jobs are verified at the physical site.
+---
 
-5. Multi-Language AI Inclusion
-Built intentionally to drive local impact. The AI models safely interpret and support local dialects across Amharic, Afan Oromo, and English, allowing users to review and manually edit their transcribed text fallbacks if background noise disrupts the audio.  
-platform.addisassistant.com
+## Project Structure
 
-6. AI Scam & Fake Job Detection
-The backend agent runs intent analysis and keyword threat models over employer postings to flag fake accounts, detect suspicious payment layouts, and protect vulnerable daily wage earners.
+```
+├── frontend/               # React + Vite SPA
+│   ├── src/
+│   │   ├── pages/          # Route pages (Worker, Employer, Admin, Auth, Landing)
+│   │   ├── components/     # Reusable UI components
+│   │   ├── context/        # React context providers
+│   │   ├── hooks/          # Custom hooks (useVoice, useAgent)
+│   │   ├── services/       # API client, push service, socket service
+│   │   └── utils/          # Formatters, validators, geo utils
+│   ├── public/             # Static assets, icons, manifest
+│   └── vite.config.js      # Vite + PWA config
+│
+├── backend/                # Node.js + Express API
+│   ├── src/
+│   │   ├── controllers/    # Route handlers
+│   │   ├── services/       # Business logic (AI, voice, push, payment)
+│   │   ├── models/         # Mongoose schemas
+│   │   ├── routes/         # Express route definitions
+│   │   ├── middleware/      # Auth, error handling, multer
+│   │   ├── config/         # DB, socket, passport config
+│   │   └── utils/          # Helpers (OTP, tokens, cron)
+│   └── server.js           # Entry point
+│
+├── .gitignore
+└── README.md
+```
 
-System Architecture
-Frontend: React.js / Next.js (Mobile-First, PWA optimized)
+---
 
-Backend: Node.js + Express.js (Clean, controller-service architecture)
+## Setup & Development
 
-Database: MongoDB (Schemas tracking coordinates, history, and metadata)
+### Prerequisites
+- Node.js 18+
+- MongoDB Atlas (or local MongoDB)
+- Google Gemini API key
+- Groq API key (for Whisper STT)
+- Google OAuth credentials
+- Chapa test credentials
+- Africa's Talking sandbox credentials
 
-AI Engine: Gemini API Core (For semantic extraction, matching, and moderation)
+### Environment Variables
 
-Voice Pipeline: OpenAI Whisper / Google Speech-to-Text APIs
+Copy `backend/.env.example` to `backend/.env` and fill in:
 
-Mapping: Leaflet.js + OpenStreetMap (Fully free, cached, and low-data friendly)
+```bash
+cp backend/.env.example backend/.env
+```
 
-Real-time Engine: Socket.io (Instant application alerts and employer hiring updates)
+Key variables you must set:
 
+| Variable | Description |
+|----------|-------------|
+| `MONGO_URI` | MongoDB connection string |
+| `JWT_SECRET` | JWT signing secret |
+| `SESSION_SECRET` | Express session secret |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `GEMINI_API_KEY` | Google Gemini API key |
+| `GROQ_API_KEY` | Groq API key for Whisper STT |
+| `VAPID_PUBLIC_KEY` | Web Push VAPID public key |
+| `VAPID_PRIVATE_KEY` | Web Push VAPID private key |
+| `FRONTEND_URL` | Frontend URL (for CORS + OAuth redirect) |
+| `BACKEND_URL` | Backend URL (for CSP + OAuth) |
+
+### Run Backend
+
+```bash
+cd backend
+npm install
+npm run dev       # nodemon with hot reload
+```
+
+### Run Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev       # Vite dev server on port 5173
+```
+
+---
+
+## Deployment
+
+### Frontend → Vercel
+
+1. Push to GitHub
+2. Import repo in Vercel (root: `frontend/`)
+3. Set env vars in Vercel dashboard:
+   - `VITE_API_URL` → `https://your-backend.onrender.com`
+   - `VITE_BACKEND_URL` → `https://your-backend.onrender.com`
+4. Deploy — Vite builds to `dist/`, `vercel.json` handles SPA routing
+
+### Backend → Render
+
+1. Create a Web Service from your repo
+2. Root directory: `backend/`
+3. Build command: `npm install`
+4. Start command: `node src/server.js`
+5. Set all env vars in Render dashboard (see `.env.example`)
+6. Ensure `NODE_ENV=production` and `PORT=10000` (Render default)
+
+### Google OAuth
+
+Add both URLs to your Google Cloud Console OAuth client:
+- Authorized Redirect URIs:
+  - `http://localhost:5001/api/auth/google/callback`
+  - `https://your-backend.onrender.com/api/auth/google/callback`
+- Authorized JavaScript Origins:
+  - `http://localhost:5173`
+  - `https://your-frontend.vercel.app`
+
+---
+
+## API Overview
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/auth/register` | Register with email/phone + password |
+| `POST /api/auth/login` | Login with email + password |
+| `GET /api/auth/google` | Google OAuth login |
+| `POST /api/auth/passkey/register-options` | Start passkey registration |
+| `POST /api/auth/passkey/verify-registration` | Complete passkey registration |
+| `POST /api/auth/passkey/login-options` | Start passkey login |
+| `POST /api/auth/passkey/verify-login` | Complete passkey login |
+| `GET /api/jobs` | List jobs (with geo search) |
+| `POST /api/jobs` | Create job |
+| `POST /api/applications/:jobId/apply` | Apply to job |
+| `POST /api/ai/voice-action` | Process voice command |
+| `POST /api/voice/voice-action` | Extended voice processing |
+| `GET /api/chat` | List conversations |
+| `GET /api/notifications` | List notifications |
+| `POST /api/push/subscribe` | Subscribe to push notifications |
+| `GET /api/push/vapid-public-key` | Get VAPID public key |
+| `POST /api/payments/initialize` | Initialize Chapa payment |
+| `POST /api/payments/webhook` | Chapa webhook handler |
+
+Full route documentation is available in `backend/src/routes/`.
+
+---
+
+## License
+
+Private / Proprietary

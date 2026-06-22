@@ -3,7 +3,6 @@ import { Bell, Menu, Search, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx'; 
-// Fixed: Importing from Instance file instead of Provider
 import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
 import { connectSocket, disconnectSocket } from '../../services/socketService.js';
 import api from '../../services/api.js';
@@ -30,7 +29,6 @@ const Header = ({ onMobileMenuToggle }) => {
       return;
     }
 
-    // Fetch current unread count
     (async () => {
       try {
         const res = await api.get('/notifications');
@@ -94,7 +92,6 @@ const Header = ({ onMobileMenuToggle }) => {
       </div>
 
       <div className="flex items-center gap-3 md:gap-6">
-        {/* Language switcher */}
         <div className="hidden sm:block">
           <select
             value={lang ?? 'en'}

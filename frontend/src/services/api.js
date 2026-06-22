@@ -67,7 +67,6 @@ api.interceptors.response.use(
           })
         );
       } catch  {
-        // Fallback silently
       }
     }
 
@@ -120,7 +119,6 @@ api.interceptors.response.use(
             data: cachePackage.data,
           });
         } catch  {
-          // Fallback silently
         }
       }
     }

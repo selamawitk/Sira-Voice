@@ -4,14 +4,10 @@ import fs from 'fs';
 
 const uploadDir = 'uploads/';
 
-// Ensure upload directory exists
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-/* =========================
-   📦 STORAGE CONFIG
-========================= */
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
@@ -31,9 +27,6 @@ const storage = multer.diskStorage({
   },
 });
 
-/* =========================
-   🎧 FILE FILTER (VOICE SAFE)
-========================= */
 const allowedMimeTypes = new Set([
   'audio/mpeg',
   'audio/wav',
@@ -59,15 +52,12 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-/* =========================
-   ⚙️ MULTER INSTANCE
-========================= */
 const upload = multer({
   storage,
   fileFilter,
 
   limits: {
-    fileSize: 15 * 1024 * 1024, // 15MB max voice input
+    fileSize: 15 * 1024 * 1024,
   },
 });
 

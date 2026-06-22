@@ -11,10 +11,9 @@ import upload from '../middleware/multer.js';
 
 const router = express.Router();
 
-// Rate limiter for AI endpoints
 const aiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // 20 AI requests per window
+  windowMs: 15 * 60 * 1000,
+  max: 20,
   message: 'Too many AI requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,

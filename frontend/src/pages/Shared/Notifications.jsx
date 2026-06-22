@@ -37,7 +37,6 @@ const Notifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [filter, setFilter] = useState('all');
 
-  // Inline localized fallback dictionary mapper
   const getLabel = (key, enVal, amVal, orVal) => {
     if (langCtx?.copy?.[key]) return langCtx.copy[key];
     if (langCtx?.lang === 'am') return amVal;
@@ -137,7 +136,6 @@ const Notifications = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8">
-      {/* Header View */}
       <div className="mb-8">
         <h1 className="text-4xl font-semibold text-white mt-[-35px]">
           {getLabel('notificationsTitle', 'Notifications', 'ማሳወቂያዎች', 'Beeksisoota')}
@@ -153,7 +151,6 @@ const Notifications = () => {
         </p>
       </div>
 
-      {/* Mark All Action Button Element */}
       {unreadCount > 0 && (
         <div className="mb-6">
           <button
@@ -165,7 +162,6 @@ const Notifications = () => {
         </div>
       )}
 
-      {/* Filter Tabs Navigation */}
       <div className="flex flex-wrap gap-2 mb-8 pb-4 border-b border-white/10">
         {['all', 'unread', 'JOB_MATCH', 'HIRE', 'PAYMENT', 'RATING'].map(type => (
           <button
@@ -182,7 +178,6 @@ const Notifications = () => {
         ))}
       </div>
 
-      {/* Notifications Container Box Area */}
       <GlassCard className="relative overflow-hidden">
         <div className="absolute -top-24 -left-24 w-64 h-64 bg-[#2BB8B8] opacity-[0.03] blur-[80px] pointer-events-none" />
 

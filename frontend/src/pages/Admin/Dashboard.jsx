@@ -41,7 +41,6 @@ const Dashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4">
-      {/* HEADER SECTION - BALANCED WEIGHT WITH SHRUNK MARGINS */}
       <div className="mb-4">
         <h1 className="text-4xl font-semibold text-white/90 font-sans">
           {activeLang === 'am' ? (
@@ -70,7 +69,6 @@ const Dashboard = () => {
         </div>
       ) : (
         <>
-          {/* STATS MATRIX LAYOUT */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <Stat 
               label={activeLang === 'am' ? 'ሰራተኞች' : activeLang === 'or' ? 'Hojjettoota' : 'Workers'} 
@@ -92,7 +90,6 @@ const Dashboard = () => {
             />
           </div>
 
-          {/* LOWER OPERATIONAL GLASS PANELS */}
           <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
             <GlassCard className="lg:col-span-2 relative overflow-hidden flex flex-col justify-between">
               <div className="absolute -top-40 -right-40 w-[520px] h-[520px] bg-[#2BB8B8] opacity-[0.05] blur-[140px] pointer-events-none" />
@@ -137,7 +134,6 @@ const Dashboard = () => {
               </div>
             </GlassCard>
 
-            {/* PLATFORM ECONOMIC IMPACT SUMMARY */}
             <GlassCard>
               <div className="flex items-center gap-2 text-[#2BB8B8] mb-3">
                 <TrendingUp className="w-4 h-4" />

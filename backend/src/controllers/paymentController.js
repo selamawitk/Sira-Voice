@@ -9,9 +9,6 @@ import Payment from '../models/Payment.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { sendRealTimeNotification, sendPaymentNotification } from '../services/notificationService.js';
 
-/**
- * 🚀 INITIALIZE GENERAL CHAPA (Verification/Generic)
- */
 export const initializeChapa = asyncHandler(async (req, res) => {
   if (!process.env.CHAPA_SECRET_KEY) {
     res.status(500);
@@ -75,9 +72,6 @@ export const initializeChapa = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * 💰 PAY CONTRACT (THE ESCROW FLOW)
- */
 export const payContract = asyncHandler(async (req, res) => {
   const { contractId } = req.body;
 
@@ -125,7 +119,6 @@ export const payContract = asyncHandler(async (req, res) => {
     throw new Error('Payment initialization failed');
   }
 
-  // Create Transaction Record
   await Transaction.create({
     employer: contract.employerId,
     worker: contract.workerId._id,
@@ -137,7 +130,6 @@ export const payContract = asyncHandler(async (req, res) => {
     status: 'pending'
   });
 
-  // Update contract status to 'held' (Money is now in transit)
   contract.escrowStatus = 'held';
   await contract.save();
 
@@ -147,9 +139,6 @@ export const payContract = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * ⚓ WEBHOOK (THE SOURCE OF TRUTH)
- */
 export const verifyChapaWebhook = asyncHandler(async (req, res) => {
   const hash = crypto
     .createHmac('sha256', process.env.CHAPA_WEBHOOK_SECRET)
@@ -171,10 +160,8 @@ export const verifyChapaWebhook = asyncHandler(async (req, res) => {
 
   if (!transaction) return res.status(404).send('Transaction not found');
 
-  // Handle Socket instance reliably
   const io = req.app.get('io');
 
-  // 1. ACCOUNT VERIFICATION
   if (transaction.purpose === 'verification') {
     await User.findByIdAndUpdate(transaction.employer, { isVerified: true });
     sendRealTimeNotification(io, transaction.employer, {
@@ -184,7 +171,6 @@ export const verifyChapaWebhook = asyncHandler(async (req, res) => {
     });
   }
 
-  // 2. JOB PAYMENTS (ESCROW RELEASE)
   if (transaction.purpose === 'job_payment') {
     const contract = await Contract.findById(transaction.contract).populate('jobId', 'title');
     const worker = await User.findById(transaction.worker);
@@ -203,7 +189,6 @@ export const verifyChapaWebhook = asyncHandler(async (req, res) => {
         paymentReference: tx_ref
       });
 
-      // Create Payment record
       await Payment.create({
         employerId: transaction.employer,
         workerId: transaction.worker,
@@ -219,7 +204,6 @@ export const verifyChapaWebhook = asyncHandler(async (req, res) => {
       });
     }
 
-    // Send payment notification with enhanced metadata
     await sendPaymentNotification(
       io,
       transaction.worker,
@@ -232,9 +216,6 @@ export const verifyChapaWebhook = asyncHandler(async (req, res) => {
   res.status(200).send('Webhook processed');
 });
 
-/**
- * 📜 HISTORY
- */
 export const getUserTransactions = asyncHandler(async (req, res) => {
   const transactions = await Transaction.find({
     $or: [{ employer: req.user._id }, { worker: req.user._id }]
@@ -250,9 +231,6 @@ export const getUserTransactions = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * GET payments for employer
- */
 export const getEmployerPayments = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -272,9 +250,6 @@ export const getEmployerPayments = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * GET payments for worker
- */
 export const getWorkerPayments = asyncHandler(async (req, res) => {
   const { id } = req.params;
 

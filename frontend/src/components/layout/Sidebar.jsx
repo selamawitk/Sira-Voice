@@ -230,7 +230,6 @@ const Sidebar = ({ onClose }) => {
 
       <div className="absolute inset-y-0 right-0 w-px bg-linear-to-b from-transparent via-[#2BB8B8]/12 to-transparent"></div>
 
-      {/* Header Margin: Restored to original layout rules */}
       <div className={`flex flex-col gap-2 relative z-10 shrink-0 ${role === 'worker' ? 'mb-3' : 'mb-6'}`}>
         <div className="flex items-center justify-between text-2xl font-black text-[#2BB8B8]">
           <div className="flex items-center gap-2">
@@ -248,7 +247,6 @@ const Sidebar = ({ onClose }) => {
         </div>
       </div>
 
-      {/* Navigation Spacing: space-y-1 for worker, restored original space-y-2 for employers/admins */}
       <nav 
         style={workerScrollbarHiddenStyle}
         className={`flex-1 min-h-0 relative z-10 overflow-y-auto pr-1 ${
@@ -276,7 +274,6 @@ const Sidebar = ({ onClose }) => {
                   className={`absolute right-4 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-red-500 transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'}`}
                 />
 
-                {/* Icon Sizes: w-5 for worker, original w-[18px] layout for employers */}
                 <item.icon
                   className={`transition-colors duration-200 ${role === 'worker' ? 'w-5 h-5' : 'w-[18px] h-[18px]'} ${
                     isActive
@@ -289,7 +286,6 @@ const Sidebar = ({ onClose }) => {
                   }`}
                 />
 
-                {/* Text Sizes: custom text-[13px] for worker, original text-[14px] layout for employers */}
                 <span className={`tracking-tight flex-1 ${role === 'worker' ? 'text-[13px]' : 'text-[14px]'}`}>{item.label}</span>
                 
                 {item.badgeCount > 0 && (
@@ -303,7 +299,6 @@ const Sidebar = ({ onClose }) => {
         ))}
       </nav>
 
-      {/* Footer Margins: worker stays compact, employer/admin restores mt-6 pt-6 */}
       <div className={`border-t border-white/5 relative z-10 shrink-0 ${role === 'worker' ? 'mt-3 pt-3' : 'mt-6 pt-6'}`}>
         <div className="flex items-center justify-between text-[9px] font-bold text-gray-500 uppercase tracking-[0.15em] mb-2">
           {langCtx?.copy?.systemLanguage ?? getFallbackLabel('systemLanguage', 'Language', 'ቋንቋ', 'Afaan')}

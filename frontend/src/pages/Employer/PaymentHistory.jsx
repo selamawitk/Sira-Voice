@@ -1,11 +1,11 @@
 import React, { useContext, useEffect, useState } from 'react';
 import api from '../../services/api.js';
-import { LanguageContext } from '../../context/LanguageContextInstance.jsx'; // 👈 Imported Language Context
+import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 import { Loader2, Receipt, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 
 const PaymentHistory = () => {
-  const lang = useContext(LanguageContext); // 👈 Accessing localization brain
-  const t = lang?.copy || {}; // 👈 Shortcut configuration mapping object
+  const lang = useContext(LanguageContext);
+  const t = lang?.copy || {};
 
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,11 +25,9 @@ const PaymentHistory = () => {
     }
   };
 
-  // Helper utility function updated to map status badges dynamically by active locale language string
   const getStatusStyles = (status) => {
     const normalize = status?.toLowerCase();
     
-    // Internal labels map dictionary matching design schemas
     const statusLabels = {
       am: { success: 'ተሳክቷል', pending: 'በጥበቃ ላይ', failed: 'አልተሳካም' },
       or: { success: 'Milkaa’eera', pending: 'Eeggamaa jira', failed: 'Kufeera' },
@@ -77,7 +75,6 @@ const PaymentHistory = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* LOCALIZED HEADER BLOCK */}
       <div className="mb-10">
         <h1 className="text-4xl font-black text-white italic tracking-tighter">
           {lang?.lang === 'am' ? (
@@ -151,7 +148,6 @@ const PaymentHistory = () => {
                         </span>
                       </div>
                       
-                      {/* Formatted Date Render UI matching device layout properties */}
                       <p className="hidden md:block text-white/20 text-[10px] font-bold uppercase mt-1">
                         {new Date(payment.createdAt).toLocaleDateString(lang?.lang === 'am' ? 'am-ET' : lang?.lang === 'or' ? 'om-ET' : 'en-US', {
                           month: 'short',

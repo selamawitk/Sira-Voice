@@ -2,9 +2,6 @@ import mongoose from 'mongoose';
 
 const jobSchema = new mongoose.Schema(
   {
-    /* =========================
-       🧾 BASIC JOB INFO
-    ========================= */
     title: {
       type: String,
       required: [true, 'Please add a job title'],
@@ -24,9 +21,6 @@ const jobSchema = new mongoose.Schema(
       default: '',
     },
 
-    /* =========================
-       📍 GEO LOCATION (MAP + MATCHING)
-    ========================= */
     location: {
       type: {
         type: String,
@@ -47,9 +41,6 @@ const jobSchema = new mongoose.Schema(
       },
     },
 
-    /* =========================
-       👤 RELATIONS
-    ========================= */
     employer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -63,9 +54,6 @@ const jobSchema = new mongoose.Schema(
       default: null,
     },
 
-    /* =========================
-       💰 PAYMENT INFO
-    ========================= */
     salary: {
       type: Number,
       required: [true, 'Please add a salary amount'],
@@ -83,9 +71,6 @@ const jobSchema = new mongoose.Schema(
       default: true,
     },
 
-    /* =========================
-       📊 STATUS FLOW
-    ========================= */
     status: {
       type: String,
       enum: ['open', 'in-progress', 'completed', 'cancelled'],
@@ -93,9 +78,6 @@ const jobSchema = new mongoose.Schema(
       index: true,
     },
 
-    /* =========================
-       🎤 VOICE + AI FEATURES
-    ========================= */
     voiceMemoUrl: {
       type: String,
       default: null,
@@ -122,14 +104,8 @@ const jobSchema = new mongoose.Schema(
   }
 );
 
-/* =========================
-   ⚡ GEO INDEX (CRITICAL)
-========================= */
 jobSchema.index({ location: '2dsphere' });
 
-/* =========================
-   ⚡ PERFORMANCE INDEXES
-========================= */
 jobSchema.index({ category: 1 });
 jobSchema.index({ category: 1, status: 1 });
 jobSchema.index({ status: 1, createdAt: -1 });

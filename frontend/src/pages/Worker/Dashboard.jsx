@@ -26,7 +26,6 @@ const Dashboard = () => {
   const [jobsLoading, setJobsLoading] = useState(true);
   const [nearbyJobs, setNearbyJobs] = useState([]);
   
-  // New States for Background Autonomous Matching Engine
   const [passiveMatches, setPassiveMatches] = useState([]);
   const [isAutoApplyActive, setIsAutoApplyActive] = useState(user?.workerProfile?.autoApplyEnabled || false);
   const [togglingAutoApply, setTogglingAutoApply] = useState(false);
@@ -34,7 +33,6 @@ const Dashboard = () => {
   const [voiceJobs, setVoiceJobs] = useState([]);
   const [voiceApplyJob, setVoiceApplyJob] = useState(null);
 
-  // Fetch application history
   useEffect(() => {
     const run = async () => {
       setAppsLoading(true);
@@ -48,7 +46,6 @@ const Dashboard = () => {
     run();
   }, []);
 
-  // Fetch standard location-based jobs
   useEffect(() => {
     const run = async () => {
       setJobsLoading(true);
@@ -70,7 +67,6 @@ const Dashboard = () => {
     run();
   }, [location?.coords?.lat, location?.coords?.lng]);
 
-  // Fetch Passive Background Matches from Autonomous Agent Engine
   useEffect(() => {
     const fetchPassiveMatches = async () => {
       try {
@@ -85,7 +81,6 @@ const Dashboard = () => {
     fetchPassiveMatches();
   }, []);
 
-  // Toggle Background Auto-Apply Status
   const handleToggleAutoApply = async () => {
     if (togglingAutoApply) return;
     setTogglingAutoApply(true);
@@ -125,7 +120,6 @@ const Dashboard = () => {
     };
   }, [applications, user]);
 
-  // Merge Voice Results, Passive Background Agent Matches, and Coordinates
   const recommendedJobs = useMemo(() => {
     const fromVoice = Array.isArray(voiceJobs) && voiceJobs.length > 0 ? voiceJobs : [];
     const fromPassive = Array.isArray(passiveMatches) && passiveMatches.length > 0 ? passiveMatches : [];
@@ -150,7 +144,6 @@ const Dashboard = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-1000">
       
-      {/* 🎙️ VOICE INTERACTION HERO & AUTO-APPLY DASHBOARD CONTROL BAR */}
       <div className="relative group overflow-hidden bg-white/[0.03] border border-white/10 rounded-[3rem] p-8 md:p-12 shadow-2xl">
         <div className="absolute top-0 right-0 w-1/2 h-full bg-linear-to-l from-[#2BB8B8]/10 to-transparent"></div>
         
@@ -162,7 +155,6 @@ const Dashboard = () => {
                 {copy.aiMatchingActive || 'AI Agent Monitor Engine Active'}
               </span>
               
-              {/* One-Click Auto-Apply Control Badge */}
               <button 
                 onClick={handleToggleAutoApply}
                 disabled={togglingAutoApply}
@@ -204,7 +196,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* STATS GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {[
           { label: copy.weeklyEarnings, val: `${stats.weeklyEarningsETB} ETB`, sub: copy.calculatedSoon, icon: TrendingUp },
@@ -223,7 +214,6 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* RECENT PASSIVE & VOICE ENHANCED MATCHES */}
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-black text-white flex items-center gap-2">
@@ -247,16 +237,16 @@ const Dashboard = () => {
               </div>
             ) : (
               recommendedJobs.map((job) => {
-                // Read calculated profile alignment telemetry directly from the background match layer
-                const matchScore = job.matchScore || Math.floor(Math.random() * (99 - 88 + 1)) + 88;
+                const matchScore = job.matchScore ?? 0;
                 
                 return (
                   <div key={job._id} className="group bg-white/[0.03] border border-white/10 p-5 rounded-3xl flex flex-col md:flex-row md:items-center justify-between hover:border-[#2BB8B8]/30 transition-all gap-4 relative overflow-hidden">
                     
-                    {/* Background Visual Score Indicator Tag */}
+                    {matchScore > 0 && (
                     <div className="absolute top-0 right-0 bg-[#2BB8B8]/10 border-bl border-white/10 text-[#2BB8B8] text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl">
                       {matchScore}% Compatibility
                     </div>
+                    )}
 
                     <div className="flex items-center gap-5 min-w-0">
                       <div className="w-14 h-14 rounded-2xl bg-[#1A2E35] flex items-center justify-center text-[#2BB8B8] font-black text-xl shrink-0 border border-white/5 shadow-inner">
@@ -299,7 +289,6 @@ const Dashboard = () => {
                             try {
                               await jobService.applyToJob(job._id);
                               toast?.show?.('Applied successfully via dashboard pitch.', 'success');
-                              // Filter out instantly from current viewport listing state updates
                               setNearbyJobs(prev => prev.filter(n => n._id !== job._id));
                               setPassiveMatches(prev => prev.filter(p => p._id !== job._id));
                             } catch {
@@ -326,7 +315,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* SIDEBAR TOOLS */}
         <div className="space-y-6">
           <div className="bg-linear-to-br from-[#2BB8B8] to-cyan-500 p-8 rounded-[3rem] shadow-2xl shadow-[#2BB8B8]/15 relative overflow-hidden group">
             <div className="relative z-10">
@@ -357,7 +345,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Voice Apply Modal */}
       {voiceApplyJob && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-200">
           <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 max-w-md w-full relative shadow-2xl">

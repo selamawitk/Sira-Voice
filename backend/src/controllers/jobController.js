@@ -11,9 +11,6 @@ import { sendPaymentNotification, sendContractNotification, sendAIAgentNotificat
 
 import { createApplicationLogic } from './applicationController.js';
 
-/* =========================
-   📍 DISTANCE HELPER
-========================= */
 const getDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371e3;
 
@@ -35,9 +32,6 @@ const getDistance = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
-/* =========================
-   📍 NORMALIZE LOCATION
-========================= */
 const normalizeLocationCoordinates = (location) => {
   if (
     !location ||
@@ -66,9 +60,6 @@ const normalizeLocationCoordinates = (location) => {
   return location;
 };
 
-/* =========================
-   🤖 AI MATCH PROCESSOR
-========================= */
 export const processNewJobMatches = async (job, io) => {
   const matches = await findMatchingWorkers(job, io);
 
@@ -101,9 +92,6 @@ export const processNewJobMatches = async (job, io) => {
     }
   }
 
-  /* =========================
-     📡 REALTIME NOTIFICATIONS
-  ========================= */
   if (io) {
     for (const match of nonAutoMatches) {
       const userId = match.worker?._id?.toString();
@@ -126,9 +114,6 @@ export const processNewJobMatches = async (job, io) => {
   return matches;
 };
 
-/* =========================
-   🟢 CREATE JOB
-========================= */
 export const createJob = asyncHandler(async (req, res) => {
   const {
     title,
@@ -138,7 +123,6 @@ export const createJob = asyncHandler(async (req, res) => {
     location,
   } = req.body;
 
-  /* AI scam check */
   const scamAnalysis = await analyzeJobForScam(description, salary);
 
   if (!scamAnalysis.isSafe) {
@@ -169,7 +153,6 @@ export const createJob = asyncHandler(async (req, res) => {
     req.io
   );
 
-  /* save scam analysis log */
   try {
     await ScamAnalysis.create({
       jobId: job._id,
@@ -191,9 +174,6 @@ export const createJob = asyncHandler(async (req, res) => {
   });
 });
 
-/* =========================
-   🔍 GET JOBS (SEARCH + GEO)
-========================= */
 export const getJobs = asyncHandler(async (req, res) => {
   const {
     lat,
@@ -250,9 +230,6 @@ export const getJobs = asyncHandler(async (req, res) => {
   });
 });
 
-/* =========================
-   📄 GET JOB BY ID
-========================= */
 export const getJobById = asyncHandler(
   async (req, res) => {
     const job = await Job.findById(req.params.id)
@@ -275,9 +252,6 @@ export const getJobById = asyncHandler(
   }
 );
 
-/* =========================
-   🤝 GET MATCHES
-========================= */
 export const getJobMatches = asyncHandler(
   async (req, res) => {
     const job = await Job.findById(req.params.id);
@@ -302,9 +276,6 @@ export const getJobMatches = asyncHandler(
   }
 );
 
-/* =========================
-   ✏️ UPDATE JOB (Employer)
-========================= */
 export const updateJob = asyncHandler(async (req, res) => {
   const job = await Job.findById(req.params.id);
 
@@ -330,9 +301,6 @@ export const updateJob = asyncHandler(async (req, res) => {
   res.json({ success: true, data: job });
 });
 
-/* =========================
-   🗑️ DELETE JOB (Employer, soft)
-========================= */
 export const deleteJob = asyncHandler(async (req, res) => {
   const job = await Job.findById(req.params.id);
 
@@ -354,9 +322,6 @@ export const deleteJob = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Job cancelled' });
 });
 
-/* =========================
-   🚀 START JOB (GPS VERIFY)
-========================= */
 export const startJob = asyncHandler(
   async (req, res) => {
     const { lat, lng } = req.body;
@@ -414,9 +379,6 @@ export const startJob = asyncHandler(
   }
 );
 
-/* =========================
-   💰 COMPLETE JOB + PAYMENT
-========================= */
 export const completeJob = asyncHandler(
   async (req, res) => {
     const job = await Job.findById(req.params.id);
@@ -448,7 +410,6 @@ export const completeJob = asyncHandler(
       });
     }
 
-    /* mark completed */
     job.status = 'completed';
     job.completedAt = Date.now();
     await job.save();
@@ -457,7 +418,6 @@ export const completeJob = asyncHandler(
 
     const txRef = `EARN-${job._id}-${Date.now()}`;
 
-    /* transaction record */
     await Transaction.create({
       employer: job.employer,
       worker: job.worker,
@@ -470,7 +430,6 @@ export const completeJob = asyncHandler(
       paidAt: new Date(),
     });
 
-    /* update wallet */
     const worker = await User.findById(job.worker);
 
     if (worker) {
@@ -484,7 +443,6 @@ export const completeJob = asyncHandler(
 
       await worker.save();
 
-      /* notify worker */
       sendPaymentNotification(req.io, worker._id.toString(), amount, job.title, null);
     }
 

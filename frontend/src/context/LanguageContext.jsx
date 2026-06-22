@@ -1,4 +1,3 @@
-// /src/context/LanguageContext.jsx
 import React, { useMemo, useState } from 'react';
 import { LanguageContext } from './LanguageContextInstance.jsx';
 
@@ -60,7 +59,6 @@ const COPY = {
     notifications: 'ማሳወቂያዎች',
     settings: 'ማስተካከያዎች',
 
-    // New Dashboard / Worker Specific Keys From State Screen
     welcomeBack: 'እንኳን ደህና መጡ!',
     aiMatchingActive: 'የአርቴፊሻል ኢንተለጀንስ (AI) ማገናኛ ገባሪ ነው',
     voiceHuntingJobs: 'የእርስዎ የድምፅ ረዳት በአቅራቢያዎ ያሉ ስራዎችን እየፈለገ ነው።',
@@ -126,22 +124,18 @@ const COPY = {
     hiringProgress: 'እየቀጠረ ነው...',
     hireAction: 'ቅጠር',
 
-    // Missing Voice Assistant translation strings
     voiceAssistantSubtitle: 'በአማርኛ፣ በአፋን ኦሮሞ ወይም በእንግሊዝኛ ይናገሩ። ሥራ እርምጃ ከመውሰዱ በፊት የሰማውን ማስተካከል ይችላሉ።',
     processingVoice: 'ሥራ በማሰብ ላይ ነው…',
     autoStopHint: 'ከ~10 ሰከንድ በኋላ በራሱ ይቆማል።',
     transcribedTextLabel: 'የተቀዳ ጽሑፍ (ሊስተካከል የሚችል)',
     suggestedJobsLabel: 'የቀረቡ ሥራዎች',
 
-    // Fallback Manual Input Text String
     typeFallbackPlaceholder: 'ትዕዛዝ ወይም የስራ መደብ እዚህ ይጻፉ…',
     saveLabel: 'ለውጦችን አስቀምጥ',
     cancelLabel: 'ሰርዝ',
 
-    // Admin
     users: 'ተጠቃሚዎች',
 
-    // Landing Page
     landingHeroTitle: 'ሲራ-ቮይስ: ለእለታዊ ሰራተኞች AI ወኪል',
     landingHeroSubtitle: 'ክህሎትዎን ይናገሩ፣ ተቀጥሩ፣ እና ሲራ-ቮይስ ማጣመሪያውን ያድርግ። አማርኛ፣ አፋን ኦሮሞ፣ እንግሊዘኛ—ድምጽዎ የሲቪዎ ነው።',
     landingWorkerCta: 'ሰራተኛ ነኝ →',
@@ -251,7 +245,6 @@ const COPY = {
     notifications: 'Beeksisa',
     settings: 'Qindaa’i',
 
-    // New Dashboard / Worker Specific Keys From State Screen
     welcomeBack: 'Baga nagaan dhuftan!',
     aiMatchingActive: 'Walitti Hidhiinsa AI Hojii Irra Jira',
     voiceHuntingJobs: 'Eejantiin sagalee keessanii naannoo keessanitti hojii barbaadaa jira.',
@@ -317,19 +310,16 @@ const COPY = {
     hiringProgress: 'Qaxaraa jira...',
     hireAction: 'Qaxari',
 
-    // Missing Voice Assistant translation strings
     voiceAssistantSubtitle: "Afaan Oromoo, Amaariffa ykn Ingiliffaan dubbadhu. Sira'n gocha dura waan dhaga'e sirreessuu dandeessa.",
     processingVoice: "Sira'n yaadaa jira…",
     autoStopHint: 'Sekondii ~10 booda ofiin dhaabbata.',
     transcribedTextLabel: 'Barreeffama waraabame (kan sirreeffamu)',
     suggestedJobsLabel: 'Hojiiwwan siif dhiyaatan',
 
-    // Fallback Manual Input Text String
     typeFallbackPlaceholder: 'Ajaja ykn gosa hojii barreessi…',
     saveLabel: 'Hanga jidduu ol-kaahi',
     cancelLabel: 'Haqi',
 
-    // Landing Page
     landingHeroTitle: 'Sira-Voice: Eejjantii AI Hojjettoota Guyyaa Guyyaatiif',
     landingHeroSubtitle: 'Dandeettii kee dubbadhu, qaxarami, Sira-Voiceen madaallii sirreessi. Afaan Oromoo, Amaariffa, Ingiliffa—sagaleen kee CV kee ti.',
     landingWorkerCta: 'Hojjetaan →',
@@ -339,7 +329,6 @@ const COPY = {
     landingVoiceTag: 'Sagalee → AI → Madaallii Hojii',
     users: 'Fayyadamtoota',
 
-    // Navbar
     navAbout: 'Waa\'ee',
     navHowItWorks: 'Akkamitti Hojjata',
     navEmployers: 'Qaxartoota',
@@ -448,7 +437,6 @@ const COPY = {
     notifications: 'Notifications',
     settings: 'Settings',
 
-    // New Dashboard / Worker Specific Keys From State Screen
     welcomeBack: 'Welcome back!',
     aiMatchingActive: 'AI Matching Active',
     voiceHuntingJobs: 'Your voice agent is hunting for jobs near you.',
@@ -514,29 +502,24 @@ const COPY = {
     hiringProgress: 'Hiring...',
     hireAction: 'Hire',
 
-    // Missing Voice Assistant translation strings
     voiceAssistantSubtitle: 'Speak in Amharic, Afaan Oromo, or English. You can edit what Sira heard before taking action.',
     processingVoice: 'Sira is thinking…',
     autoStopHint: 'Auto-stops after ~10 seconds.',
     transcribedTextLabel: 'Transcribed text (editable)',
     suggestedJobsLabel: 'Suggested jobs',
 
-    // Fallback Manual Input Text String
     typeFallbackPlaceholder: 'Type command or job title manually...',
     saveLabel: 'Save Changes',
     cancelLabel: 'Cancel',
 
-    // Admin
     users: 'Users',
 
-    // Navbar
     navAbout: 'About',
     navHowItWorks: 'How it Works',
     navEmployers: 'Employers',
     navWorkers: 'Workers',
     navContact: 'Contact Us',
 
-    // Landing Page
     landingHeroTitle: 'Sira-Voice: The AI Agent for Everyday Workers',
     landingHeroSubtitle: 'Speak your skills, get hired, and let Sira-Voice handle the matching. Amharic, Afan Oromo, English—your voice is your CV.',
     landingWorkerCta: 'I\'m a Worker →',

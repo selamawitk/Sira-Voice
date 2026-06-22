@@ -15,77 +15,17 @@ const TalkToSira = () => {
   const toast = useContext(ToastContext);
   const [jobs, setJobs] = useState([]);
 
-  // Sync state when new speech data arrives from user microphone context
   useEffect(() => {
     if (transcript) {
       setEditable(transcript);
     }
   }, [transcript]);
 
-  // Multilingual Fallbacks Dictionary
-  const fallbackCopy = {
-    talkToSira: {
-      english: 'Talk to Sira',
-      amharic: 'ከሥራ ጋር ይነጋገሩ',
-      oromigna: 'Siraa wajjin dubbadhu'
-    },
-    voiceAssistantSubtitle: {
-      english: 'Speak in Amharic, Afaan Oromo, or English. You can edit what Sira heard before taking action.',
-      amharic: 'በአማርኛ፣ በአፋን ኦሮሞ ወይም በእንግሊዝኛ ይናገሩ። ሥራ እርምጃ ከመውሰዱ በፊት የሰማውን ማስተካከል ይችላሉ።',
-      oromigna: 'Afaan Oromoo, Amaariffa ykn Ingiliffaan dubbadhu. Sira\'n gocha dura waan dhaga\'e sirreessuu dandeessa.'
-    },
-    listening: {
-      english: 'Listening… speak now',
-      amharic: 'በማዳመጥ ላይ… አሁን ይናገሩ',
-      oromigna: 'Dhaggeeffachaa jira… amma dubbadhu'
-    },
-    processingVoice: {
-      english: 'Sira is thinking…',
-      amharic: 'ሥራ በማሰብ ላይ ነው…',
-      oromigna: 'Sira\'n yaadaa jira…'
-    },
-    tapToSpeak: {
-      english: 'Tap to speak',
-      amharic: 'ለመናገር ይንኩ',
-      oromigna: 'Dubbachuuf tuqi'
-    },
-    autoStopHint: {
-      english: 'Auto-stops after ~10 seconds.',
-      amharic: 'ከ~10 ሰከንድ በኋላ በራሱ ይቆማል።',
-      oromigna: 'Sekondii ~10 booda ofiin dhaabbata.'
-    },
-    transcribedTextLabel: {
-      english: 'Transcribed text (editable)',
-      amharic: 'የተቀዳ ጽሑፍ (ሊስተካከል የሚችል)',
-      oromigna: 'Barreeffama waraabame (kan sirreeffamu)'
-    },
-    micPlaceholder: {
-      english: 'Your speech will appear here…',
-      amharic: 'የተናገሩት እዚህ ይወጣል…',
-      oromigna: 'Wanti ati dubbattu asitti mul\'ata…'
-    },
-    suggestedJobsLabel: {
-      english: 'Suggested jobs',
-      amharic: 'የቀረቡ ሥራዎች',
-      oromigna: 'Hojiiwwan siif dhiyaatan'
-    },
-    executeActionButton: {
-      english: 'Process Command',
-      amharic: 'ትዕዛዝ አከናውን',
-      oromigna: 'Ajaja Raawwadhu'
-    },
-    applyNowButton: {
-      english: 'Apply via Profile',
-      amharic: 'በፕሮፋይል ያመልክቱ',
-      oromigna: 'Iyyadhichaan iyyadhu'
-    }
-  };
-
   const getCopy = (key, defaultStr) => {
-    return copy?.[key] ?? fallbackCopy[key]?.[currentLang] ?? fallbackCopy[key]?.['english'] ?? defaultStr;
+    return copy?.[key] ?? defaultStr;
   };
 
-  // Process structured responses from engine hook configurations
+
   const handleVoiceIntentPayload = (result) => {
     if (result?.actionTaken === 'JOB_SEARCH_RESULTS') {
       setJobs(result?.data || []);
@@ -111,7 +51,6 @@ const TalkToSira = () => {
     });
   };
 
-  // Dispatches typed or heavily edited commands manual fallback routing fallback
   const handleManualSubmit = async () => {
     if (!editable.trim()) return;
     setLocalProcessing(true);
@@ -131,13 +70,11 @@ const TalkToSira = () => {
     }
   };
 
-  // Direct manual alternative to voice dispatch triggers
   const handleApplyToJob = async (jobId) => {
     try {
       const res = await api.post(`/jobs/${jobId}/apply`);
       if (res.data?.success) {
         toast?.show?.('Application submitted successfully!', 'success');
-        // Filter out job instantly to keep dynamic clean layout view state representation
         setJobs(prev => prev.filter(j => j._id !== jobId));
       }
     } catch (err) {
@@ -163,7 +100,6 @@ const TalkToSira = () => {
         <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#2BB8B8] opacity-[0.03] blur-[80px] pointer-events-none" />
         
         <div className="flex flex-col items-center gap-6">
-          {/* Main Visual Big Mic Trigger Control Element Row */}
           <button
             onClick={isListening ? stopListening : start}
             disabled={localProcessing}
@@ -199,7 +135,6 @@ const TalkToSira = () => {
             </p>
           </div>
 
-          {/* Interactive Text Field & Confirmation Submission Area Controls */}
           <div className="w-full space-y-3">
             <label className="block text-xs font-black uppercase tracking-widest text-gray-500">
               {getCopy('transcribedTextLabel', 'Transcribed text (editable)')}
@@ -225,7 +160,6 @@ const TalkToSira = () => {
             </div>
           </div>
 
-          {/* Render List Dynamic Outputs */}
           {showingLoader && (
             <div className="w-full flex flex-col items-center justify-center py-12 border border-dashed border-white/5 rounded-2xl bg-white/[0.01]">
               <div className="inline-block w-8 h-8 border-4 border-[#2BB8B8]/20 border-t-[#2BB8B8] rounded-full animate-spin mb-3" />

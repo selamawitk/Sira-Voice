@@ -26,7 +26,6 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      // Only required if NOT using Google and NOT using Passkeys
       required: function () {
         return !this.googleId && (!this.passkey || !this.passkey.credentialID);
       },
@@ -39,7 +38,7 @@ const userSchema = new mongoose.Schema(
       index: true,
     },
     currentChallenge: {
-      type: String, // Temporary storage for WebAuthn challenge
+      type: String,
     },
     passkey: {
       credentialID: { type: String },
@@ -57,7 +56,6 @@ const userSchema = new mongoose.Schema(
     totalEarnings: { type: Number, default: 0 },
     isAgentActive: { type: Boolean, default: false },
 
-    // Profiles
     workerProfile: {
       title: { type: String, default: '' },
       headline: { type: String, default: '' },
@@ -104,19 +102,16 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Indexes
 userSchema.index({ location: '2dsphere' }, { sparse: true });
 userSchema.index({ role: 1 });
 userSchema.index({ 'workerProfile.skills': 1 });
 userSchema.index({ role: 1, isAgentActive: 1 });
 
-// Password Match Method
 userSchema.methods.matchPassword = async function (enteredPassword) {
   if (!this.password) return false;
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Password Hashing Middleware
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password') || !this.password) {
     return next();
@@ -126,7 +121,6 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-// JSON Formatting
 userSchema.methods.toJSON = function () {
   const user = this.toObject();
   delete user.password;

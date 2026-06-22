@@ -16,16 +16,13 @@ const LandingPage = () => {
     <div className="font-sans antialiased bg-[#1A2E35] text-white">
       <Navbar />
       
-      {/* --- HERO SECTION --- */}
       <section className="relative min-h-screen flex items-center pt-16 md:pt-16 overflow-hidden px-4 sm:px-6 md:px-16 bg-[#1A2E35]">
-        {/* Decorative Background Glow */}
         <div className="absolute right-0 top-0 w-1/2 h-full opacity-20 pointer-events-none">
           <div className="w-full h-full bg-[#2BB8B8] blur-[120px] rounded-full translate-x-1/2"></div>
         </div>
 
         <div className="container mx-auto flex flex-col lg:flex-row gap-6 md:gap-12 items-center relative z-10">
           
-          {/* Left Side: Text Content - First on mobile, 50% on desktop */}
           <div className="w-full lg:w-1/2 space-y-6 md:space-y-8">
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black leading-[1.1] tracking-tight">
               {t.landingHeroTitle || 'Sira-Voice: The AI Agent for Everyday Workers'}
@@ -61,7 +58,6 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* Right Side: Image - below text on mobile, 50% on desktop */}
           <div className="relative flex justify-center w-full lg:w-1/2 mt-8 lg:mt-0">
             <div className="relative group overflow-hidden rounded-[2rem] sm:rounded-[3rem] lg:rounded-[4rem] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.6)] border border-white/10 transition-all duration-700 w-full">
               <img 
@@ -81,7 +77,6 @@ const LandingPage = () => {
         </div>
       </section>
       
-      {/* ---  SHIFT (ABOUT) SECTION --- */}
       <section id="about" className="py-20 bg-[#FDF8EE]">
         <div className="container mx-auto px-6 md:px-16">
           <div className="text-center mb-8 space-y-2">
@@ -131,7 +126,6 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* --- HOW IT WORKS SECTION --- */}
       <section id="how-it-works" className="py-24 bg-[#FDF8EE]">
         <div className="container mx-auto px-6 md:px-16">
           <div className="text-center mb-16 space-y-4">
@@ -185,7 +179,6 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* --- EMPLOYER SECTION --- */}
       <section id="employers" className="py-24 bg-[#FDF8EE]">
         <div className="container mx-auto px-6 md:px-16 grid md:grid-cols-2 gap-16 items-center">
           <div className="space-y-6">
@@ -215,7 +208,6 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* --- WORKER SECTION --- */}
       <section id="workers" className="py-17 bg-white">
         <div className="container mx-auto px-6 md:px-16">
           <div className="grid md:grid-cols-2 gap-16 items-center">
@@ -277,7 +269,6 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* --- CONTACT / FOOTER SECTION --- */}
       <footer id="contact" className="bg-[#1A2E35] text-gray-800 pt-24 pb-12 px-6 border-t border-white/5">
         <div className="container mx-auto">
           <div className="grid md:grid-cols-3 gap-16 border-b border-white/10 pb-20">

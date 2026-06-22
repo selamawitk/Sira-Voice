@@ -3,6 +3,6 @@ export const generateOTP = () => {
 };
 export const isOTPExpired = (createdAt, expiresInMinutes = 10) => {
   const now = new Date();
-  const diff = (now - new Date(createdAt)) / (1000 * 60); // Convert ms to minutes
+  const diff = (now - new Date(createdAt)) / (1000 * 60);
   return diff > expiresInMinutes;
 }

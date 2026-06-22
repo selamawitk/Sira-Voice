@@ -21,7 +21,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-// Helper component to dynamically pan map view when coordinates adjust
 const ChangeMapView = ({ center }) => {
   const map = useMap();
   useEffect(() => {
@@ -47,10 +46,8 @@ const Applicants = () => {
   const [hiringId, setHiringId] = useState('');
   const [jobLocation, setJobLocation] = useState(null);
   
-  // Layout state toggle for List view vs Map view
   const [viewMode, setViewMode] = useState('list'); 
 
-  // Fallback coordinate center point (Addis Ababa)
   const defaultCenter = [9.0192, 38.7468];
 
   const urlJobId = useMemo(() => {
@@ -62,7 +59,6 @@ const Applicants = () => {
     setJobId(urlJobId);
   }, [urlJobId]);
 
-  // Fetch Candidates and Job Context details for GPS Mapping
   useEffect(() => {
     const fetchJobAndMatches = async () => {
       if (!jobId) {
@@ -73,11 +69,9 @@ const Applicants = () => {
 
       setLoading(true);
       try {
-        // Fetch Candidates
         const matchRes = await api.get(`/jobs/${jobId}/matches`);
         setCandidates(matchRes.data?.matches ?? []);
 
-        // Fetch Job Details for spatial anchor tracking
         const jobRes = await api.get(`/jobs/${jobId}`);
         const jobData = jobRes.data?.data;
         if (jobData?.location?.coordinates && jobData.location.coordinates.length === 2) {
@@ -101,7 +95,6 @@ const Applicants = () => {
     fetchJobAndMatches();
   }, [jobId, toast, activeLang]);
 
-  // Sort candidates by match score, distance metrics, and star ratings
   const sortedCandidates = useMemo(() => {
     return [...candidates].sort((a, b) => {
       const scoreA = Number(a.score ?? 0);
@@ -116,7 +109,6 @@ const Applicants = () => {
     });
   }, [candidates]);
 
-  // Resolve active map view center focus
   const mapCenterCoordinates = useMemo(() => {
     if (jobLocation) return jobLocation;
     return defaultCenter;
@@ -213,7 +205,6 @@ const Applicants = () => {
   return (
     <div className="max-w-5xl mx-auto px-4 pt-0 pb-8">
       
-      {/* Header and Control Bar */}
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl text-white tracking-tight font-semibold">
@@ -229,7 +220,6 @@ const Applicants = () => {
         <div className="flex items-center gap-3 self-end sm:self-center">
           {jobId && (
             <>
-              {/* List View / Map View Switch Toggle */}
               <div className="flex items-center bg-white/5 border border-white/10 rounded-2xl p-1 backdrop-blur-md">
                 <button
                   onClick={() => setViewMode('list')}
@@ -259,7 +249,6 @@ const Applicants = () => {
         </div>
       </div>
 
-      {/* Main Candidate Content Module */}
       <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-xl">
         {!jobId ? (
           <div className="py-20 text-center">
@@ -281,7 +270,6 @@ const Applicants = () => {
             </p>
           </div>
         ) : viewMode === 'list' ? (
-          /* Standard Smart Ranking Applicant List View */
           <div className="divide-y divide-white/5">
             {sortedCandidates.map((c, index) => {
               const scoreNum = Number(c.score ?? 0);
@@ -355,7 +343,6 @@ const Applicants = () => {
             })}
           </div>
         ) : (
-          /* Geospatial Map Visualizer View Mode */
           <div className="w-full h-[550px] relative z-0">
             <MapContainer 
               center={mapCenterCoordinates} 
@@ -369,7 +356,6 @@ const Applicants = () => {
               
               <ChangeMapView center={mapCenterCoordinates} />
 
-              {/* Base anchor position for the Job details opening */}
               {jobLocation && (
                 <Marker position={jobLocation}>
                   <Popup>
@@ -380,7 +366,6 @@ const Applicants = () => {
                 </Marker>
               )}
 
-              {/* Interactive worker tracking pins */}
               {sortedCandidates.map((c) => {
                 const lat = c.location?.coordinates?.[1] || c.latitude;
                 const lng = c.location?.coordinates?.[0] || c.longitude;

@@ -44,7 +44,6 @@ const Navbar = () => {
           </div>
         </div>
         
-        {/* Navigation Links */}
         <div className="hidden md:flex items-center gap-8 text-white/90 font-semibold text-sm">
           <button onClick={() => scrollTo('about')} className="hover:text-[#2BB8B8] transition-colors">{t.navAbout || 'About'}</button>
           <button onClick={() => scrollTo('how-it-works')} className="hover:text-[#2BB8B8] transition-colors">{t.navHowItWorks || 'How it Works'}</button>
@@ -60,13 +59,11 @@ const Navbar = () => {
           </button>
         </div>
 
-        {/* Mobile Toggle */}
         <div className="md:hidden text-white cursor-pointer" onClick={() => setIsOpen(!isOpen)} aria-label={isOpen ? 'Close menu' : 'Open menu'}>
           {isOpen ? <X className="w-8 h-8" /> : <Menu className="w-8 h-8" />}
         </div>
       </div>
 
-      {/* Mobile Menu */}
       {isOpen && (
         <div className="md:hidden bg-[#1A2E35]/95 backdrop-blur-md border-t border-white/10">
           <div className="container mx-auto px-6 py-4 space-y-4">

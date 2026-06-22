@@ -82,7 +82,6 @@ const Ratings = () => {
   };
 
   return (
-    /* Standardized global layout padding and max-width layout structure constraints */
     <div className="max-w-7xl mx-auto px-4 pt-0 pb-8">
       <div className="mb-8">
         <h1 className="text-4xl font-semibold text-white tracking-tight normal-case">

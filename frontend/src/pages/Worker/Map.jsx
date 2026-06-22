@@ -225,10 +225,8 @@ const Map = () => {
         />
         <RecenterMap coords={center} />
         
-        {/* User Location Node */}
         <Marker position={center} icon={userDot} />
         
-        {/* Dynamic Proximity Mapping Filtering Loop */}
         {jobs.filter(j => {
           if (!j.location?.coordinates) return false;
           const pos = normalizeCoordinates(j.location.coordinates);
@@ -238,7 +236,6 @@ const Map = () => {
           const pos = normalizeCoordinates(job.location.coordinates);
           if (!pos) return null;
 
-          // Convert meters from getDistance into exact, clean kilometers
           const distanceInMeters = getDistance(center[0], center[1], pos[0], pos[1]);
           const distanceInKm = (distanceInMeters / 1000).toFixed(1);
 
@@ -300,7 +297,6 @@ const Map = () => {
         </div>
       )}
       
-      {/* Active Satellite Broadcast Counter Badge */}
       <div className="absolute bottom-6 left-6 z-10 bg-[#0B1519]/90 backdrop-blur-md border border-white/5 p-2.5 px-4 rounded-xl shadow-xl flex items-center gap-3">
         <div className="w-2 h-2 bg-[#2BB8B8] rounded-full animate-pulse"></div>
         <span className="text-white/80 font-black text-[10px] uppercase tracking-widest">

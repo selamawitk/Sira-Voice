@@ -185,7 +185,6 @@ const RegisterPage = () => {
       const data = await auth.register(payload);
       toast?.show?.(t.toastSuccess, 'success');
       
-      // After registration, offer passkey registration automatically or navigate
       navigate(getRedirectPath(data?.role || role));
     } catch (error) {
       toast?.show?.(error?.response?.data?.message || 'Registration failed.', 'error');
@@ -275,7 +274,6 @@ const RegisterPage = () => {
           {loading ? t.processing : t.registerBtn} <LogIn className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </button>
 
-        {/* Biometric registration (fingerprint/face) */}
         <button
           type="button"
           onClick={handleBiometricRegister}

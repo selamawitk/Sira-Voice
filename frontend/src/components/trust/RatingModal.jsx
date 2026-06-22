@@ -7,12 +7,10 @@ import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 const RatingModal = ({ open, onClose, onSubmit, initialComment = '' }) => {
   const { isListening, transcript, isProcessing, startListening, stopListening } = useVoice();
   
-  // Initialize state directly from props to avoid the "syncing" effect
   const [score, setScore] = useState(5);
   const [comment, setComment] = useState(initialComment);
   const lang = useContext(LanguageContext);
 
-  // Reset local state only when the modal is specifically opened
   useEffect(() => {
     if (open) {
       setComment(initialComment);
@@ -20,7 +18,6 @@ const RatingModal = ({ open, onClose, onSubmit, initialComment = '' }) => {
     }
   }, [open, initialComment]);
 
-  // Sync transcript from the voice hook
   useEffect(() => {
     if (transcript && transcript.trim() !== '') {
       setComment(transcript);

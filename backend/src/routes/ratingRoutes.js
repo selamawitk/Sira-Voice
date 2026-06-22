@@ -7,7 +7,6 @@ import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Matches the controller export 'postRating'
 router.post('/', protect, postRating);
 
 router.get('/:userId', getUserRatings);

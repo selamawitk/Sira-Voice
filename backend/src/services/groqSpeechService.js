@@ -10,13 +10,6 @@ const RETRY_DELAY_MS = 1500;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/**
- * Transcribe audio file using Groq Whisper Large-v3
- * with retry logic and language detection.
- *
- * @param {string} filePath - Path to audio file
- * @returns {Promise<{text: string, language: string, duration: number}>}
- */
 export const transcribeWithGroq = async (filePath) => {
   if (!groq) {
     console.warn('⚠️ GROQ_API_KEY not set, skipping Groq transcription');
@@ -55,7 +48,6 @@ export const transcribeWithGroq = async (filePath) => {
       const text = transcription?.text?.trim() || '';
       const detectedLanguage = transcription?.segments?.[0]?.language || 'am';
 
-      // Normalize language code to our format
       const languageMap = {
         amharic: 'am',
         am: 'am',
@@ -90,7 +82,4 @@ export const transcribeWithGroq = async (filePath) => {
   return null;
 };
 
-/**
- * Check if Groq is configured
- */
 export const isGroqAvailable = () => !!groq;

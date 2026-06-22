@@ -23,15 +23,12 @@ passport.use(
           return done(new Error('Google account email is required'), null);
         }
 
-        // 1. Try to find user by googleId
         let user = await User.findOne({ googleId: profile.id });
 
-        // 2. If not found by googleId, check by email
         if (!user) {
           user = await User.findOne({ email });
 
           if (user) {
-            // Link existing email account to Google
             if (user.googleId && user.googleId !== profile.id) {
               return done(
                 new Error('This email is already linked to another Google account'),
@@ -50,9 +47,7 @@ passport.use(
           }
         }
 
-        // 3. Create new user if they don't exist at all
         if (!user) {
-          // Extract role from state if you passed it from the frontend
           let role = 'worker';
           if (req.query.state) {
             try {
@@ -69,8 +64,6 @@ passport.use(
             googleId: profile.id,
             role: role,
             isVerified: true,
-            // DO NOT include the location object here. 
-            // The model will now handle it as 'undefined' which avoids the GeoJSON error.
           });
         }
 

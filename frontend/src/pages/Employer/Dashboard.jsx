@@ -21,7 +21,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-// Helper component to dynamically pan map viewport when selected opening updates
 const ChangeMapView = ({ center }) => {
   const map = useMap();
   useEffect(() => {
@@ -55,13 +54,10 @@ const EmployerDashboard = () => {
   const [matches, setMatches] = useState([]);
   const [hiringWorkerId, setHiringWorkerId] = useState('');
   
-  // Layout state switch tracking for List view vs Map view
   const [viewMode, setViewMode] = useState('list'); 
 
-  // Default coordinate center point fallback (Addis Ababa)
   const defaultCenter = [9.0192, 38.7468];
 
-  // 1. Fetch Employer Jobs
   useEffect(() => {
     const fetchJobs = async () => {
       if (!employerId) return;
@@ -83,7 +79,6 @@ const EmployerDashboard = () => {
     fetchJobs();
   }, [employerId, selectedJobId]);
 
-  // 2. Fetch Matches
   useEffect(() => {
     const fetchMatches = async () => {
       if (!selectedJobId) {
@@ -118,7 +113,6 @@ const EmployerDashboard = () => {
     });
   }, [matches]);
 
-  // Find geolocation parameters of currently active job profile selection for map focus
   const mapCenterCoordinates = useMemo(() => {
     const selectedJob = jobs.find(j => String(j._id) === String(selectedJobId));
     if (selectedJob?.location?.coordinates && selectedJob.location.coordinates.length === 2) {
@@ -130,7 +124,6 @@ const EmployerDashboard = () => {
     return defaultCenter;
   }, [jobs, selectedJobId]);
 
-  // 3. Hire Logic Workflow
   const hire = async (workerId) => {
     if (!selectedJobId || hiringWorkerId) return;
 
@@ -205,7 +198,6 @@ const EmployerDashboard = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 pt-0 pb-8">
       
-      {/* Header Panel */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
         <div>
           <div className="flex items-center gap-3">
@@ -236,7 +228,6 @@ const EmployerDashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left Column: Job Selector */}
         <GlassCard className="h-fit">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-white/60 font-semibold text-sm capitalize tracking-wide">
@@ -274,7 +265,6 @@ const EmployerDashboard = () => {
           </div>
         </GlassCard>
 
-        {/* Right Column: AI Matchmaking Card with Integrated GPS Leaflet Map Toggle */}
         <GlassCard className="lg:col-span-2">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div>
@@ -288,7 +278,6 @@ const EmployerDashboard = () => {
               </p>
             </div>
             
-            {/* View Switching Toggle Buttons */}
             <div className="flex items-center gap-3">
               {matchesLoading && <Loader2 className="w-5 h-5 text-[#2BB8B8] animate-spin" />}
               <div className="flex items-center bg-white/5 border border-white/10 rounded-xl p-1">
@@ -310,7 +299,6 @@ const EmployerDashboard = () => {
             </div>
           </div>
 
-          {/* Conditional View Rendering */}
           {viewMode === 'list' ? (
             <div className="space-y-4">
               {rankedByDistanceAndRating.length === 0 && !matchesLoading && (
@@ -416,7 +404,6 @@ const EmployerDashboard = () => {
                 
                 <ChangeMapView center={mapCenterCoordinates} />
 
-                {/* Main Job Position Anchor Node */}
                 {jobs.find(j => String(j._id) === String(selectedJobId)) && (
                   <Marker position={mapCenterCoordinates}>
                     <Popup>
@@ -428,7 +415,6 @@ const EmployerDashboard = () => {
                 )}
                 
                 {rankedByDistanceAndRating.map((w) => {
-                  // Fallback support for structural variance inside location payloads
                   const lat = w.location?.coordinates?.[1] || w.latitude;
                   const lng = w.location?.coordinates?.[0] || w.longitude;
                   

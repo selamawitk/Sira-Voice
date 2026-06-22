@@ -9,16 +9,13 @@ const AuthLayout = ({ children, title, subtitle }) => {
       className="min-h-screen w-full flex items-center justify-center relative overflow-hidden font-sans bg-cover bg-center"
       style={{ backgroundImage: `url(${authBg})` }}
     >
-      {/* Darkened Overlay */}
       <div className="absolute inset-0 bg-[#1A2E35]/85 backdrop-blur-[2px] z-0"></div>
 
       <div className="absolute left-[-10%] top-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#2BB8B8] opacity-[0.14] blur-[150px] rounded-full z-1"></div>
       <div className="absolute right-[-5%] bottom-[-10%] w-[600px] h-[600px] bg-[#2BB8B8] opacity-[0.10] blur-[120px] rounded-full z-1"></div>
 
-      {/* Main Container */}
       <div className="container mx-auto max-w-7xl w-full flex flex-col md:flex-row items-center justify-center md:justify-between z-20 px-4 sm:px-8 lg:px-20 py-6 md:py-10">
         
-        {/* LEFT SIDE: LOGO, TEXT, ROBOT - Hidden on small screens */}
         <div className="hidden md:flex flex-col h-full justify-between items-start space-y-12">
           
           <div className="space-y-4 -mt-10"> 
@@ -51,7 +48,6 @@ const AuthLayout = ({ children, title, subtitle }) => {
           </div>
         </div>
 
-        {/* RIGHT SIDE: CONTENT CARD - REDUCED BY ANOTHER 10PX */}
         <div className="relative z-50 mt-0 md:mt-2 flex justify-center w-full md:w-auto mx-auto md:mx-0">
           <div className="w-full min-w-[310px] sm:min-w-[330px] md:w-[450px] lg:w-[490px] bg-[#1A2E35]/70 backdrop-blur-3xl border border-white/10 rounded-[1.5rem] md:rounded-[2.5rem] p-6 sm:p-10 shadow-[0_30px_50px_rgba(0,0,0,0.6)] border-b-white/20">
              

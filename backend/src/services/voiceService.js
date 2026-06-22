@@ -9,10 +9,6 @@ import {
   genAI,
 } from './aiService.js';
 
-/* =========================
-   🎤 TRANSCRIBE AUDIO (MAIN)
-   Groq Whisper → Gemini fallback
-========================= */
 export const transcribeAudio = async (filePath) => {
   let result = null;
 
@@ -39,9 +35,6 @@ export const transcribeAudio = async (filePath) => {
   return result;
 };
 
-/* =========================
-   🎤 GEMINI FALLBACK TRANSCRIBE
-========================= */
 const transcribeWithGemini = async (filePath) => {
   try {
     if (!filePath) return { text: '', language: 'unknown', duration: 0 };
@@ -81,22 +74,16 @@ Rules:
   }
 };
 
-/* =========================
-   🧠 FULL VOICE → AI PIPELINE
-   Audio → Groq → Translate → Gemini Extract
-========================= */
 export const processVoiceToData = async (filePath) => {
   try {
     if (!filePath) return fallbackVoice();
 
-    // Step 1: Transcribe with Groq Whisper
     const transcription = await transcribeAudio(filePath);
     const transcript = transcription.text || '';
     const detectedLanguage = transcription.language || 'unknown';
 
     if (!transcript.trim()) return fallbackVoice();
 
-    // Step 2: Translate if Amharic/Oromo
     let textForExtraction = transcript;
     let sourceLanguage = detectedLanguage;
 
@@ -106,7 +93,6 @@ export const processVoiceToData = async (filePath) => {
       sourceLanguage = translation?.sourceLanguage || detectedLanguage;
     }
 
-    // Step 3: Extract with Gemini 2.5 Flash
     const ai = await processTextToData(textForExtraction, sourceLanguage);
 
     return {
@@ -121,10 +107,6 @@ export const processVoiceToData = async (filePath) => {
   }
 };
 
-/* =========================
-   👤 WORKER VOICE → CV PIPELINE
-   Audio → Groq → Translate → Gemini Extract → Profile
-========================= */
 export const processWorkerVoiceToCV = async (filePath) => {
   try {
     if (!filePath) return fallbackCV();
@@ -135,7 +117,6 @@ export const processWorkerVoiceToCV = async (filePath) => {
 
     if (!transcript.trim()) return fallbackCV();
 
-    // Translate if needed
     let textForExtraction = transcript;
     let sourceLanguage = detectedLanguage;
 
@@ -145,7 +126,6 @@ export const processWorkerVoiceToCV = async (filePath) => {
       sourceLanguage = translation?.sourceLanguage || detectedLanguage;
     }
 
-    // Extract worker profile
     const profile = await extractWorkerProfileFromText(textForExtraction, sourceLanguage);
 
     return {
@@ -160,10 +140,6 @@ export const processWorkerVoiceToCV = async (filePath) => {
   }
 };
 
-/* =========================
-   💼 EMPLOYER VOICE → JOB PIPELINE
-   Audio → Groq → Translate → Gemini Extract → Job Form
-========================= */
 export const processEmployerVoiceToJob = async (filePath) => {
   try {
     if (!filePath) return fallbackJob();
@@ -174,7 +150,6 @@ export const processEmployerVoiceToJob = async (filePath) => {
 
     if (!transcript.trim()) return fallbackJob();
 
-    // Translate if needed
     let textForExtraction = transcript;
     let sourceLanguage = detectedLanguage;
 
@@ -184,7 +159,6 @@ export const processEmployerVoiceToJob = async (filePath) => {
       sourceLanguage = translation?.sourceLanguage || detectedLanguage;
     }
 
-    // Extract job details
     const job = await extractJobFromText(textForExtraction, sourceLanguage);
 
     return {
@@ -199,17 +173,11 @@ export const processEmployerVoiceToJob = async (filePath) => {
   }
 };
 
-/* =========================
-   🎧 SIMPLE TEXT WRAPPER
-========================= */
 export const transcribeAudioSimple = async (filePath) => {
   const res = await transcribeAudio(filePath);
   return { text: res.text || '', language: res.language || 'unknown' };
 };
 
-/* =========================
-   🧯 SAFE FALLBACKS
-========================= */
 const fallbackVoice = () => ({
   transcript: '',
   translatedText: '',

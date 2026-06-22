@@ -3,11 +3,6 @@ import Job from '../models/Job.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { sendSystemNotification, sendContractNotification } from '../services/notificationService.js';
 
-/**
- * ✅ CREATE CONTRACT
- * Triggered when an employer hires a worker.
- * Status defaults to 'active', escrowStatus defaults to 'pending'.
- */
 export const createContract = asyncHandler(async (req, res) => {
   const {
     employerId,
@@ -39,11 +34,10 @@ export const createContract = asyncHandler(async (req, res) => {
     paymentType,
     agreedAmount: agriedAmount || job.salary,
     status: 'active',
-    escrowStatus: 'pending', // Waiting for employer to initiate payment
+    escrowStatus: 'pending',
     startedAt: new Date()
   });
 
-  // Send system notification to worker about contract creation
   try {
     await sendSystemNotification(
       req.io,
@@ -66,10 +60,6 @@ export const createContract = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * ✅ GET EMPLOYER CONTRACTS
- * Optimized for the ActiveContracts UI with population
- */
 export const getEmployerContracts = asyncHandler(async (req, res) => {
   const { employerId } = req.params;
 
@@ -85,10 +75,6 @@ export const getEmployerContracts = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * ✅ COMPLETE CONTRACT (WORKER FINISHED)
- * Marks the work as done, but doesn't release funds yet.
- */
 export const completeContract = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -118,11 +104,6 @@ export const completeContract = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * 💰 MARK CONTRACT AS PAID (CHAPA WEBHOOK ONLY)
- * This is the ONLY function that should finalize the money.
- * It is called by your Payment Controller after verifying the Chapa Hash.
- */
 export const markContractAsPaid = asyncHandler(async (req, res) => {
   const { contractId } = req.params;
   const { tx_ref } = req.body; // Passed from the payment verification logic
@@ -157,10 +138,6 @@ export const markContractAsPaid = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * 🛠 CANCEL CONTRACT
- * Safety net if the hire was a mistake or worker didn't show up.
- */
 export const cancelContract = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const contract = await Contract.findById(id);

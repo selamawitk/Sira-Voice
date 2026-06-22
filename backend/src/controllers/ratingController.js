@@ -39,7 +39,6 @@ export const postRating = asyncHandler(async (req, res) => {
       await targetUser.save();
     }
 
-    // Send rating notification to the rated user
     try {
       await sendRatingNotification(
         req.io,

@@ -11,11 +11,6 @@ const model = genAI.getGenerativeModel({
 
 export { genAI, model };
 
-/* =========================
-   🧼 STRICT JSON PARSER
-   No markdown. No prose.
-   No hallucinated fields.
-========================= */
 const STRICT_SCHEMAS = {
   workerProfile: {
     skill: '',
@@ -79,10 +74,6 @@ const validateAgainstSchema = (parsed, schema) => {
   return validated;
 };
 
-/* =========================
-   🌐 TRANSLATION ENGINE
-   Amharic/Oromo → English
-========================= */
 export const translateText = async (text, sourceLanguage) => {
   if (!text?.trim()) return null;
   if (sourceLanguage === 'en') {
@@ -115,10 +106,6 @@ Input: "${text}"`;
   }
 };
 
-/* =========================
-   🧠 TEXT → INTENT ENGINE
-   Detects what user wants to do
-========================= */
 export const processTextToData = async (transcript = '', language = 'am') => {
   try {
     if (!transcript?.trim()) return null;
@@ -163,10 +150,6 @@ Input: "${transcript}"`;
   }
 };
 
-/* =========================
-   👤 WORKER PROFILE EXTRACTION
-   Voice/CV → Structured Profile
-========================= */
 export const extractWorkerProfileFromText = async (text = '', language = 'am') => {
   try {
     const prompt = `Extract worker profile from this text.
@@ -196,10 +179,6 @@ Input: "${text}"`;
   }
 };
 
-/* =========================
-   💼 EMPLOYER JOB EXTRACTION
-   Voice → Structured Job Post
-========================= */
 export const extractJobFromText = async (text = '', language = 'am') => {
   try {
     const prompt = `Extract job posting details from this employer's request.
@@ -240,17 +219,10 @@ Input: "${text}"`;
   }
 };
 
-/* =========================
-   👤 LEGACY PROFILE EXTRACTION
-   (Kept for backward compat)
-========================= */
 export const extractProfileFromText = async (text = '') => {
   return extractWorkerProfileFromText(text, 'am');
 };
 
-/* =========================
-   ⚠️ JOB SAFETY ANALYZER
-========================= */
 export const analyzeJobForScam = async (description = '') => {
   try {
     const riskyKeywords = [

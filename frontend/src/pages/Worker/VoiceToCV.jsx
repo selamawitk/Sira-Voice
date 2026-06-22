@@ -132,7 +132,6 @@ const VoiceToCV = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Voice Capture */}
         <div className="bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-6 md:p-8 relative overflow-hidden backdrop-blur-md flex flex-col justify-between">
           <div className="absolute -top-40 -right-40 w-[520px] h-[520px] bg-[#2BB8B8] opacity-[0.07] blur-[140px] pointer-events-none" />
 
@@ -237,7 +236,6 @@ const VoiceToCV = () => {
           </div>
         </div>
 
-        {/* Preview & Edit */}
         <div className="bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md">
           <p className="text-xs font-black uppercase tracking-[0.24em] text-white/40 mb-4">
             {saved ? '✓ Saved Profile' : hasPreview ? 'Preview & Edit' : 'Extracted Profile'}
@@ -256,7 +254,6 @@ const VoiceToCV = () => {
             </div>
           ) : hasPreview ? (
             <div className="space-y-4">
-              {/* Skill */}
               <div>
                 <label className="text-xs font-black uppercase tracking-[0.2em] text-white/40 mb-1 block">Skill</label>
                 <input
@@ -266,7 +263,6 @@ const VoiceToCV = () => {
                   className="w-full bg-[#1A2E35]/60 border border-white/10 rounded-2xl px-4 py-3 text-white outline-none focus:border-[#2BB8B8]/50 transition-all"
                 />
               </div>
-              {/* Experience */}
               <div>
                 <label className="text-xs font-black uppercase tracking-[0.2em] text-white/40 mb-1 block">Experience (years)</label>
                 <input
@@ -277,7 +273,6 @@ const VoiceToCV = () => {
                   className="w-full bg-[#1A2E35]/60 border border-white/10 rounded-2xl px-4 py-3 text-white outline-none focus:border-[#2BB8B8]/50 transition-all"
                 />
               </div>
-              {/* Location */}
               <div>
                 <label className="text-xs font-black uppercase tracking-[0.2em] text-white/40 mb-1 block">Location</label>
                 <input
@@ -318,7 +313,6 @@ const VoiceToCV = () => {
             </div>
           )}
 
-          {/* Debug info */}
           {hasPreview && (
             <div className="mt-6 bg-[#1A2E35]/70 border border-white/10 rounded-3xl p-5">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-white/40">AI Interpretation</p>

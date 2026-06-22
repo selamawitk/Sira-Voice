@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useContext } from 'react';
 import api from '../../services/api.js';
-import { LanguageContext } from '../../context/LanguageContextInstance.jsx'; // 👈 Imported Language Context
+import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 import { Loader2, ShieldCheck, ShieldAlert, RefreshCw } from 'lucide-react';
 
 const GlassCard = ({ children, className = '' }) => (
@@ -24,8 +24,8 @@ const riskBadge = (score) => {
 };
 
 const ScamLog = () => {
-  const lang = useContext(LanguageContext); // 👈 Accessing current app locale context info
-  const activeLang = lang?.lang || 'en'; // 👈 'en', 'am', or 'or'
+  const lang = useContext(LanguageContext);
+  const activeLang = lang?.lang || 'en';
 
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState([]);
@@ -80,7 +80,6 @@ const ScamLog = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-2">
-      {/* LOCALIZED HEADER SECTION */}
       <div className="mb-8">
         <h1 className="text-4xl font-semibold text-white ">
           {activeLang === 'am' ? (
@@ -127,7 +126,6 @@ const ScamLog = () => {
                       {job.location?.address ?? 'Addis Ababa'} • {job.salary ?? 0} {job.currency || 'ETB'}
                     </p>
                     
-                    {/* RISK ANALYSIS EXPLANATION STRINGS */}
                     {analysis ? (
                       <p className="text-white/70 text-sm mt-3 bg-white/[0.02] border border-white/5 rounded-xl p-3 font-medium">
                         {analysis.reason}
@@ -149,7 +147,6 @@ const ScamLog = () => {
                       </p>
                     </div>
 
-                    {/* DYNAMIC RISK BADGE WITH INLINE FALLBACK MAPPING */}
                     <span className={`text-[10px] font-black uppercase tracking-[0.15em] px-3 py-1.5 rounded-full border ${riskBadge(analysis?.score)}`}>
                       {analysis?.score == null 
                         ? (activeLang === 'am' ? 'አልተመረመረም' : activeLang === 'or' ? 'Hin xiinxalamne' : 'Not analyzed') 
@@ -158,7 +155,6 @@ const ScamLog = () => {
                         : (activeLang === 'am' ? 'አነስተኛ ስጋት' : activeLang === 'or' ? 'Riskii Xiqqaa' : 'Low Risk')}
                     </span>
 
-                    {/* TRIGGER INTERACTION TRIGGER BUTTON */}
                     <button
                       type="button"
                       onClick={() => analyze(job._id)}
@@ -184,7 +180,6 @@ const ScamLog = () => {
           </div>
         )}
 
-        {/* SYSTEM PERFORMANCE BACKGROUND NOTICE */}
         <p className="text-white/30 text-[11px] font-medium mt-6 relative z-10 border-t border-white/5 pt-4">
           {activeLang === 'am' 
             ? 'ማሳሰቢያ፡ ይህ ለእያንዳንዱ ስራ `GET /api/ai/verify-safety/:jobId` ይጠራል። ለወደፊቱ በጅምላ ለመተንተን የጀርባ መጋጠሚያ (backend endpoint) ይጨመራል::' 

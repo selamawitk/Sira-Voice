@@ -134,7 +134,6 @@ const VoiceJobPosting = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Voice Input */}
         <div className="bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-6 md:p-8 relative overflow-hidden backdrop-blur-md">
           <div className="absolute -top-40 -right-40 w-[520px] h-[520px] bg-[#2BB8B8] opacity-[0.07] blur-[140px] pointer-events-none" />
 
@@ -227,7 +226,6 @@ const VoiceJobPosting = () => {
           )}
         </div>
 
-        {/* Preview & Edit */}
         <div className="bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-6 md:p-8 backdrop-blur-md">
           <p className="text-xs font-black uppercase tracking-[0.24em] text-white/40 mb-4">
             {saved ? '✓ Job Posted!' : preview ? 'Review & Post' : 'Job Details'}

@@ -79,7 +79,6 @@ export const useVoice = (onCompleteCallback, externalLang) => {
   }, [currentLang, toastContext]);
 
   const startListening = async (inlineOnComplete, options = {}) => {
-    // Default fallback to 'post-job-ai' unless designated otherwise (e.g. 'profile')
     const { action = 'post-job-ai', jobId = null } = options;
 
     if (isListening) return;
@@ -116,7 +115,6 @@ export const useVoice = (onCompleteCallback, externalLang) => {
       const jobId = recognitionRef.current.jobId || null;
       const onComplete = recognitionRef.current.onComplete;
 
-      // Conditional execution block to prevent catching 'profile' or alternative configurations incorrectly
       let endpoint = '/ai/voice-action';
       if (action === 'register' || action === 'login') {
         endpoint = '/auth/voice-auth';
