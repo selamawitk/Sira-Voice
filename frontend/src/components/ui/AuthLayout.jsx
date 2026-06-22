@@ -1,4 +1,5 @@
 import React from 'react';
+import { Mic } from 'lucide-react';
 import authBg from '../../assets/images/auth bg img.png';
 import robotImg from '../../assets/images/robot.png';
 
@@ -15,24 +16,20 @@ const AuthLayout = ({ children, title, subtitle }) => {
       <div className="absolute right-[-5%] bottom-[-10%] w-[600px] h-[600px] bg-[#2BB8B8] opacity-[0.10] blur-[120px] rounded-full z-1"></div>
 
       {/* Main Container */}
-      <div className="container mx-auto max-w-7xl w-full flex flex-col md:flex-row items-center justify-between z-20 px-8 lg:px-20 py-10">
+      <div className="container mx-auto max-w-7xl w-full flex flex-col md:flex-row items-center justify-center md:justify-between z-20 px-4 sm:px-8 lg:px-20 py-6 md:py-10">
         
-        {/* LEFT SIDE: LOGO, TEXT, ROBOT */}
-        <div className="flex flex-col h-full justify-between items-start space-y-12">
+        {/* LEFT SIDE: LOGO, TEXT, ROBOT - Hidden on small screens */}
+        <div className="hidden md:flex flex-col h-full justify-between items-start space-y-12">
           
           <div className="space-y-4 -mt-10"> 
             <div 
           className="flex items-center gap-2 cursor-pointer group" 
           onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}
         >
-          {/* Mic Icon */}
-          <div className="text-[#2BB8B8] text-2xl drop-shadow-md">🎙️</div>
-          {/* Text Logo */}
+          <Mic className="w-6 h-6 text-[#2BB8B8] drop-shadow-md" />
           <div className="text-white text-2xl font-black tracking-tight">
             Sira-<span className="text-[#2BB8B8]">Voice</span>
           </div>
-          {/* Handshake Icon (Matches screenshot image_4e4a2b.png) */}
-          <div className="text-2xl ml-1">🤝</div>
         </div>
             <h1 className="text-4xl lg:text-4xl mt-6 font-black text-white leading-tight tracking-tight">
               Voice → AI → 
@@ -54,9 +51,9 @@ const AuthLayout = ({ children, title, subtitle }) => {
           </div>
         </div>
 
-        {/* ✅ RIGHT SIDE: CARD MOVED 20px LEFT */}
-        <div className="relative z-50 mt-2 md:mt-0 flex justify-center md:justify-end w-full md:w-auto md:-translate-x-5">
-          <div className="w-[420px] max-w-[450px] bg-[#1A2E35]/70 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-8 shadow-[0_30px_50px_rgba(0,0,0,0.6)] border-b-white/20">
+        {/* ✅ RIGHT SIDE: CARD - Full width on mobile */}
+        <div className="relative z-50 mt-0 md:mt-2 flex justify-center w-full md:w-auto md:-translate-x-5">
+          <div className="w-full max-w-[500px] bg-[#1A2E35]/70 backdrop-blur-3xl border border-white/10 rounded-[1.5rem] md:rounded-[2.5rem] p-5 sm:p-8 shadow-[0_30px_50px_rgba(0,0,0,0.6)] border-b-white/20">
              
              <div className="mb-6">
                <h2 className="text-2xl font-black -mt-4 text-center text-white mb-1 tracking-tight">{title}</h2>
