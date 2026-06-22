@@ -7,21 +7,37 @@ const getBackendUrl = () => {
   return apiUrl.replace(/\/api\/?$/, '');
 };
 
+const getToken = () => localStorage.getItem('token');
+
 export const connectSocket = (userId) => {
-  if (!socket) {
-    socket = io(getBackendUrl(), {
-      transports: ['websocket'],
-      withCredentials: true,
-    });
+  const token = getToken();
 
-    socket.on('connect_error', (err) => {
-      console.error('Socket connect error:', err);
-    });
+  if (socket?.connected) {
+    if (userId) {
+      socket.emit('join', userId);
+    }
+    return socket;
   }
 
-  if (userId) {
-    socket.emit('join', userId);
+  if (socket) {
+    socket.disconnect();
   }
+
+  socket = io(getBackendUrl(), {
+    auth: { token },
+    transports: ['websocket'],
+    withCredentials: true,
+  });
+
+  socket.on('connect_error', (err) => {
+    console.error('Socket connect error:', err);
+  });
+
+  socket.on('connect', () => {
+    if (userId) {
+      socket.emit('join', userId);
+    }
+  });
 
   return socket;
 };
