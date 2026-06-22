@@ -137,6 +137,7 @@ const ChatWindow = ({ conversation, currentUser, activeLang }) => {
         <button
           type="submit"
           disabled={!newMessageText.trim()}
+          aria-label="Send message"
           className="w-10 h-10 rounded-xl bg-[#2BB8B8] text-slate-950 flex items-center justify-center transition-all active:scale-95 disabled:opacity-40 disabled:scale-100 shadow-md shadow-[#2BB8B8]/10 cursor-pointer shrink-0"
         >
           <Send className="w-4 h-4" />
