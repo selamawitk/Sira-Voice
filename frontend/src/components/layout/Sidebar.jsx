@@ -164,6 +164,12 @@ const Sidebar = ({ onClose }) => {
       path: "/post-job", 
       isVoice: true 
     },
+    {
+      icon: Mic,
+      label: "Voice Job Posting",
+      path: "/voice-job-posting",
+      isVoice: true
+    },
     { 
       icon: ClipboardList, 
       label: langCtx?.copy?.applicants ?? getFallbackLabel('applicants', "Applicants", "የስራ አመልካቾች", "Iyyattoota"), 
@@ -180,15 +186,20 @@ const Sidebar = ({ onClose }) => {
   const adminMenu = [
     { 
       icon: LayoutDashboard, 
-      label: langCtx?.copy?.adminDashboard ?? getFallbackLabel('adminDashboard', "Admin Dashboard", "የአስተዳዳሪ ዳሽቦርድ", "የአስተዳዳሪ ዳሽቦርድ"), 
+      label: langCtx?.copy?.adminDashboard ?? getFallbackLabel('adminDashboard', "Admin Dashboard", "የአስተዳዳሪ ዳሽቦርድ", "Daashboordii Bulchaa"), 
       path: "/admin-dashboard" 
     },
-    chatMenuItem,
+    { 
+      icon: UserCircle, 
+      label: langCtx?.copy?.users ?? getFallbackLabel('users', "Users", "ተጠቃሚዎች", "Fayyadamtoota"), 
+      path: "/admin-users" 
+    },
     { 
       icon: ShieldAlert, 
-      label: langCtx?.copy?.scamLog ?? getFallbackLabel('scamLog', "Scam Log", "የማጭበርበር ምዝግብ ማስታወሻ", "የማጭበርበር ምዝግብ ማስታወሻ"), 
+      label: langCtx?.copy?.scamLog ?? getFallbackLabel('scamLog', "Scam Log", "የማጭበርበር መዝገብ", "Galmee Madaa'aa"), 
       path: "/admin-scam-log" 
     },
+    chatMenuItem,
     { 
       icon: Bell, 
       label: langCtx?.copy?.notifications ?? getFallbackLabel('notifications', "Notifications", "ማሳወቂያዎች", "Beeksisoota"), 
@@ -223,10 +234,10 @@ const Sidebar = ({ onClose }) => {
       <div className={`flex flex-col gap-2 relative z-10 shrink-0 ${role === 'worker' ? 'mb-3' : 'mb-6'}`}>
         <div className="flex items-center justify-between text-2xl font-black text-[#2BB8B8]">
           <div className="flex items-center gap-2">
-            <span className="text-2xl drop-shadow-[0_0_15px_rgba(43,184,184,0.28)]">🎙️</span> Sira-Voice
+            <Mic className="w-6 h-6 drop-shadow-[0_0_15px_rgba(43,184,184,0.28)]" /> Sira-Voice
           </div>
           {onClose && (
-            <button onClick={onClose} className="p-1 text-white/60 hover:text-white transition-colors">
+            <button onClick={onClose} aria-label="Close sidebar" className="p-1 text-white/60 hover:text-white transition-colors">
               <X className="w-5 h-5" />
             </button>
           )}
