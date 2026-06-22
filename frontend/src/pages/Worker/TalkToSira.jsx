@@ -3,7 +3,7 @@ import { useVoice } from '../../hooks/useVoice.js';
 import api from '../../services/api.js';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
-import { Send, Sparkles, CheckCircle2, Briefcase, MapPin, DollarSign } from 'lucide-react';
+import { Mic, Send, Sparkles, CheckCircle2, Briefcase, MapPin, DollarSign } from 'lucide-react';
 
 const TalkToSira = () => {
   const { isListening, transcript, isProcessing, startListening, stopListening } = useVoice();
@@ -180,8 +180,8 @@ const TalkToSira = () => {
                 isListening ? 'border-[#2BB8B8]/60 shadow-[0_0_50px_rgba(43,184,184,0.28)]' : 'border-white/10 group-hover:border-white/20'
               }`}
             />
-            <span className={`text-5xl transition-transform duration-300 ${isListening ? 'scale-110' : 'group-hover:scale-105'}`}>
-              🎤
+            <span className={`transition-transform duration-300 ${isListening ? 'scale-110' : 'group-hover:scale-105'}`}>
+              <Mic className={`w-12 h-12 ${isListening ? 'text-[#2BB8B8]' : 'text-white/80'}`} />
             </span>
           </button>
 
