@@ -13,7 +13,7 @@ const getBaseUrl = () => {
 const api = axios.create({
   baseURL: getBaseUrl(),
   withCredentials: true,
-  timeout: 60000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -48,6 +48,8 @@ api.interceptors.response.use(
       '/contracts/worker/history',
       '/jobs/nearby',
       '/worker/profile',
+      '/ratings',
+      '/notifications',
     ];
 
     const matchesTarget = cacheableEndpoints.some((endpoint) =>
@@ -71,8 +73,25 @@ api.interceptors.response.use(
 
     return response;
   },
-  (error) => {
+  async (error) => {
     const originalRequest = error.config;
+
+    if (!originalRequest || originalRequest._retryCount === undefined) {
+      if (originalRequest) originalRequest._retryCount = 0;
+    }
+
+    const isRetryable =
+      originalRequest &&
+      originalRequest.method === 'get' &&
+      originalRequest._retryCount < 2 &&
+      (!error.response || error.code === 'ECONNABORTED' || error.response.status >= 500);
+
+    if (isRetryable) {
+      originalRequest._retryCount += 1;
+      const delay = Math.min(1000 * Math.pow(2, originalRequest._retryCount), 4000);
+      await new Promise((r) => setTimeout(r, delay));
+      return api(originalRequest);
+    }
 
     const isOfflineOrNetworkFailure =
       !error.response ||

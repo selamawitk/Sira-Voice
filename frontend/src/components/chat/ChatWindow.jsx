@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import api from '../../services/api.js';
 import { SocketContext } from '../../context/SocketContextInstance.jsx';
 import { Send, User, ShieldCheck, Loader2 } from 'lucide-react';
@@ -8,7 +8,9 @@ const ChatWindow = ({ conversation, currentUser, activeLang }) => {
   const [messages, setMessages] = useState([]);
   const [newMessageText, setNewMessageText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [typingUser, setTypingUser] = useState(null);
   const scrollRef = useRef(null);
+  const typingTimerRef = useRef(null);
 
   const targetParticipant = currentUser?.role === 'employer' ? conversation.worker : conversation.employer;
 
@@ -37,25 +39,46 @@ const ChatWindow = ({ conversation, currentUser, activeLang }) => {
 
     socket.emit('join_conversation', conversation._id);
 
+    if (currentUser?._id) {
+      socket.emit('messages_read', { conversationId: conversation._id });
+    }
+
     const handleIncomingMessage = (message) => {
       if (message.conversationId === conversation._id) {
         setMessages((prev) => [...prev, message]);
       }
     };
 
+    const handleTyping = ({ userId }) => {
+      if (userId !== currentUser?._id) {
+        setTypingUser(userId);
+        clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = setTimeout(() => setTypingUser(null), 2500);
+      }
+    };
+
     socket.on('receive_message', handleIncomingMessage);
+    socket.on('typing', handleTyping);
 
     return () => {
       socket.emit('leave_conversation', conversation._id);
       socket.off('receive_message', handleIncomingMessage);
+      socket.off('typing', handleTyping);
+      clearTimeout(typingTimerRef.current);
     };
-  }, [socket, conversation._id]);
+  }, [socket, conversation._id, currentUser?._id]);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  const handleTyping = useCallback(() => {
+    if (socket && conversation._id) {
+      socket.emit('typing', { conversationId: conversation._id, userId: currentUser?._id });
+    }
+  }, [socket, conversation._id, currentUser?._id]);
 
   const handleSendMessage = (e) => {
     e.preventDefault();
@@ -123,6 +146,13 @@ const ChatWindow = ({ conversation, currentUser, activeLang }) => {
             );
           })
         )}
+        {typingUser && (
+          <div className="flex justify-start">
+            <div className="bg-white/5 border border-white/5 text-white/60 px-4 py-2 rounded-2xl rounded-tl-none text-xs italic">
+              {activeLang === 'am' ? 'በማተም ላይ...' : activeLang === 'or' ? 'Barreessaa jira...' : 'Typing...'}
+            </div>
+          </div>
+        )}
         <div ref={scrollRef} />
       </div>
 
@@ -130,7 +160,7 @@ const ChatWindow = ({ conversation, currentUser, activeLang }) => {
         <input
           type="text"
           value={newMessageText}
-          onChange={(e) => setNewMessageText(e.target.value)}
+          onChange={(e) => { setNewMessageText(e.target.value); handleTyping(); }}
           placeholder={activeLang === 'am' ? 'መልእክት ይፃፉ...' : activeLang === 'or' ? 'Ergaa barreessi...' : 'Type your message here...'}
           className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white outline-none focus:border-[#2BB8B8]/50 focus:bg-white/10 transition-all text-xs font-medium"
         />

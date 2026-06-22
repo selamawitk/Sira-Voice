@@ -25,8 +25,8 @@ const LandingPage = () => {
 
         <div className="container mx-auto flex flex-col lg:flex-row gap-6 md:gap-12 items-center relative z-10">
           
-          {/* Left Side: Content - First on ALL screens */}
-          <div className="w-full space-y-6 md:space-y-8">
+          {/* Left Side: Text Content - First on mobile, 50% on desktop */}
+          <div className="w-full lg:w-1/2 space-y-6 md:space-y-8">
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black leading-[1.1] tracking-tight">
               {t.landingHeroTitle || 'Sira-Voice: The AI Agent for Everyday Workers'}
             </h1>
@@ -61,13 +61,13 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* Right Side - Image below text on mobile */}
-          <div className="relative flex justify-center w-full lg:w-auto">
-            <div className="relative group overflow-hidden rounded-[2rem] sm:rounded-[3rem] lg:rounded-[4rem] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.6)] border border-white/10 transition-all duration-700">
+          {/* Right Side: Image - below text on mobile, 50% on desktop */}
+          <div className="relative flex justify-center w-full lg:w-1/2 mt-8 lg:mt-0">
+            <div className="relative group overflow-hidden rounded-[2rem] sm:rounded-[3rem] lg:rounded-[4rem] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.6)] border border-white/10 transition-all duration-700 w-full">
               <img 
                 src={heroAgentImg} 
                 alt="Sira Voice AI Agent" 
-                className="w-full max-w-md sm:max-w-lg mx-auto object-contain max-h-[40vh] sm:max-h-[55vh] lg:max-h-[70vh] transform group-hover:scale-105 transition-transform duration-1000 ease-out"
+                className="w-full h-auto object-contain max-h-[45vh] sm:max-h-[65vh] lg:max-h-[85vh] transform group-hover:scale-105 transition-transform duration-1000 ease-out"
               />
               
               <div className="absolute inset-0 bg-linear-to-t from-[#1A2E35]/80 via-transparent to-transparent opacity-90"></div>
@@ -241,7 +241,7 @@ const LandingPage = () => {
               </div>
               
               <div className="space-y-4">
-                <div className="flex gap-4">
+                <div className="flex gap-4 items-center">
                   <div className="bg-[#FFF4E6] h-12 w-12 rounded-xl flex items-center justify-center shrink-0"><Mic className="w-5 h-5 text-[#FF8A00]" /></div>
                   <div>
                     <h4 className="font-bold text-lg">{t.landingWorkerStep1 || '1. Voice-First CV Creation'}</h4>
@@ -249,7 +249,7 @@ const LandingPage = () => {
                   </div>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex gap-4 items-center">
                   <div className="bg-[#FFF4E6] h-12 w-12 rounded-xl flex items-center justify-center shrink-0"><MapPin className="w-5 h-5 text-[#FF8A00]" /></div>
                   <div>
                     <h4 className="font-bold text-lg">{t.landingWorkerStep2 || '2. Find Local Opportunities'}</h4>
@@ -257,7 +257,7 @@ const LandingPage = () => {
                   </div>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex gap-4 items-center">
                   <div className="bg-[#FFF4E6] h-12 w-12 rounded-xl flex items-center justify-center shrink-0"><DollarSign className="w-5 h-5 text-[#FF8A00]" /></div>
                   <div>
                     <h4 className="font-bold text-lg">{t.landingWorkerStep3 || '3. Get Hired & Paid Faster'}</h4>
