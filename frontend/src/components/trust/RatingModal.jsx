@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useContext, useEffect, useState } from 'react';
+import { Mic } from 'lucide-react';
 import { useVoice } from '../../hooks/useVoice.js';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 
@@ -46,6 +47,7 @@ const RatingModal = ({ open, onClose, onSubmit, initialComment = '' }) => {
           </div>
           <button
             onClick={onClose}
+            onKeyDown={(e) => e.key === 'Escape' && onClose()}
             className="px-4 py-2 rounded-2xl bg-white/5 border border-white/10 text-white/80 font-black text-xs hover:bg-white/10 transition"
           >
             {lang?.copy?.close ?? 'Close'}
@@ -67,7 +69,7 @@ const RatingModal = ({ open, onClose, onSubmit, initialComment = '' }) => {
               
               {/* Optimized Tailwind Class: -inset-3 instead of inset-[-12px] */}
               <span className={`absolute -inset-3 rounded-full border transition-colors ${isListening ? 'border-[#2BB8B8]/70 shadow-[0_0_60px_rgba(43,184,184,0.35)]' : 'border-white/10'}`} />
-              <span className="text-4xl">🎤</span>
+              <Mic className={`w-12 h-12 ${isListening ? 'text-[#2BB8B8]' : 'text-white/80'}`} />
             </button>
 
             <p className="text-center text-white font-black mt-6">
@@ -117,6 +119,7 @@ const RatingModal = ({ open, onClose, onSubmit, initialComment = '' }) => {
           <button
             type="button"
             onClick={onClose}
+            onKeyDown={(e) => e.key === 'Escape' && onClose()}
             className="px-6 py-3 rounded-2xl bg-white/5 border border-white/10 text-white/80 font-black hover:bg-white/10 transition"
           >
             {lang?.copy?.cancel ?? 'Cancel'}
