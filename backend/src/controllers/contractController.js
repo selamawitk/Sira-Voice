@@ -1,7 +1,7 @@
 import Contract from '../models/Contract.js';
 import Job from '../models/Job.js';
 import asyncHandler from '../utils/asyncHandler.js';
-import { sendSystemNotification } from '../services/notificationService.js';
+import { sendSystemNotification, sendContractNotification } from '../services/notificationService.js';
 
 /**
  * ✅ CREATE CONTRACT
@@ -106,6 +106,11 @@ export const completeContract = asyncHandler(async (req, res) => {
 
   await contract.save();
 
+  const job = await Job.findById(contract.jobId).select('title employer');
+  if (job) {
+    sendContractNotification(req.io, job.employer, 'Work Completed', `Worker marked "${job.title}" as completed. Review and release payment.`, contract._id);
+  }
+
   res.json({
     success: true,
     message: 'Work marked as completed. Funds ready for release.',
@@ -138,8 +143,12 @@ export const markContractAsPaid = asyncHandler(async (req, res) => {
 
   await contract.save();
 
-  // Also update the job status if necessary
+  const job = await Job.findById(contract.jobId).select('title');
   await Job.findByIdAndUpdate(contract.jobId, { status: 'closed' });
+
+  if (job) {
+    sendContractNotification(req.io, contract.workerId, 'Payment Released', `Payment for "${job.title}" has been released to your wallet.`, contract._id);
+  }
 
   res.json({
     success: true,
@@ -164,6 +173,11 @@ export const cancelContract = asyncHandler(async (req, res) => {
 
   contract.status = 'cancelled';
   await contract.save();
+
+  const jobCancelled = await Job.findById(contract.jobId).select('title');
+  if (jobCancelled) {
+    sendContractNotification(req.io, contract.workerId, 'Contract Cancelled', `Contract for "${jobCancelled.title}" has been cancelled.`, contract._id);
+  }
 
   res.json({ success: true, message: 'Contract cancelled' });
 });

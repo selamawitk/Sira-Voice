@@ -174,13 +174,15 @@ export const createApplicationLogic = async (
     }
   });
 
+  const notifType = isAutoApply ? 'AI_AGENT' : 'SYSTEM';
   await sendRealTimeNotification(io, job.employer, {
-    title: isAutoApply ? 'Sira AI Match 🤖' : 'New Applicant 👤',
+    title: isAutoApply ? 'Sira AI Match' : 'New Applicant',
     message: isAutoApply
       ? `AI matched a worker for "${job.title}"`
       : `New applicant for "${job.title}"`,
     jobId: job._id,
-    type: isAutoApply ? 'JOB_MATCH' : 'SYSTEM'
+    type: notifType,
+    additionalData: isAutoApply ? { action: 'view_agent', matchScore } : { action: 'view_applications' }
   });
 
   if (isAutoApply) {
@@ -249,7 +251,7 @@ export const updateApplicationStatus = asyncHandler(async (req, res) => {
   }
 
   const workerNotification = {
-    title: status === 'accepted' ? "You're Hired 🎉" : 'Application Update',
+    title: status === 'accepted' ? "You're Hired" : 'Application Update',
     message:
       status === 'accepted'
         ? `Your application for "${job.title}" was accepted`
@@ -301,7 +303,7 @@ export const workerMarkFinished = asyncHandler(async (req, res) => {
   );
 
   await sendRealTimeNotification(req.io, contract.employerId, {
-    title: 'Work Finished 🛠️',
+    title: 'Work Finished',
     message: `Worker marked service for "${contract.jobId.title}" as done. Please review and release payment.`,
     type: 'SYSTEM',
     contractId: contract._id,

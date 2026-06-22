@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import Job from '../models/Job.js';
 import User from '../models/User.js';
-import { sendRealTimeNotification } from '../services/notificationService.js';
+import { sendAIAgentNotification } from '../services/notificationService.js';
 import { createApplicationLogic } from '../controllers/applicationController.js';
 
 export const initCronJobs = (io) => {
@@ -37,12 +37,7 @@ export const initCronJobs = (io) => {
               }
             }
           } else {
-            await sendRealTimeNotification(io, worker._id, {
-              title: "Sira Agent found a match! 🎯",
-              message: `A new ${job.category} job was posted in ${job.location.address}. It fits your profile perfectly!`,
-              jobId: job._id,
-              type: "match"
-            });
+            await sendAIAgentNotification(io, worker._id, 'Sira Agent found a match', `A new ${job.category} job was posted in ${job.location.address}. It fits your profile perfectly!`, { jobId: job._id });
           }
         }
       }

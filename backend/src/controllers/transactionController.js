@@ -2,6 +2,7 @@ import Transaction from '../models/Transaction.js';
 import User from '../models/User.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import axios from 'axios';
+import { sendSystemNotification } from '../services/notificationService.js';
 
 export const getWorkerHistory = asyncHandler(async (req, res) => {
   const targetWorkerId = req.params.id || req.user._id;
@@ -97,6 +98,8 @@ export const requestPayout = asyncHandler(async (req, res) => {
       paidAt: new Date()
     });
 
+    sendSystemNotification(req.io, workerId, 'Payout Successful', `ETB ${numericAmount} has been transferred to your bank account.`);
+
     res.status(200).json({
       success: true,
       message: 'Payout processed and transferred successfully!',
@@ -118,6 +121,8 @@ export const requestPayout = asyncHandler(async (req, res) => {
       purpose: 'worker_payout_withdrawal',
       chapaResponse: error.response?.data || { message: error.message }
     });
+
+    sendSystemNotification(req.io, workerId, 'Payout Failed', `Your payout of ETB ${numericAmount} failed. The amount has been returned to your wallet.`);
 
     res.status(500);
     throw new Error(`Chapa Transfer Failed: ${error.response?.data?.message || error.message}`);

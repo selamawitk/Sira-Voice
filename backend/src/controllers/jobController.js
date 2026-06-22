@@ -7,6 +7,7 @@ import asyncHandler from '../utils/asyncHandler.js';
 
 import { findMatchingWorkers } from '../services/jobMatcher.js';
 import { analyzeJobForScam } from '../services/aiService.js';
+import { sendPaymentNotification, sendContractNotification, sendAIAgentNotification } from '../services/notificationService.js';
 
 import { createApplicationLogic } from './applicationController.js';
 
@@ -109,7 +110,7 @@ export const processNewJobMatches = async (job, io) => {
       if (!userId) continue;
 
       const payload = {
-        title: 'Sira Agent Match 📍',
+        title: 'Sira Agent Match',
         message: `New ${job.category || 'job'} matches your profile`,
         jobId: job._id,
         score: match.score,
@@ -117,6 +118,8 @@ export const processNewJobMatches = async (job, io) => {
 
       io.to(userId).emit('new_job_match', payload);
       io.to(userId).emit('new_match', payload);
+
+      sendAIAgentNotification(io, userId, payload.title, payload.message, { jobId: job._id, score: match.score });
     }
   }
 
@@ -197,6 +200,8 @@ export const getJobs = asyncHandler(async (req, res) => {
     lng,
     distance = 5,
     category,
+    page = 1,
+    limit = 20,
   } = req.query;
 
   const query = {};
@@ -223,16 +228,24 @@ export const getJobs = asyncHandler(async (req, res) => {
     };
   }
 
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const total = await Job.countDocuments(query);
+
   const jobs = await Job.find(query)
     .populate(
       'employer',
       'fullName employerProfile.employerRating'
     )
-    .limit(20);
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit));
 
   res.json({
     success: true,
     count: jobs.length,
+    total,
+    page: parseInt(page),
+    pages: Math.ceil(total / parseInt(limit)),
     data: jobs,
   });
 });
@@ -290,6 +303,58 @@ export const getJobMatches = asyncHandler(
 );
 
 /* =========================
+   ✏️ UPDATE JOB (Employer)
+========================= */
+export const updateJob = asyncHandler(async (req, res) => {
+  const job = await Job.findById(req.params.id);
+
+  if (!job) {
+    return res.status(404).json({ success: false, message: 'Job not found' });
+  }
+
+  if (job.employer.toString() !== req.user._id.toString()) {
+    return res.status(403).json({ success: false, message: 'Not authorized to edit this job' });
+  }
+
+  if (job.status !== 'open') {
+    return res.status(400).json({ success: false, message: 'Can only edit open jobs' });
+  }
+
+  const fields = ['title', 'description', 'category', 'salary', 'location'];
+  fields.forEach((f) => {
+    if (req.body[f] !== undefined) job[f] = req.body[f];
+  });
+
+  await job.save();
+
+  res.json({ success: true, data: job });
+});
+
+/* =========================
+   🗑️ DELETE JOB (Employer, soft)
+========================= */
+export const deleteJob = asyncHandler(async (req, res) => {
+  const job = await Job.findById(req.params.id);
+
+  if (!job) {
+    return res.status(404).json({ success: false, message: 'Job not found' });
+  }
+
+  if (job.employer.toString() !== req.user._id.toString()) {
+    return res.status(403).json({ success: false, message: 'Not authorized to delete this job' });
+  }
+
+  job.status = 'cancelled';
+  await job.save();
+
+  if (job.worker) {
+    sendContractNotification(req.io, job.worker, 'Job Cancelled', `Job "${job.title}" has been cancelled.`, null);
+  }
+
+  res.json({ success: true, message: 'Job cancelled' });
+});
+
+/* =========================
    🚀 START JOB (GPS VERIFY)
 ========================= */
 export const startJob = asyncHandler(
@@ -338,6 +403,8 @@ export const startJob = asyncHandler(
     job.startedAt = Date.now();
 
     await job.save();
+
+    sendContractNotification(req.io, job.employer, 'Work Started', `Worker has started "${job.title}".`, null);
 
     res.json({
       success: true,
@@ -418,15 +485,7 @@ export const completeJob = asyncHandler(
       await worker.save();
 
       /* notify worker */
-      req.io?.to(worker._id.toString()).emit(
-        'payment_received',
-        {
-          title: 'Payment Received 💸',
-          message: `+${amount} ETB`,
-          balance:
-            worker.workerProfile.balance,
-        }
-      );
+      sendPaymentNotification(req.io, worker._id.toString(), amount, job.title, null);
     }
 
     res.json({
