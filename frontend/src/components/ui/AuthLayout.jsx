@@ -23,14 +23,14 @@ const AuthLayout = ({ children, title, subtitle }) => {
           
           <div className="space-y-4 -mt-10"> 
             <div 
-          className="flex items-center gap-2 cursor-pointer group" 
-          onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}
-        >
-          <Mic className="w-6 h-6 text-[#2BB8B8] drop-shadow-md" />
-          <div className="text-white text-2xl font-black tracking-tight">
-            Sira-<span className="text-[#2BB8B8]">Voice</span>
-          </div>
-        </div>
+              className="flex items-center gap-2 cursor-pointer group" 
+              onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}
+            >
+              <Mic className="w-6 h-6 text-[#2BB8B8] drop-shadow-md" />
+              <div className="text-white text-2xl font-black tracking-tight">
+                Sira-<span className="text-[#2BB8B8]">Voice</span>
+              </div>
+            </div>
             <h1 className="text-4xl lg:text-4xl mt-6 font-black text-white leading-tight tracking-tight">
               Voice → AI → 
               <span className="text-[#2BB8B8] drop-shadow-[0_0_20px_rgba(43,184,184,0.28)]"> Agent Match</span>
@@ -51,9 +51,9 @@ const AuthLayout = ({ children, title, subtitle }) => {
           </div>
         </div>
 
-        {/* ✅ RIGHT SIDE: CARD */}
-        <div className="relative z-50 mt-0 md:mt-2 flex justify-center w-full md:w-auto md:-translate-x-5">
-          <div className="w-full max-w-[500px] bg-[#1A2E35]/70 backdrop-blur-3xl border border-white/10 rounded-[1.5rem] md:rounded-[2.5rem] p-5 sm:p-8 shadow-[0_30px_50px_rgba(0,0,0,0.6)] border-b-white/20">
+        {/* RIGHT SIDE: CONTENT CARD - REDUCED BY ANOTHER 10PX */}
+        <div className="relative z-50 mt-0 md:mt-2 flex justify-center w-full md:w-auto mx-auto md:mx-0">
+          <div className="w-full min-w-[310px] sm:min-w-[330px] md:w-[450px] lg:w-[490px] bg-[#1A2E35]/70 backdrop-blur-3xl border border-white/10 rounded-[1.5rem] md:rounded-[2.5rem] p-6 sm:p-10 shadow-[0_30px_50px_rgba(0,0,0,0.6)] border-b-white/20">
              
              <div className="mb-6">
                <h2 className="text-2xl font-black -mt-4 text-center text-white mb-1 tracking-tight">{title}</h2>
