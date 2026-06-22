@@ -6,25 +6,27 @@ import { SocketContext } from './SocketContextInstance.jsx';
 export const SocketProvider = ({ children }) => {
   const auth = useContext(AuthContext);
   const userId = auth?.user?._id;
+  const token = localStorage.getItem('token');
 
   const socketInstance = useMemo(() => {
-    if (!userId) return null;
+    if (!userId || !token) return null;
 
     const socketUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-    
+
     return io(socketUrl, {
+      auth: { token },
       autoConnect: false,
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 2000
     });
-  }, [userId]);
+  }, [userId, token]);
 
   useEffect(() => {
     if (!socketInstance || !userId) return;
 
     const handleConnect = () => {
-      socketInstance.emit('join_user', userId);
+      socketInstance.emit('join', userId);
     };
 
     socketInstance.on('connect', handleConnect);
