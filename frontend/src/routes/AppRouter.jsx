@@ -1,38 +1,46 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Outlet, Link } from 'react-router-dom';
 
 import MainLayout from '../components/layout/MainLayout.jsx';
 import ProtectedRoute from './ProtectedRoute.jsx';
 import RoleRoute from './RoleRoute.jsx';
 
-import LandingPage from '../pages/Landing/LandingPage.jsx';
-import Register from '../pages/Auth/Register.jsx';
-import Login from '../pages/Auth/Login.jsx';
-import ForgotPassword from '../pages/Auth/ForgotPassword.jsx';
-import ResetPassword from '../pages/Auth/ResetPassword.jsx';
-import ChooseRolePage from '../pages/Auth/ChooseRolePage.jsx';
+const LandingPage = lazy(() => import('../pages/Landing/LandingPage.jsx'));
+const Register = lazy(() => import('../pages/Auth/Register.jsx'));
+const Login = lazy(() => import('../pages/Auth/Login.jsx'));
+const ForgotPassword = lazy(() => import('../pages/Auth/ForgotPassword.jsx'));
+const ResetPassword = lazy(() => import('../pages/Auth/ResetPassword.jsx'));
+const ChooseRolePage = lazy(() => import('../pages/Auth/ChooseRolePage.jsx'));
 
-import Dashboard from '../pages/Worker/Dashboard.jsx';
-import JobList from '../pages/Worker/JobList.jsx';
-import TalkToSira from '../pages/Worker/TalkToSira.jsx';
-import Map from '../pages/Worker/Map.jsx';
-import Profile from '../pages/Worker/Profile.jsx';
-import VoiceToCV from '../pages/Worker/VoiceToCV.jsx';
-import ApplicationHistory from '../pages/Worker/ApplicationHistory.jsx';
-import WorkerPayments from '../pages/Worker/WorkerPayments.jsx';
+const Dashboard = lazy(() => import('../pages/Worker/Dashboard.jsx'));
+const JobList = lazy(() => import('../pages/Worker/JobList.jsx'));
+const TalkToSira = lazy(() => import('../pages/Worker/TalkToSira.jsx'));
+const Map = lazy(() => import('../pages/Worker/Map.jsx'));
+const Profile = lazy(() => import('../pages/Worker/Profile.jsx'));
+const VoiceToCV = lazy(() => import('../pages/Worker/VoiceToCV.jsx'));
+const ApplicationHistory = lazy(() => import('../pages/Worker/ApplicationHistory.jsx'));
+const WorkerPayments = lazy(() => import('../pages/Worker/WorkerPayments.jsx'));
 
-import EmployerDashboard from '../pages/Employer/Dashboard.jsx';
-import PostJob from '../pages/Employer/PostJob.jsx';
-import Applicants from '../pages/Employer/Applicants.jsx';
-import ActiveContracts from '../pages/Employer/ActiveContracts.jsx';
-import PaymentHistory from '../pages/Employer/PaymentHistory.jsx';
+const EmployerDashboard = lazy(() => import('../pages/Employer/Dashboard.jsx'));
+const PostJob = lazy(() => import('../pages/Employer/PostJob.jsx'));
+const Applicants = lazy(() => import('../pages/Employer/Applicants.jsx'));
+const ActiveContracts = lazy(() => import('../pages/Employer/ActiveContracts.jsx'));
+const PaymentHistory = lazy(() => import('../pages/Employer/PaymentHistory.jsx'));
+const VoiceJobPosting = lazy(() => import('../pages/Employer/VoiceJobPosting.jsx'));
 
-import Ratings from '../pages/Shared/Ratings.jsx';
-import Notifications from '../pages/Shared/Notifications.jsx';
-import ChatLayout from '../pages/chat/ChatLayout.jsx';
-import SiraTalkPage from '../pages/sira/SiraTalkPage.jsx';
-import AdminDashboard from '../pages/Admin/Dashboard.jsx';
-import ScamLog from '../pages/Admin/ScamLog.jsx';
+const Ratings = lazy(() => import('../pages/Shared/Ratings.jsx'));
+const Notifications = lazy(() => import('../pages/Shared/Notifications.jsx'));
+const ChatLayout = lazy(() => import('../pages/chat/ChatLayout.jsx'));
+const SiraTalkPage = lazy(() => import('../pages/sira/SiraTalkPage.jsx'));
+const AdminDashboard = lazy(() => import('../pages/Admin/Dashboard.jsx'));
+const AdminUsers = lazy(() => import('../pages/Admin/Users.jsx'));
+const ScamLog = lazy(() => import('../pages/Admin/ScamLog.jsx'));
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-screen bg-[#1A2E35]">
+    <div className="w-10 h-10 border-4 border-[#2BB8B8] border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 const NotFound = () => (
   <div className="flex flex-col items-center justify-center h-screen bg-[#1A2E35] text-white">
@@ -89,47 +97,51 @@ const AppRouter = () => {
   return (
     <Router>
       <div className="min-h-screen bg-[#1A2E35]">
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/choose-role" element={<ChooseRolePage />} />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/choose-role" element={<ChooseRolePage />} />
 
-          <Route element={<WorkerSection />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/available-jobs" element={<JobList />} />
-            <Route path="/talk-to-sira" element={<TalkToSira />} />
-            <Route path="/job-map" element={<Map />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/voice-to-cv" element={<VoiceToCV />} />
-            <Route path="/application-history" element={<ApplicationHistory />} />
-            <Route path="/payments" element={<WorkerPayments />} />
-          </Route>
+            <Route element={<WorkerSection />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/available-jobs" element={<JobList />} />
+              <Route path="/talk-to-sira" element={<TalkToSira />} />
+              <Route path="/job-map" element={<Map />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/voice-to-cv" element={<VoiceToCV />} />
+              <Route path="/application-history" element={<ApplicationHistory />} />
+              <Route path="/payments" element={<WorkerPayments />} />
+            </Route>
 
-          <Route element={<EmployerSection />}>
-            <Route path="/employer-dashboard" element={<EmployerDashboard />} />
-            <Route path="/post-job" element={<PostJob />} />
-            <Route path="/applicants" element={<Applicants />} />
-            <Route path="/contracts" element={<ActiveContracts />} />
-            <Route path="/payments" element={<PaymentHistory />} />
-          </Route>
+            <Route element={<EmployerSection />}>
+              <Route path="/employer-dashboard" element={<EmployerDashboard />} />
+              <Route path="/post-job" element={<PostJob />} />
+              <Route path="/voice-job-posting" element={<VoiceJobPosting />} />
+              <Route path="/applicants" element={<Applicants />} />
+              <Route path="/contracts" element={<ActiveContracts />} />
+              <Route path="/payments" element={<PaymentHistory />} />
+            </Route>
 
-          <Route element={<SharedSection />}>
-            <Route path="/ratings" element={<Ratings />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/chat" element={<ChatLayout />} />
-            <Route path="/sira" element={<SiraTalkPage />} />
-          </Route>
+            <Route element={<SharedSection />}>
+              <Route path="/ratings" element={<Ratings />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/chat" element={<ChatLayout />} />
+              <Route path="/sira" element={<SiraTalkPage />} />
+            </Route>
 
-          <Route element={<AdminSection />}>
-            <Route path="/admin-dashboard" element={<AdminDashboard />} />
-            <Route path="/admin-scam-log" element={<ScamLog />} />
-          </Route>
+            <Route element={<AdminSection />}>
+              <Route path="/admin-dashboard" element={<AdminDashboard />} />
+              <Route path="/admin-users" element={<AdminUsers />} />
+              <Route path="/admin-scam-log" element={<ScamLog />} />
+            </Route>
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </div>
     </Router>
   );
