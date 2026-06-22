@@ -71,9 +71,15 @@ app.set('trust proxy', 1);
 const frontendUrl =
   process.env.FRONTEND_URL || 'http://localhost:5173';
 
+const corsOrigins =
+  process.env.CORS_ORIGINS?.split(',')
+    .map((o) => o.trim())
+    .filter(Boolean) || [];
+
 const allowedOrigins = [
   frontendUrl,
   'http://localhost:5173',
+  ...corsOrigins,
 ];
 
 app.use(
@@ -89,8 +95,10 @@ app.use(
         connectSrc: [
           "'self'",
           frontendUrl,
+          ...allowedOrigins,
           process.env.BACKEND_URL || 'http://localhost:5001',
           'ws://localhost:5001',
+          'wss://localhost:5001',
           'wss:',
         ],
 
