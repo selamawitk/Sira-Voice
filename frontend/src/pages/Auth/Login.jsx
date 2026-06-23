@@ -161,44 +161,21 @@ const LoginPage = () => {
   };
 
   useEffect(() => {
-    let isMounted = true;
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
 
-    const processOAuthResult = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const token = urlParams.get('token');
-      const error = urlParams.get('error');
+    if (error === 'google_auth_failed') {
+      localStorage.removeItem('token');
+      toast?.show?.(t.toastOAuthFail, 'error');
+      navigate('/login', { replace: true });
+    }
+  }, [navigate, toast, t.toastOAuthFail]);
 
-      if (error === 'google_auth_failed') {
-        localStorage.removeItem('token');
-        toast?.show?.(t.toastOAuthFail, 'error');
-        navigate('/login', { replace: true });
-        return;
-      }
-
-      if (token) {
-        try {
-          localStorage.setItem('token', token);
-          const user = await auth.fetchMe();
-
-          if (isMounted) {
-            navigate(getRedirectPath(user?.role), {
-              replace: true,
-            });
-          }
-        } catch {
-          localStorage.removeItem('token');
-          toast?.show?.(t.toastProfileFail, 'error');
-          navigate('/login', { replace: true });
-        }
-      }
-    };
-
-    processOAuthResult();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [auth, navigate, toast, t.toastOAuthFail, t.toastProfileFail, getRedirectPath]);
+  useEffect(() => {
+    if (auth.isAuthenticated && auth.user) {
+      navigate(getRedirectPath(auth.user.role), { replace: true });
+    }
+  }, [auth.isAuthenticated, auth.user, navigate, getRedirectPath]);
 
   return (
     <AuthLayout title={t.title} subtitle={t.subtitle}>

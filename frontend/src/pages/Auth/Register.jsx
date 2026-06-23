@@ -124,35 +124,21 @@ const RegisterPage = () => {
   };
 
   useEffect(() => {
-    let isMounted = true;
-    const handleOAuthCallback = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const token = urlParams.get('token');
-      const error = urlParams.get('error');
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
 
-      if (error) {
-        toast?.show?.(t.toastOAuthFail, 'error');
-        navigate('/register', { replace: true });
-        return;
-      }
+    if (error) {
+      toast?.show?.(t.toastOAuthFail, 'error');
+      navigate('/register', { replace: true });
+    }
+  }, [navigate, toast, t.toastOAuthFail]);
 
-      if (token) {
-        localStorage.setItem('token', token);
-        try {
-          const user = await auth?.fetchMe?.();
-          localStorage.removeItem('pending_role');
-          if (isMounted) {
-            navigate(getRedirectPath(user?.role), { replace: true });
-          }
-        } catch (err) {
-          localStorage.removeItem('token');
-          navigate('/register', { replace: true });
-        }
-      }
-    };
-    handleOAuthCallback();
-    return () => { isMounted = false; };
-  }, [auth, navigate, toast, t.toastOAuthFail]);
+  useEffect(() => {
+    if (auth.isAuthenticated && auth.user) {
+      localStorage.removeItem('pending_role');
+      navigate(getRedirectPath(auth.user.role), { replace: true });
+    }
+  }, [auth.isAuthenticated, auth.user, navigate, getRedirectPath]);
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
