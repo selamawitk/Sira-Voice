@@ -28,16 +28,21 @@ const ORIGIN = process.env.ORIGIN || 'http://localhost:5173';
 export const generatePasskeyRegistration = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
 
+  const excludeCredentials = user.passkey?.credentialID
+    ? [{ id: user.passkey.credentialID, type: 'public-key' }]
+    : [];
+
   const options = await generateRegistrationOptions({
     rpName: 'Sira Platform',
     rpID: RP_ID,
     userID: isoUint8Array.fromUTF8String(user._id.toString()),
     userName: user.email || user.phone || user.fullName,
     attestationType: 'none',
+    excludeCredentials,
     authenticatorSelection: {
-      residentKey: 'required',
-      userVerification: 'required',
       authenticatorAttachment: 'platform',
+      userVerification: 'required',
+      residentKey: 'required',
     },
   });
 
