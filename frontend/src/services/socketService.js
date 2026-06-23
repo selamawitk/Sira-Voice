@@ -23,7 +23,6 @@ export const connectSocket = (userId) => {
 
   socket = io(getBackendUrl(), {
     auth: { token },
-    transports: ['websocket'],
     withCredentials: true,
   });
 

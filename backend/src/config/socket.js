@@ -22,15 +22,21 @@ const authenticateSocket = async (socket, next) => {
 };
 
 export const initSocket = (server) => {
+  const extraOrigins = (process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
   io = new Server(server, {
     cors: {
       origin: [
         process.env.FRONTEND_URL || 'http://localhost:5173',
         'http://localhost:3000',
-        'http://192.168.1.100:3000'
-      ],
+        'http://192.168.1.100:3000',
+        ...extraOrigins,
+      ].filter(Boolean),
       methods: ['GET', 'POST'],
-      credentials: true
+      credentials: true,
     },
   });
 
