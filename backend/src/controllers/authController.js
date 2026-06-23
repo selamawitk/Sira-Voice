@@ -239,8 +239,7 @@ export const googleAuthSuccess = asyncHandler(async (req, res) => {
   const token = generateToken(user);
   const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
 
-  const redirectPath = user.role === 'employer' ? '/employer-dashboard' : '/dashboard';
-  res.redirect(`${frontendUrl}${redirectPath}?token=${token}`);
+  res.redirect(`${frontendUrl}/login?token=${token}`);
 });
 
 export const loginUser = asyncHandler(async (req, res) => {
