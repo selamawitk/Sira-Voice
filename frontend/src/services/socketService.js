@@ -1,11 +1,9 @@
 import { io } from 'socket.io-client';
+import { baseAPI } from './api.js';
 
 let socket = null;
 
-const getBackendUrl = () => {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-  return apiUrl.replace(/\/api\/?$/, '');
-};
+const getBackendUrl = () => baseAPI.replace(/\/api\/?$/, '');
 
 const getToken = () => localStorage.getItem('token');
 

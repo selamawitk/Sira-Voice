@@ -5,6 +5,7 @@ import AuthLayout from '../../components/ui/AuthLayout';
 import Input from '../../components/ui/Input';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
+import { baseAPI } from '../../services/api.js';
 
 const translations = {
   en: {
@@ -91,11 +92,7 @@ const LoginPage = () => {
     return '/dashboard';
   }, []);
 
-  const getGoogleAuthUrl = () => {
-    let base = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-    base = base.replace(/\/$/, '').replace(/\/api$/, '');
-    return `${base}/api/auth/google`;
-  };
+  const getGoogleAuthUrl = () => `${baseAPI}/auth/google`;
 
   const handleLangChange = (newLang) => {
     setLang(newLang);

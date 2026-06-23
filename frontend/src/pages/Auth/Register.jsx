@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { User, Mail, Lock, LogIn, Fingerprint } from 'lucide-react';
 import AuthLayout from '../../components/ui/AuthLayout';
 import Input from '../../components/ui/Input';
-import api from '../../services/api.js';
+import api, { baseAPI } from '../../services/api.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
 
@@ -101,10 +101,8 @@ const RegisterPage = () => {
   };
 
   const getGoogleAuthUrl = () => {
-    let base = (import.meta.env.VITE_API_URL || 'http://localhost:5001');
-    base = base.replace(/\/$/, '').replace(/\/api$/, '');
     localStorage.setItem('pending_role', role);
-    return `${base}/api/auth/google?role=${role}&prompt=select_account`;
+    return `${baseAPI}/auth/google?role=${role}&prompt=select_account`;
   };
 
   const getRedirectPath = (roleValue) => {

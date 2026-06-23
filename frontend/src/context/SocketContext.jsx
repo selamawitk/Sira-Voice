@@ -2,6 +2,7 @@ import React, { useEffect, useContext, useMemo } from 'react';
 import { io } from 'socket.io-client';
 import { AuthContext } from './AuthContextInstance.jsx';
 import { SocketContext } from './SocketContextInstance.jsx';
+import { baseAPI } from '../services/api.js';
 
 export const SocketProvider = ({ children }) => {
   const auth = useContext(AuthContext);
@@ -11,7 +12,7 @@ export const SocketProvider = ({ children }) => {
   const socketInstance = useMemo(() => {
     if (!userId || !token) return null;
 
-    const socketUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+    const socketUrl = import.meta.env.VITE_BACKEND_URL || baseAPI.replace(/\/api$/, '');
 
     return io(socketUrl, {
       auth: { token },

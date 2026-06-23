@@ -10,8 +10,10 @@ const getBaseUrl = () => {
   return `${url}/api`;
 };
 
+const baseAPI = getBaseUrl();
+
 const api = axios.create({
-  baseURL: getBaseUrl(),
+  baseURL: baseAPI,
   withCredentials: true,
   timeout: 30000,
   headers: {
@@ -146,4 +148,5 @@ api.interceptors.response.use(
   }
 );
 
+export { baseAPI };
 export default api;
