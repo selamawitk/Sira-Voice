@@ -23,7 +23,7 @@ setInterval(() => {
 }, 60_000);
 
 const RP_ID = process.env.RP_ID || 'localhost';
-const ORIGIN = process.env.ORIGIN || `http://${RP_ID}:5173`;
+const ORIGIN = process.env.ORIGIN || 'http://localhost:5173';
 
 export const generatePasskeyRegistration = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
