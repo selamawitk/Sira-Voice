@@ -259,6 +259,7 @@ const Sidebar = ({ onClose }) => {
           <NavLink 
             key={item.label}
             to={item.path}
+            onClick={onClose}
             className={({ isActive }) => `
               flex items-center gap-3.5 px-4 rounded-xl transition-all duration-200 group relative
               ${role === 'worker' ? 'py-2' : 'py-3'} 
