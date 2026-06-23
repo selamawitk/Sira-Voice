@@ -20,6 +20,7 @@ const Profile = lazy(() => import('../pages/Worker/Profile.jsx'));
 const VoiceToCV = lazy(() => import('../pages/Worker/VoiceToCV.jsx'));
 const ApplicationHistory = lazy(() => import('../pages/Worker/ApplicationHistory.jsx'));
 const WorkerPayments = lazy(() => import('../pages/Worker/WorkerPayments.jsx'));
+const JobDetails = lazy(() => import('../pages/Worker/JobDetails.jsx'));
 
 const EmployerDashboard = lazy(() => import('../pages/Employer/Dashboard.jsx'));
 const PostJob = lazy(() => import('../pages/Employer/PostJob.jsx'));
@@ -108,6 +109,7 @@ const AppRouter = () => {
 
             <Route element={<WorkerSection />}>
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/jobs/:id" element={<JobDetails />} />
               <Route path="/available-jobs" element={<JobList />} />
               <Route path="/talk-to-sira" element={<TalkToSira />} />
               <Route path="/job-map" element={<Map />} />
