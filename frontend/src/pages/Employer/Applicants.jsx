@@ -69,8 +69,17 @@ const Applicants = () => {
 
       setLoading(true);
       try {
-        const matchRes = await api.get(`/jobs/${jobId}/matches`);
-        setCandidates(matchRes.data?.matches ?? []);
+        const [matchRes, appRes] = await Promise.all([
+          api.get(`/jobs/${jobId}/matches`),
+          api.get(`/applications/job/${jobId}`),
+        ]);
+        const matchedWorkers = matchRes.data?.matches ?? [];
+        const applications = appRes.data?.data ?? [];
+
+        const applicantIds = new Set(applications.map((a) => a.worker?._id || a.worker));
+        const applied = matchedWorkers.filter((w) => applicantIds.has(w._id));
+
+        setCandidates(applied.length > 0 ? applied : matchedWorkers);
 
         const jobRes = await api.get(`/jobs/${jobId}`);
         const jobData = jobRes.data?.data;

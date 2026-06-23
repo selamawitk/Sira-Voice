@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Clock, Briefcase, DollarSign, User, Loader2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Briefcase, DollarSign, User, Loader2, MessageSquare, Send } from 'lucide-react';
 import api from '../../services/api.js';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
@@ -13,6 +13,7 @@ const JobDetails = () => {
 
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(null);
 
   const copy = lang?.copy;
 
@@ -32,6 +33,38 @@ const JobDetails = () => {
     fetchJob();
   }, [id, navigate]);
 
+  const handleMessageEmployer = async () => {
+    if (!job || actionLoading) return;
+    setActionLoading('message');
+    try {
+      const employerId = job.employer?._id || job.employer;
+      const res = await api.post('/chat/conversations', {
+        jobId: job._id,
+        workerId: auth?.user?._id,
+        employerId,
+      });
+      if (res.data?.success) {
+        navigate('/chat', { state: { autoSelectConversation: res.data.data } });
+      }
+    } catch {
+      // stay on page
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleApply = async () => {
+    if (!job || actionLoading) return;
+    setActionLoading('apply');
+    try {
+      await api.post(`/applications/${job._id}/apply`);
+    } catch {
+      // stay on page
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -43,6 +76,7 @@ const JobDetails = () => {
   if (!job) return null;
 
   const isOwner = auth?.user?._id === (job.employer?._id || job.employer);
+  const isWorker = auth?.role === 'worker';
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -86,6 +120,35 @@ const JobDetails = () => {
           <div className="flex items-center gap-2 p-3 bg-white/5 rounded-xl text-sm text-white/50">
             <User className="w-4 h-4 shrink-0" />
             Posted by: {job.employer?.fullName ?? 'Employer'}
+          </div>
+        )}
+
+        {isWorker && job.status === 'open' && (
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={handleApply}
+              disabled={!!actionLoading}
+              className="flex-1 flex items-center justify-center gap-2 bg-[#2BB8B8] text-slate-950 font-black text-sm py-3 rounded-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+            >
+              {actionLoading === 'apply' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              Apply
+            </button>
+            <button
+              onClick={handleMessageEmployer}
+              disabled={!!actionLoading}
+              className="flex-1 flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-white font-black text-sm py-3 rounded-xl hover:bg-white/10 transition-all disabled:opacity-50"
+            >
+              {actionLoading === 'message' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <MessageSquare className="w-4 h-4" />
+              )}
+              Message Employer
+            </button>
           </div>
         )}
       </div>

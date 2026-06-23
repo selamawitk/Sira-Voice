@@ -1,7 +1,6 @@
 import express from 'express';
 import Conversation from '../models/Conversation.js'; 
-import Message from '../models/Message.js';           
-import Application from '../models/Application.js';   
+import Message from '../models/Message.js';
 
 const router = express.Router();
 
@@ -36,24 +35,6 @@ router.post('/conversations', protect, async (req, res) => {
     
     if (!workerId || !employerId || !jobId) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
-    }
-
-    const currentUserId = req.user._id;
-    const currentUserRole = req.user.role;
-
-    if (currentUserRole === 'worker') {
-      const application = await Application.findOne({
-        job: jobId,
-        applicant: currentUserId,
-        status: 'hired'
-      });
-
-      if (!application) {
-        return res.status(403).json({ 
-          success: false, 
-          message: 'Access denied: You must be officially hired for this job to contact the employer.' 
-        });
-      }
     }
 
     let conversation = await Conversation.findOne({
