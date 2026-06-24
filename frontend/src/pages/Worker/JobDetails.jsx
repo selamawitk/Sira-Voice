@@ -23,6 +23,7 @@ const JobDetails = () => {
   const copy = lang?.copy;
   const isWorker = auth?.role === 'worker';
   const isOwner = auth?.user?._id === (job?.employer?._id || job?.employer);
+  const localeMap = { am: 'am-ET', or: 'om-ET', en: 'en-US' };
 
   const tr = (key, fallback) => copy?.[key] ?? fallback;
 
@@ -156,7 +157,7 @@ const JobDetails = () => {
           </div>
           <div className="flex items-center gap-2 text-sm text-white/60">
             <Clock className="w-4 h-4 text-[#2BB8B8]" />
-            {tr('postedDateLabel', 'Posted')}: {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : '—'}
+            {tr('postedDateLabel', 'Posted')}: {job.createdAt ? new Date(job.createdAt).toLocaleDateString(localeMap[lang?.lang] || 'en-US') : '—'}
           </div>
         </div>
         <div className="flex items-center gap-2 text-sm text-white/60">
