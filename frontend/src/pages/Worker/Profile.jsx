@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Award, ShieldCheck, Edit3, Save, X, Sparkles, TrendingUp, History, ShieldAlert, CheckCircle, Briefcase, DollarSign, ArrowLeft } from 'lucide-react';
+import { MapPin, Award, ShieldCheck, Edit3, Save, X, Sparkles, TrendingUp, History, ShieldAlert, CheckCircle, Briefcase, DollarSign, ArrowLeft, Loader2, Banknote, CreditCard, CheckCircle2, AlertTriangle } from 'lucide-react';
 import api from '../../services/api.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
@@ -411,6 +411,10 @@ const Profile = () => {
           </div>
         )}
 
+        {!isPublicView && (
+          <PaymentInfoSection userId={currentUser?._id} />
+        )}
+
         <div className="bg-white/3 border border-white/10 rounded-3xl p-6 md:col-span-2 space-y-4">
           <div className="flex items-center gap-2 border-b border-white/5 pb-3">
             <History className="w-4 h-4 text-[#2BB8B8]" />
@@ -450,7 +454,7 @@ const Profile = () => {
                         ★ {Number(log.rating).toFixed(1)}
                       </span>
                     )}
-                  </div>
+                    </div>
                 </div>
               ))}
             </div>
@@ -458,6 +462,218 @@ const Profile = () => {
         </div>
 
       </div>
+    </div>
+  );
+};
+
+const PaymentInfoSection = ({ userId }) => {
+  const [paymentProfile, setPaymentProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
+
+  const [bankName, setBankName] = useState('');
+  const [accountName, setAccountName] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [stripeAccountId, setStripeAccountId] = useState('');
+
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const res = await api.get('/payments/profile');
+        if (res.data?.success) {
+          setPaymentProfile(res.data.data.paymentProfile);
+          setBankName(res.data.data.paymentProfile?.bankName || '');
+          setAccountName(res.data.data.paymentProfile?.accountName || '');
+          setAccountNumber(res.data.data.paymentProfile?.accountNumber || '');
+          setStripeAccountId(res.data.data.paymentProfile?.stripeAccountId || '');
+        }
+      } catch {} finally {
+        setLoading(false);
+      }
+    };
+    fetch();
+  }, [userId]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await api.put('/payments/profile', {
+        bankName,
+        accountName,
+        accountNumber,
+        stripeAccountId
+      });
+      if (res.data?.success) {
+        setPaymentProfile(res.data.data);
+        toast.success('Payment information saved');
+        setEditing(false);
+      }
+    } catch {
+      toast.error('Failed to save payment information');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isReady = paymentProfile?.paymentReady;
+
+  return (
+    <div className="bg-white/3 border border-white/10 rounded-3xl p-6 md:col-span-2">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Banknote className="w-4 h-4 text-[#2BB8B8]" />
+          <div>
+            <h3 className="text-white font-bold text-sm">Payment Information</h3>
+            <p className="text-[10px] text-white/30">Required to receive payments from employers</p>
+          </div>
+        </div>
+        {!editing && (
+          <button
+            onClick={() => setEditing(true)}
+            className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-white hover:bg-white/10 transition-all"
+          >
+            <Edit3 className="w-3 h-3" />
+            {paymentProfile?.bankName ? 'Edit' : 'Add'}
+          </button>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="py-4 flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-[#2BB8B8] border-t-transparent rounded-full animate-spin" />
+          <span className="text-[10px] text-white/40">Loading payment info...</span>
+        </div>
+      ) : (
+        <>
+          {isReady && !editing && (
+            <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-2 mb-4">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span className="text-emerald-400 text-xs font-bold">Ready for payment</span>
+            </div>
+          )}
+          {!isReady && !editing && (
+            <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2 mb-4">
+              <AlertTriangle className="w-4 h-4 text-amber-400" />
+              <span className="text-amber-400 text-xs font-bold">Add payment information to receive payments</span>
+            </div>
+          )}
+
+          {editing ? (
+            <div className="space-y-4">
+              <div>
+                <p className="text-white/50 text-xs font-bold uppercase tracking-wider mb-2">Option 1: Bank Account</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[10px] text-white/40 mb-1">Bank Name</label>
+                    <input
+                      type="text"
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      placeholder="e.g. Commercial Bank of Ethiopia"
+                      className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-[#2BB8B8]/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-white/40 mb-1">Account Holder Name</label>
+                    <input
+                      type="text"
+                      value={accountName}
+                      onChange={(e) => setAccountName(e.target.value)}
+                      placeholder="Full name on account"
+                      className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-[#2BB8B8]/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-white/40 mb-1">Account Number</label>
+                    <input
+                      type="text"
+                      value={accountNumber}
+                      onChange={(e) => setAccountNumber(e.target.value)}
+                      placeholder="Account number"
+                      className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-[#2BB8B8]/50"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-white/5 pt-4">
+                <p className="text-white/50 text-xs font-bold uppercase tracking-wider mb-2">Option 2: Stripe Account</p>
+                <div>
+                  <label className="block text-[10px] text-white/40 mb-1">Stripe Account ID</label>
+                  <input
+                    type="text"
+                    value={stripeAccountId}
+                    onChange={(e) => setStripeAccountId(e.target.value)}
+                    placeholder="acct_..."
+                    className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-[#2BB8B8]/50"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center gap-2 bg-[#2BB8B8] text-slate-950 px-5 py-2.5 rounded-xl font-black text-xs hover:scale-105 transition-all disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save Payment Info
+                </button>
+                <button
+                  onClick={() => {
+                    setEditing(false);
+                    setBankName(paymentProfile?.bankName || '');
+                    setAccountName(paymentProfile?.accountName || '');
+                    setAccountNumber(paymentProfile?.accountNumber || '');
+                    setStripeAccountId(paymentProfile?.stripeAccountId || '');
+                  }}
+                  className="flex items-center gap-2 bg-white/5 text-white px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-white/10 transition-all"
+                >
+                  <X className="w-4 h-4" />
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {(paymentProfile?.bankName || paymentProfile?.accountName || paymentProfile?.accountNumber) && (
+                <div className="bg-black/20 border border-white/5 rounded-xl p-3">
+                  <p className="text-[10px] text-white/40 font-bold uppercase tracking-wider mb-2">Bank Account</p>
+                  <div className="grid grid-cols-3 gap-4 text-xs">
+                    <div>
+                      <p className="text-white/30 text-[10px]">Bank</p>
+                      <p className="text-white font-semibold">{paymentProfile?.bankName || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-white/30 text-[10px]">Account Holder</p>
+                      <p className="text-white font-semibold">{paymentProfile?.accountName || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-white/30 text-[10px]">Account Number</p>
+                      <p className="text-white font-semibold">{paymentProfile?.accountNumber ? `****${paymentProfile.accountNumber.slice(-4)}` : '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {paymentProfile?.stripeAccountId && (
+                <div className="bg-black/20 border border-white/5 rounded-xl p-3">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-[#2BB8B8]" />
+                    <div>
+                      <p className="text-[10px] text-white/40 font-bold uppercase tracking-wider">Stripe Account</p>
+                      <p className="text-white text-xs font-semibold">{paymentProfile.stripeAccountId}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {!paymentProfile?.bankName && !paymentProfile?.stripeAccountId && (
+                <p className="text-white/30 text-xs italic">No payment information added yet.</p>
+              )}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };
