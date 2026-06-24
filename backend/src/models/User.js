@@ -83,6 +83,14 @@ const userSchema = new mongoose.Schema(
         minSalary: { type: Number, default: 0 },
       },
     },
+    paymentProfile: {
+      bankName: { type: String, default: '' },
+      accountName: { type: String, default: '' },
+      accountNumber: { type: String, default: '' },
+      stripeAccountId: { type: String, default: '' },
+      paymentReady: { type: Boolean, default: false },
+    },
+
     employerProfile: {
       companyName: { type: String, default: '' },
       industry: { type: String, default: '' },
