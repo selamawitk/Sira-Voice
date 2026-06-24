@@ -2,7 +2,6 @@ import React, { useEffect, useState, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Clock, Briefcase, DollarSign, User, Loader2, MessageSquare, Send, FileText, CheckCircle2, Star, Navigation, Sparkles } from 'lucide-react';
 import api from '../../services/api.js';
-import { LocationContext } from '../../context/LocationContextInstance.jsx';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
@@ -12,7 +11,6 @@ const JobDetails = () => {
   const navigate = useNavigate();
   const lang = useContext(LanguageContext);
   const auth = useContext(AuthContext);
-  const locationCtx = useContext(LocationContext);
   const toast = useContext(ToastContext);
 
   const [job, setJob] = useState(null);
@@ -20,7 +18,6 @@ const JobDetails = () => {
   const [actionLoading, setActionLoading] = useState(null);
   const [includeCv, setIncludeCv] = useState(false);
   const [cvInfo, setCvInfo] = useState(null);
-  const [distance, setDistance] = useState(null);
   const [myApplication, setMyApplication] = useState(null);
 
   const copy = lang?.copy;
@@ -45,15 +42,6 @@ const JobDetails = () => {
               if (mine) setMyApplication(mine);
             } catch {}
           }
-          if (jobData.location?.coordinates && locationCtx?.coords?.lat) {
-            const [lng, lat] = jobData.location.coordinates;
-            const R = 6371;
-            const dLat = (lat - locationCtx.coords.lat) * Math.PI / 180;
-            const dLng = (lng - locationCtx.coords.lng) * Math.PI / 180;
-            const a = Math.sin(dLat/2)**2 + Math.cos(locationCtx.coords.lat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * Math.sin(dLng/2)**2;
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            setDistance(Math.round(R * c));
-          }
         }
       } catch {
         navigate('/available-jobs', { replace: true });
@@ -62,7 +50,7 @@ const JobDetails = () => {
       }
     };
     fetchJob();
-  }, [id, navigate, isWorker, locationCtx?.coords?.lat, locationCtx?.coords?.lng]);
+  }, [id, navigate, isWorker]);
 
   useEffect(() => {
     if (!isWorker) return;
@@ -164,13 +152,6 @@ const JobDetails = () => {
           </div>
         </div>
 
-        {distance !== null && (
-          <div className="flex items-center gap-2 p-3 bg-[#2BB8B8]/5 border border-[#2BB8B8]/20 rounded-xl text-sm text-[#2BB8B8]">
-            <MapPin className="w-4 h-4 shrink-0" />
-            {distance} {copy.kmAwayFromLocation}
-          </div>
-        )}
-
         {!isOwner && job.employer?.employerProfile?.employerRating && (
           <div className="flex items-center gap-2 p-3 bg-white/5 rounded-xl text-sm text-white/50">
             <Star className="w-4 h-4 shrink-0 text-yellow-400 fill-yellow-400" />
@@ -198,7 +179,7 @@ const JobDetails = () => {
             className="flex items-center justify-center gap-2 w-full p-3 bg-[#2BB8B8]/5 border border-[#2BB8B8]/20 rounded-xl text-[#2BB8B8] text-sm font-semibold hover:bg-[#2BB8B8]/10 transition-all"
           >
             <Navigation className="w-4 h-4" />
-            {copy.viewLocation} {job.location?.locationName || job.location?.address}
+            {copy.viewJobAddress}
           </button>
         )}
 
