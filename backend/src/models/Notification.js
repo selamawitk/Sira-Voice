@@ -19,6 +19,9 @@ const notificationSchema = new mongoose.Schema({
       'AI_AGENT',
       'SCAM',
       'FRAUD',
+      'APPLICATION',
+      'JOB_COMPLETE',
+      'JOB_CLOSED',
       'SYSTEM',
     ],
     default: 'SYSTEM'
