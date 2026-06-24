@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useLocation } from 'react-router-dom';
 import api from '../../services/api.js';
 import { SocketContext } from '../../context/SocketContextInstance.jsx';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
@@ -10,6 +11,7 @@ const ChatLayout = () => {
   const socket = useContext(SocketContext);
   const auth = useContext(AuthContext);
   const lang = useContext(LanguageContext);
+  const location = useLocation();
   
   const currentUser = auth?.user;
   const activeLang = lang?.lang || 'en';
@@ -35,6 +37,18 @@ const ChatLayout = () => {
 
     fetchConversations();
   }, []);
+
+  useEffect(() => {
+    if (!conversations.length) return;
+    const autoSelect = location.state?.autoSelectConversation;
+    if (autoSelect) {
+      const match = conversations.find(c => c._id === autoSelect._id);
+      if (match) {
+        setSelectedConversation(match);
+        window.history.replaceState({}, document.title);
+      }
+    }
+  }, [conversations, location.state]);
 
   useEffect(() => {
     if (!socket || !currentUser?._id) return;
@@ -65,13 +79,13 @@ const ChatLayout = () => {
   const getParticipantDetails = (conversation) => {
     if (currentUser?.role === 'employer') {
       return {
-        name: conversation.worker?.name || 'Worker',
+        name: conversation.worker?.fullName || 'Worker',
         avatar: conversation.worker?.avatar,
         email: conversation.worker?.email
       };
     }
     return {
-      name: conversation.employer?.name || 'Employer',
+      name: conversation.employer?.fullName || 'Employer',
       avatar: conversation.employer?.avatar,
       email: conversation.employer?.email
     };
@@ -116,9 +130,10 @@ const ChatLayout = () => {
               {activeLang === 'am' ? 'ምንም መልእክት አልተገኘም' : 'No active connections found.'}
             </div>
           ) : (
-            filteredConversations.map((c) => {
+              filteredConversations.map((c) => {
               const party = getParticipantDetails(c);
               const isSelected = selectedConversation?._id === c._id;
+              const hasUnread = c.lastMessage && c.lastMessage.sender !== currentUser?._id && !c.lastMessage.read;
               return (
                 <button
                   key={c._id}
@@ -127,7 +142,7 @@ const ChatLayout = () => {
                     isSelected 
                       ? 'bg-[#2BB8B8]/10 border border-[#2BB8B8]/30' 
                       : 'border border-transparent hover:bg-white/5'
-                  }`}
+                  } ${hasUnread ? 'bg-[#2BB8B8]/5' : ''}`}
                 >
                   <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60 shrink-0 relative">
                     {party.avatar ? (
@@ -135,17 +150,21 @@ const ChatLayout = () => {
                     ) : (
                       <User className="w-4 h-4" />
                     )}
+                    {hasUnread && (
+                      <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-[#2BB8B8] rounded-full border-2 border-[#1A2E35]" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0 space-y-0.5">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-white font-semibold text-sm truncate">{party.name}</h4>
+                      <h4 className={`text-sm truncate ${hasUnread ? 'text-white font-bold' : 'text-white font-semibold'}`}>{party.name}</h4>
+                      {hasUnread && <span className="w-2 h-2 rounded-full bg-[#2BB8B8] shrink-0" />}
                     </div>
                     <div className="flex items-center gap-1 text-white/50 text-[11px] font-medium truncate">
                       <Briefcase className="w-3 h-3 shrink-0 opacity-60" />
                       <span className="truncate">{c.job?.title}</span>
                     </div>
                     {c.lastMessage && (
-                      <p className="text-white/30 text-xs truncate normal-case pt-0.5">
+                      <p className={`text-xs truncate normal-case pt-0.5 ${hasUnread ? 'text-white/70 font-medium' : 'text-white/30'}`}>
                         {c.lastMessage.text}
                       </p>
                     )}
