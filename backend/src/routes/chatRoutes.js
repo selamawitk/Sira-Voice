@@ -1,15 +1,9 @@
 import express from 'express';
 import Conversation from '../models/Conversation.js'; 
 import Message from '../models/Message.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
-
-const protect = async (req, res, next) => {
-  if (req.user && req.user._id) {
-    return next();
-  }
-  return res.status(401).json({ success: false, message: 'Not authorized' });
-};
 
 router.get('/conversations', protect, async (req, res) => {
   try {
@@ -17,8 +11,8 @@ router.get('/conversations', protect, async (req, res) => {
     const conversations = await Conversation.find({
       $or: [{ employer: userId }, { worker: userId }]
     })
-      .populate('employer', 'name email avatar role')
-      .populate('worker', 'name email avatar role')
+      .populate('employer', 'fullName email avatar role')
+      .populate('worker', 'fullName email avatar role')
       .populate('job', 'title salary paymentType')
       .populate('lastMessage')
       .sort({ updatedAt: -1 });
@@ -52,8 +46,8 @@ router.post('/conversations', protect, async (req, res) => {
     }
 
     conversation = await Conversation.findById(conversation._id)
-      .populate('employer', 'name email avatar role')
-      .populate('worker', 'name email avatar role')
+      .populate('employer', 'fullName email avatar role')
+      .populate('worker', 'fullName email avatar role')
       .populate('job', 'title salary paymentType');
 
     res.status(201).json({ success: true, data: conversation });
@@ -80,6 +74,7 @@ router.get('/conversations/:id/messages', protect, async (req, res) => {
     }
 
     const messages = await Message.find({ conversationId })
+      .populate('sender', 'fullName email avatar role')
       .sort({ createdAt: 1 });
 
     await Message.updateMany(
