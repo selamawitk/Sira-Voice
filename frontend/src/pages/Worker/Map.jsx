@@ -7,6 +7,7 @@ import { LocationContext } from '../../context/LocationContextInstance.jsx';
 import api from '../../services/api.js';
 import { jobService } from '../../services/jobService.js';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
+import { useVoice } from '../../hooks/useVoice.js';
 import { MapPin, Navigation, Share2, Mic, Info, ArrowLeft, DollarSign, Briefcase } from 'lucide-react';
 
 const jobPin = new L.DivIcon({
