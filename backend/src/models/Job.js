@@ -34,6 +34,12 @@ const jobSchema = new mongoose.Schema(
         trim: true,
       },
 
+      locationName: {
+        type: String,
+        trim: true,
+        default: '',
+      },
+
       coordinates: {
         type: [Number], // [longitude, latitude]
         required: true,
@@ -73,7 +79,7 @@ const jobSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ['open', 'in-progress', 'completed', 'cancelled'],
+      enum: ['open', 'hired', 'in-progress', 'completed', 'cancelled'],
       default: 'open',
       index: true,
     },
@@ -97,6 +103,9 @@ const jobSchema = new mongoose.Schema(
       type: Object,
       default: null,
     },
+
+    isPaid: { type: Boolean, default: false },
+    paidAt: { type: Date, default: null },
   },
 
   {
