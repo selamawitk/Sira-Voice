@@ -37,6 +37,7 @@ const PostJob = () => {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [address, setAddress] = useState('');
+  const [locationName, setLocationName] = useState('');
   const [salary, setSalary] = useState('');
   const [description, setDescription] = useState('');
   const [paymentType, setPaymentType] = useState('daily');
@@ -162,6 +163,7 @@ const PostJob = () => {
         escrowEnabled: useEscrow,
         location: {
           address: address || 'Addis Ababa',
+          locationName: locationName || address || 'Addis Ababa',
           type: 'Point',
           coordinates: [mapCenter[1], mapCenter[0]],
         },
@@ -319,13 +321,24 @@ const PostJob = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div className="md:col-span-2 space-y-1.5">
-                <label className="text-[10px] text-white/40 ml-1 font-medium">{t.fieldLocation || 'Location'}</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-white/40 ml-1 font-medium">{t.fieldLocation || 'Address'}</label>
                 <input
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl p-3.5 text-white outline-none focus:border-[#2BB8B8]/50 focus:bg-white/10 transition-all text-sm font-medium"
                   placeholder={activeLang === 'am' ? 'አዲስ አበባ፣ ቦሌ አካባቢ' : activeLang === 'or' ? 'Finfinnee, Naannoo Boolee' : 'Addis Ababa, Bole Area'}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-white/40 ml-1 font-medium">
+                  {activeLang === 'am' ? 'የቦታ ስም' : activeLang === 'or' ? 'Maqaa Iddoo' : 'Place Name'}
+                </label>
+                <input
+                  value={locationName}
+                  onChange={(e) => setLocationName(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-3.5 text-white outline-none focus:border-[#2BB8B8]/50 focus:bg-white/10 transition-all text-sm font-medium"
+                  placeholder={activeLang === 'am' ? 'ምሳሌ፡ ቦሌ ሩብ' : activeLang === 'or' ? 'fkf. Boolee' : 'e.g. Bole, Addis Ababa'}
                 />
               </div>
               <div className="space-y-1.5">
