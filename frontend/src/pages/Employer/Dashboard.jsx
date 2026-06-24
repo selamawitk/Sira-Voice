@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { ShieldCheck, Loader2, UserPlus, Sparkles, Map, List } from 'lucide-react';
+import { ShieldCheck, Loader2, UserPlus, Sparkles, Map, List, CheckCircle2, DollarSign, ExternalLink } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import api from '../../services/api.js';
@@ -54,7 +54,42 @@ const EmployerDashboard = () => {
   const [matches, setMatches] = useState([]);
   const [hiringWorkerId, setHiringWorkerId] = useState('');
   
-  const [viewMode, setViewMode] = useState('list'); 
+  const [viewMode, setViewMode] = useState('list');
+  
+  const [closingJobId, setClosingJobId] = useState('');
+  const [payingJobId, setPayingJobId] = useState('');
+  const [completedJobs, setCompletedJobs] = useState([]);
+
+  const handleCloseJob = async (jobId) => {
+    setClosingJobId(jobId);
+    try {
+      const res = await api.patch(`/jobs/${jobId}/employer-close`);
+      toast?.show?.('Job closed! Payment can be processed now.', 'success');
+      setJobs(prev => prev.filter(j => j._id !== jobId));
+      setCompletedJobs(prev => [...prev, { ...res.data.job, isPaid: false }]);
+    } catch {
+      toast?.show?.('Failed to close job', 'error');
+    } finally {
+      setClosingJobId('');
+    }
+  };
+
+  const handlePayWorker = async (jobId) => {
+    setPayingJobId(jobId);
+    try {
+      const res = await api.post('/payments/initiate-job-payment', { jobId });
+      if (res.data?.checkoutUrl) {
+        window.location.href = res.data.checkoutUrl;
+      } else {
+        toast?.show?.('Payment initialization failed', 'error');
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to initiate payment';
+      toast?.show?.(msg, 'error');
+    } finally {
+      setPayingJobId('');
+    }
+  };
 
   const defaultCenter = [9.0192, 38.7468];
 
@@ -67,8 +102,10 @@ const EmployerDashboard = () => {
         const all = res.data?.data ?? [];
         const mine = all.filter(j => String(j?.employer?._id ?? j?.employer) === String(employerId));
         const active = mine.filter(j => (j.status ?? 'open') === 'open');
+        const completed = mine.filter(j => j.status === 'completed');
 
         setJobs(active);
+        setCompletedJobs(completed);
         if (active.length > 0 && !selectedJobId) setSelectedJobId(active[0]._id);
       } catch (err) {
         console.error("Failed to fetch jobs:", err);
@@ -245,22 +282,31 @@ const EmployerDashboard = () => {
               </div>
             )}
             {jobs.map((job) => (
-              <button
-                key={job._id}
-                onClick={() => setSelectedJobId(job._id)}
-                className={`w-full text-left p-4 rounded-2xl border transition-all duration-300 ${
-                  selectedJobId === job._id 
-                  ? 'bg-[#2BB8B8]/20 border-[#2BB8B8]/50 ring-1 ring-[#2BB8B8]/30' 
-                  : 'bg-white/5 border-white/10 hover:border-white/30'
-                }`}
-              >
-                <p className={`font-semibold capitalize transition-colors ${selectedJobId === job._id ? 'text-white' : 'text-white/70'}`}>
-                  {job.title}
-                </p>
-                <p className="text-[#2BB8B8] font-bold text-sm mt-1">
-                  {job.salary} {activeLang === 'am' ? 'ብር' : activeLang === 'or' ? 'ETB' : 'ETB'}
-                </p>
-              </button>
+              <div key={job._id} className="group relative">
+                <button
+                  onClick={() => setSelectedJobId(job._id)}
+                  className={`w-full text-left p-4 rounded-2xl border transition-all duration-300 ${
+                    selectedJobId === job._id 
+                    ? 'bg-[#2BB8B8]/20 border-[#2BB8B8]/50 ring-1 ring-[#2BB8B8]/30' 
+                    : 'bg-white/5 border-white/10 hover:border-white/30'
+                  }`}
+                >
+                  <p className={`font-semibold capitalize transition-colors ${selectedJobId === job._id ? 'text-white' : 'text-white/70'}`}>
+                    {job.title}
+                  </p>
+                  <p className="text-[#2BB8B8] font-bold text-sm mt-1">
+                    {job.salary} {activeLang === 'am' ? 'ብር' : activeLang === 'or' ? 'ETB' : 'ETB'}
+                  </p>
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleCloseJob(job._id); }}
+                  disabled={closingJobId === job._id}
+                  className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/5 border border-white/10 text-white/40 hover:text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all opacity-0 group-hover:opacity-100"
+                  title="Close Job"
+                >
+                  {closingJobId === job._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                </button>
+              </div>
             ))}
           </div>
         </GlassCard>
@@ -467,6 +513,48 @@ const EmployerDashboard = () => {
           )}
         </GlassCard>
       </div>
+
+      {completedJobs.length > 0 && (
+        <div className="mt-8">
+          <GlassCard>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-white/60 font-semibold text-sm capitalize tracking-wide">
+                Completed Jobs — Payment Pending
+              </h2>
+            </div>
+            <div className="space-y-3">
+              {completedJobs.map((job) => (
+                <div key={job._id} className="flex items-center justify-between p-4 rounded-2xl border border-white/10 bg-white/5">
+                  <div>
+                    <p className="text-white font-semibold">{job.title}</p>
+                    <p className="text-[#2BB8B8] font-bold text-sm mt-1">{job.salary} ETB</p>
+                    <p className="text-white/30 text-xs mt-0.5">
+                      Worker: {job.worker?.fullName || 'Assigned'} 
+                      {job.isPaid && <span className="text-emerald-400 ml-2">✓ Paid</span>}
+                    </p>
+                  </div>
+                  {!job.isPaid && (
+                    <button
+                      onClick={() => handlePayWorker(job._id)}
+                      disabled={payingJobId === job._id}
+                      className="flex items-center gap-2 px-6 py-3 bg-[#2BB8B8] text-slate-950 font-bold rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      {payingJobId === job._id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <DollarSign className="w-4 h-4" />
+                          Pay Worker
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+        </div>
+      )}
     </div>
   );
 };
