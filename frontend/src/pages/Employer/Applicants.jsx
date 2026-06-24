@@ -46,7 +46,9 @@ const Applicants = () => {
   const [hiringId, setHiringId] = useState('');
   const [jobLocation, setJobLocation] = useState(null);
   
-  const [viewMode, setViewMode] = useState('list'); 
+  const [viewMode, setViewMode] = useState('list');
+  const [applicationsData, setApplicationsData] = useState([]);
+  const [expandedWorker, setExpandedWorker] = useState(null);
 
   const defaultCenter = [9.0192, 38.7468];
 
@@ -75,6 +77,7 @@ const Applicants = () => {
         ]);
         const matchedWorkers = matchRes.data?.matches ?? [];
         const applications = appRes.data?.data ?? [];
+        setApplicationsData(applications);
 
         const applicantIds = new Set(applications.map((a) => a.worker?._id || a.worker));
         const applied = matchedWorkers.filter((w) => applicantIds.has(w._id));
@@ -346,37 +349,74 @@ const Applicants = () => {
                           • {activeLang === 'am' ? 'ተዛማጅነት' : activeLang === 'or' ? 'Madaalawaa' : 'Match'}:{' '}
                           <span className="text-emerald-400 font-bold">{scoreNum}%</span>
                         </p>
+                        {c.skills?.length > 0 && (
+                          <p className="text-[#2BB8B8]/70 text-[10px] mt-1 font-medium">
+                            {c.skills.slice(0, 3).join(' • ')}
+                          </p>
+                        )}
                       </div>
                     </div>
 
-                    <button
-                      className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#2BB8B8] text-slate-950 font-medium hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale normal-case"
-                      disabled={!!hiringId}
-                      onClick={() => hire(c._id)}
-                    >
-                      {hiringId === c._id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <UserCheck className="w-4 h-4" />
-                      )}
-                      {hiringId === c._id 
-                        ? (activeLang === 'am' ? 'እየቀጠረ ነው...' : activeLang === 'or' ? 'Qaxaraa jira...' : 'Hiring...') 
-                        : (t.rateButton || (activeLang === 'am' ? 'ቅጠር' : activeLang === 'or' ? 'Qaxari' : 'Hire'))
-                      }
-                    </button>
-                    <button
-                      onClick={(e) => handleMessage(c._id, e)}
-                      disabled={!!messageLoading}
-                      className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30 normal-case"
-                    >
-                      {messageLoading === c._id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <MessageSquare className="w-4 h-4" />
-                      )}
-                      Message
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setExpandedWorker(expandedWorker === c._id ? null : c._id)}
+                        className="flex items-center gap-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-all text-[10px] font-semibold"
+                      >
+                        {expandedWorker === c._id ? 'Hide CV' : 'View CV'}
+                      </button>
+                      <button
+                        onClick={(e) => handleMessage(c._id, e)}
+                        disabled={!!messageLoading}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30"
+                      >
+                        {messageLoading === c._id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <MessageSquare className="w-4 h-4" />
+                        )}
+                      </button>
+                      <button
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#2BB8B8] text-slate-950 font-medium hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale normal-case"
+                        disabled={!!hiringId}
+                        onClick={() => hire(c._id)}
+                      >
+                        {hiringId === c._id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <UserCheck className="w-4 h-4" />
+                        )}
+                        {hiringId === c._id 
+                          ? (activeLang === 'am' ? 'እየቀጠረ ነው...' : activeLang === 'or' ? 'Qaxaraa jira...' : 'Hiring...') 
+                          : (t.rateButton || (activeLang === 'am' ? 'ቅጠር' : activeLang === 'or' ? 'Qaxari' : 'Hire'))
+                        }
+                      </button>
+                    </div>
                   </div>
+                  {expandedWorker === c._id && (
+                    <div className="mt-4 pt-4 border-t border-white/5 animate-fade-in">
+                      <div className="bg-[#1A2E35]/70 rounded-xl p-4 space-y-3">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-[#2BB8B8] mb-1">Skills</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(c.skills?.length > 0 ? c.skills : ['General']).map((s, i) => (
+                              <span key={i} className="px-2.5 py-1 bg-[#2BB8B8]/10 text-[#2BB8B8] rounded-lg text-[10px] font-semibold">
+                                {s}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        {c.bio && (
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-[#2BB8B8] mb-1">Bio</p>
+                            <p className="text-white/60 text-xs">{c.bio}</p>
+                          </div>
+                        )}
+                        {c.experienceYears > 0 && (
+                          <p className="text-white/40 text-[10px]">{c.experienceYears} years experience</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
