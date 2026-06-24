@@ -1,13 +1,14 @@
 import Job from '../models/Job.js';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
+import Payment from '../models/Payment.js';
 import ScamAnalysis from '../models/ScamAnalysis.js';
 
 import asyncHandler from '../utils/asyncHandler.js';
 
 import { findMatchingWorkers } from '../services/jobMatcher.js';
 import { analyzeJobForScam } from '../services/aiService.js';
-import { sendPaymentNotification, sendContractNotification, sendAIAgentNotification } from '../services/notificationService.js';
+import { sendPaymentNotification, sendContractNotification, sendAIAgentNotification, sendRealTimeNotification } from '../services/notificationService.js';
 
 import { createApplicationLogic } from './applicationController.js';
 
@@ -77,7 +78,10 @@ export const processNewJobMatches = async (job, io) => {
           job._id,
           worker._id,
           io,
-          true
+          true,
+          0,
+          false,
+          null
         );
       } catch (err) {
         if (err.statusCode !== 400) {
@@ -379,6 +383,95 @@ export const startJob = asyncHandler(
   }
 );
 
+export const workerMarkComplete = asyncHandler(
+  async (req, res) => {
+    const job = await Job.findById(req.params.id);
+
+    if (!job) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
+
+    if (job.worker?.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only assigned worker can mark complete' });
+    }
+
+    if (job.status !== 'in-progress') {
+      return res.status(400).json({ message: `Invalid status: ${job.status}` });
+    }
+
+    job.status = 'completed';
+    job.completedAt = Date.now();
+    await job.save();
+
+    await Application.findOneAndUpdate(
+      { job: job._id, worker: job.worker },
+      { status: 'completed' }
+    );
+
+    sendRealTimeNotification(req.io, job.employer.toString(), {
+      title: 'Worker Marked Job Complete',
+      message: `Worker has marked "${job.title}" as completed. Please review and close the job.`,
+      type: 'SYSTEM',
+      jobId: job._id,
+      additionalData: { action: 'close_job' }
+    });
+
+    res.json({
+      success: true,
+      message: 'Job marked as complete. Employer will review and close.',
+      job,
+      redirectToRating: false,
+    });
+  }
+);
+
+export const employerCloseJob = asyncHandler(
+  async (req, res) => {
+    const job = await Job.findById(req.params.id).populate('worker', 'fullName paymentProfile');
+
+    if (!job) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
+
+    if (job.employer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    if (job.status !== 'completed') {
+      return res.status(400).json({ message: `Job must be completed first. Current: ${job.status}` });
+    }
+
+    const amount = Number(job.salary) || 0;
+
+    await Payment.create({
+      employerId: job.employer,
+      workerId: job.worker._id,
+      jobId: job._id,
+      contractId: null,
+      amount,
+      currency: 'ETB',
+      tx_ref: `PENDING-${job._id}-${Date.now()}`,
+      status: 'pending',
+      purpose: 'job_payment',
+    });
+
+    sendRealTimeNotification(req.io, job.worker._id.toString(), {
+      title: 'Job Closed — Payment Pending',
+      message: `"${job.title}" was closed by employer. Payment of ETB ${amount} is being processed.`,
+      type: 'PAYMENT',
+      jobId: job._id,
+      additionalData: { action: 'view_job' }
+    });
+
+    res.json({
+      success: true,
+      message: 'Job closed. Process payment to release funds.',
+      job,
+      requiresPayment: true,
+    });
+  }
+);
+
 export const completeJob = asyncHandler(
   async (req, res) => {
     const job = await Job.findById(req.params.id);
@@ -446,10 +539,19 @@ export const completeJob = asyncHandler(
       sendPaymentNotification(req.io, worker._id.toString(), amount, job.title, null);
     }
 
+    sendRealTimeNotification(req.io, job.worker.toString(), {
+      title: 'Job Completed',
+      message: `"${job.title}" was marked complete. Please rate your experience.`,
+      type: 'SYSTEM',
+      jobId: job._id,
+      additionalData: { action: 'rate_job' }
+    });
+
     res.json({
       success: true,
       message: 'Job completed successfully',
       job,
+      redirectToRating: true,
     });
   }
 );
