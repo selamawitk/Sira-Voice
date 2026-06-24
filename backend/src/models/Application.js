@@ -25,6 +25,16 @@ const applicationSchema = new mongoose.Schema(
       enum: ['pending', 'accepted', 'rejected', 'completed', 'cancelled'],
       default: 'pending',
     },
+    source: {
+      type: String,
+      enum: ['VOICE', 'FORM', 'AI'],
+      default: 'FORM',
+    },
+    message: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     appliedByAI: {
       type: Boolean,
       default: false,
@@ -32,6 +42,15 @@ const applicationSchema = new mongoose.Schema(
     matchScore: {
       type: Number,
       default: 0,
+    },
+    includeCv: {
+      type: Boolean,
+      default: false,
+    },
+    cvId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'CV',
+      default: null,
     },
     paymentStatus: {
       type: String,
@@ -59,6 +78,11 @@ const applicationSchema = new mongoose.Schema(
       totalRatings: Number,
       completedJobs: Number,
       availability: String,
+      cv: String,
+      cvSkills: [String],
+      cvExperience: Number,
+      cvLocation: String,
+      cvBio: String,
     },
     employerSnapshot: {
       fullName: String,
