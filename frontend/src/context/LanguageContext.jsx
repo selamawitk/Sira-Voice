@@ -165,6 +165,28 @@ const COPY = {
     redirectingToJobDetails: 'ወደ ስራ ዝርዝሮች እያዞረ ነው...',
     yrsExp: 'ዓመታት ልምድ',
 
+    paymentTypeLabel: 'የክፍያ ዓይነት',
+    statusLabel: 'ሁኔታ',
+    postedDateLabel: 'የተለጠፈበት ቀን',
+    employerLabel: 'አሰሪ',
+    generalLabel: 'አጠቃላይ',
+
+    jobStatusOpen: 'ክፍት',
+    jobStatusClosed: 'ዝግ',
+    jobStatusFilled: 'ተሞልቷል',
+    jobStatusCancelled: 'ተሰርዟል',
+
+    paymentTypeDaily: 'ዕለታዊ',
+    paymentTypeWeekly: 'ሳምንታዊ',
+    paymentTypeMonthly: 'ወርሃዊ',
+    paymentTypeContract: 'ኮንትራት',
+    paymentTypeOneTime: 'አንድ ጊዜ',
+
+    applicationStatusPending: 'በመጠባበቅ ላይ',
+    applicationStatusAccepted: 'ተቀባይነት አግኝቷል',
+    applicationStatusRejected: 'ውድቅ ተደርጓል',
+    applicationStatusWithdrawn: 'ተመልሷል',
+
     voiceAssistantSubtitle: 'በአማርኛ፣ በአፋን ኦሮሞ ወይም በእንግሊዝኛ ይናገሩ። ሥራ እርምጃ ከመውሰዱ በፊት የሰማውን ማስተካከል ይችላሉ።',
     processingVoice: 'ሥራ በማሰብ ላይ ነው…',
     autoStopHint: 'ከ~10 ሰከንድ በኋላ በራሱ ይቆማል።',
@@ -391,6 +413,28 @@ const COPY = {
     hasBeenSent: 'ergameera',
     redirectingToJobDetails: 'Gara ibsa hojiiitti deebi\'aa jira...',
     yrsExp: 'waggaa muuxannoo',
+
+    paymentTypeLabel: 'Gosa Kaffaltii',
+    statusLabel: 'Haala',
+    postedDateLabel: 'Guyyaa Maxxanfame',
+    employerLabel: 'Hojjeessisaa',
+    generalLabel: 'Waliigala',
+
+    jobStatusOpen: 'Banamaa',
+    jobStatusClosed: 'Cufame',
+    jobStatusFilled: 'Guutame',
+    jobStatusCancelled: 'Haqame',
+
+    paymentTypeDaily: 'Guyyaa',
+    paymentTypeWeekly: 'Torbeetti',
+    paymentTypeMonthly: 'Ji\'aa',
+    paymentTypeContract: 'Waliigaltee',
+    paymentTypeOneTime: 'Yeroo Tokko',
+
+    applicationStatusPending: 'Eegaa',
+    applicationStatusAccepted: 'Fudhatame',
+    applicationStatusRejected: 'Didame',
+    applicationStatusWithdrawn: 'Haqame',
 
     voiceAssistantSubtitle: "Afaan Oromoo, Amaariffa ykn Ingiliffaan dubbadhu. Sira'n gocha dura waan dhaga'e sirreessuu dandeessa.",
     processingVoice: "Sira'n yaadaa jira…",
@@ -624,6 +668,28 @@ const COPY = {
     hasBeenSent: 'has been sent.',
     redirectingToJobDetails: 'Redirecting to job details...',
     yrsExp: 'yrs exp',
+
+    paymentTypeLabel: 'Payment',
+    statusLabel: 'Status',
+    postedDateLabel: 'Posted',
+    employerLabel: 'Employer',
+    generalLabel: 'General',
+
+    jobStatusOpen: 'Open',
+    jobStatusClosed: 'Closed',
+    jobStatusFilled: 'Filled',
+    jobStatusCancelled: 'Cancelled',
+
+    paymentTypeDaily: 'Daily',
+    paymentTypeWeekly: 'Weekly',
+    paymentTypeMonthly: 'Monthly',
+    paymentTypeContract: 'Contract',
+    paymentTypeOneTime: 'One-Time',
+
+    applicationStatusPending: 'Pending',
+    applicationStatusAccepted: 'Accepted',
+    applicationStatusRejected: 'Rejected',
+    applicationStatusWithdrawn: 'Withdrawn',
 
     voiceAssistantSubtitle: 'Speak in Amharic, Afaan Oromo, or English. You can edit what Sira heard before taking action.',
     processingVoice: 'Sira is thinking…',

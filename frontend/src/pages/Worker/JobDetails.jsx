@@ -24,6 +24,14 @@ const JobDetails = () => {
   const isWorker = auth?.role === 'worker';
   const isOwner = auth?.user?._id === (job?.employer?._id || job?.employer);
 
+  const tr = (key, fallback) => copy?.[key] ?? fallback;
+
+  const translateValue = (prefix, value) => {
+    if (!value) return '—';
+    const key = prefix + value.charAt(0).toUpperCase() + value.slice(1).replace(/-/g, '');
+    return copy?.[key] || value;
+  };
+
   useEffect(() => {
     const fetchJob = async () => {
       try {
@@ -106,13 +114,13 @@ const JobDetails = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="flex items-center justify-center py-20 bg-[#1A2E35] min-h-screen">
         <Loader2 className="w-6 h-6 animate-spin text-[#2BB8B8]" />
       </div>
     );
   }
 
-  if (!job) return null;
+  if (!job) return <div className="min-h-screen bg-[#1A2E35]" />;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 page-enter">
@@ -136,7 +144,7 @@ const JobDetails = () => {
         <div className="grid grid-cols-2 gap-4">
           <div className="flex items-center gap-2 text-sm text-white/60">
             <DollarSign className="w-4 h-4 text-[#2BB8B8]" />
-            {job.salary?.toLocaleString()} ETB ({job.paymentType})
+            {job.salary?.toLocaleString()} ETB
           </div>
           <div className="flex items-center gap-2 text-sm text-white/60">
             <MapPin className="w-4 h-4 text-[#2BB8B8]" />
@@ -144,12 +152,16 @@ const JobDetails = () => {
           </div>
           <div className="flex items-center gap-2 text-sm text-white/60">
             <Briefcase className="w-4 h-4 text-[#2BB8B8]" />
-            {job.status}
+            {tr('statusLabel', 'Status')}: {translateValue('jobStatus', job.status)}
           </div>
           <div className="flex items-center gap-2 text-sm text-white/60">
             <Clock className="w-4 h-4 text-[#2BB8B8]" />
-            {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : '—'}
+            {tr('postedDateLabel', 'Posted')}: {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : '—'}
           </div>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-white/60">
+          <DollarSign className="w-4 h-4 text-[#2BB8B8]" />
+          {job.paymentType && `${tr('paymentTypeLabel', 'Payment')}: ${translateValue('paymentType', job.paymentType)}`}
         </div>
 
         {!isOwner && job.employer?.employerProfile?.employerRating && (
@@ -162,14 +174,14 @@ const JobDetails = () => {
         {!isOwner && (
           <div className="flex items-center gap-2 p-3 bg-white/5 rounded-xl text-sm text-white/50">
             <User className="w-4 h-4 shrink-0" />
-            {copy.postedBy} {job.employer?.fullName ?? 'Employer'}
+            {copy.postedBy} {job.employer?.fullName ?? tr('employerLabel', 'Employer')}
           </div>
         )}
 
         {myApplication && (
           <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-sm text-emerald-400">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
-            {copy.alreadyAppliedStatus} {myApplication.status}
+            {copy.alreadyAppliedStatus} {translateValue('applicationStatus', myApplication.status)}
           </div>
         )}
 
@@ -199,7 +211,7 @@ const JobDetails = () => {
                     {copy.sendCVWithApplication}
                   </div>
                   <p className="text-white/40 text-xs mt-0.5">
-                    {cvInfo.skills?.join(', ') || 'General'} • {cvInfo.experienceYears} yrs exp
+                    {cvInfo.skills?.join(', ') || tr('generalLabel', 'General')} • {cvInfo.experienceYears} yrs exp
                   </p>
                 </div>
               </label>
