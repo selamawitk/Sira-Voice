@@ -18,6 +18,7 @@ const JobList = () => {
   
   const copy = lang?.copy;
   const currentUser = auth?.user;
+  const localeMap = { am: 'am-ET', or: 'om-ET', en: 'en-US' };
 
   useEffect(() => {
     const fetchJobsAndApplications = async () => {
@@ -114,10 +115,10 @@ const JobList = () => {
               >
                 <div>
                   <div className="flex justify-between items-start mb-4">
-                    <span className="bg-[#2BB8B8]/10 text-[#2BB8B8] text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
-                      {job.location?.address ?? 'Addis Ababa'}
+                      <span className="bg-[#2BB8B8]/10 text-[#2BB8B8] text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
+                      {job.location?.address ?? copy?.addisAbaba ?? 'Addis Ababa'}
                     </span>
-                    <span className="text-white font-black text-lg">{job.salary?.toLocaleString() ?? 0} ETB</span>
+                    <span className="text-white font-black text-lg">{job.salary?.toLocaleString() ?? 0} {copy?.etbCurrency ?? 'ETB'}</span>
                   </div>
                   
                   <h4 className="text-white font-bold text-lg mb-2 line-clamp-1">{job.title}</h4>
@@ -134,12 +135,12 @@ const JobList = () => {
                         ) : (
                           <MessageSquare className="w-3.5 h-3.5" />
                         )}
-                        MESSAGE EMPLOYER
+                        {(copy?.messageEmployer ?? 'Message Employer').toUpperCase()}
                       </button>
                     ) : (
                       <div className="flex items-center gap-2 bg-slate-950/20 border border-white/5 rounded-xl py-2 px-3.5 text-white/40 text-[10px] font-bold uppercase tracking-wider">
                         <Lock className="w-3 h-3 text-white/20 shrink-0" />
-                        <span className="truncate">Chat unlocks upon hiring status</span>
+                        <span className="truncate">{copy?.chatUnlocksUponHiring ?? 'Chat unlocks upon hiring'}</span>
                       </div>
                     )}
                   </div>
@@ -148,7 +149,7 @@ const JobList = () => {
                 <div className="flex justify-between items-center pt-4 border-t border-white/5 mt-auto">
                   <span className="flex items-center gap-1 text-[10px] text-gray-500 font-bold uppercase">
                     <Clock className="w-3 h-3" /> 
-                    {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : '—'}
+                    {job.createdAt ? new Date(job.createdAt).toLocaleDateString(localeMap[lang?.lang] || 'en-US') : '—'}
                   </span>
                   <button className="text-[#2BB8B8] text-xs font-black uppercase tracking-widest group-hover:underline">
                     {copy?.detailsArrow ?? 'Details →'}
