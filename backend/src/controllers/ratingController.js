@@ -5,20 +5,29 @@ import asyncHandler from '../utils/asyncHandler.js';
 import { sendRatingNotification } from '../services/notificationService.js';
 
 export const postRating = asyncHandler(async (req, res) => {
-  const { targetUserId, jobId, score, comment, roleAtTime } = req.body;
+  const { targetUserId, jobId, overall, dimensions, comment, roleAtTime } = req.body;
+
+  const existingRating = await Rating.findOne({ job: jobId, from: req.user._id });
+  if (existingRating) {
+    return res.status(400).json({
+      success: false,
+      message: 'You have already rated this job'
+    });
+  }
 
   const rating = await Rating.create({
     from: req.user._id,
     to: targetUserId,
     job: jobId,
-    score,
-    comment,
-    roleAtTime
+    overall: overall || 5,
+    dimensions: dimensions || [],
+    comment: comment || '',
+    roleAtTime: roleAtTime || req.user.role
   });
 
   const stats = await Rating.aggregate([
     { $match: { to: new mongoose.Types.ObjectId(targetUserId) } },
-    { $group: { _id: '$to', avgRating: { $avg: '$score' }, count: { $sum: 1 } } }
+    { $group: { _id: '$to', avgRating: { $avg: '$overall' }, count: { $sum: 1 } } }
   ]);
 
   if (stats.length > 0) {
@@ -44,7 +53,7 @@ export const postRating = asyncHandler(async (req, res) => {
         req.io,
         targetUserId,
         rater?.fullName || 'User',
-        score
+        overall || 5
       );
     } catch (error) {
       console.error('Failed to send rating notification:', error);
@@ -58,5 +67,11 @@ export const getUserRatings = asyncHandler(async (req, res) => {
   const ratings = await Rating.find({ to: req.params.userId })
     .populate('from', 'fullName')
     .sort('-createdAt');
-  res.json(ratings);
+  res.json({ success: true, data: ratings });
+});
+
+export const getJobRatingStatus = asyncHandler(async (req, res) => {
+  const { jobId } = req.params;
+  const myRating = await Rating.findOne({ job: jobId, from: req.user._id });
+  res.json({ success: true, hasRated: !!myRating, rating: myRating });
 });
