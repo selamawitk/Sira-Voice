@@ -158,6 +158,35 @@ export const sendScamAlertNotification = async (io, userId, title, message, jobI
   });
 };
 
+export const sendApplicationNotification = async (io, userId, jobTitle) => {
+  return sendRealTimeNotification(io, userId, {
+    type: 'APPLICATION',
+    title: 'Application Received',
+    message: `A new application has been submitted for "${jobTitle}".`,
+    additionalData: { action: 'view_applications' }
+  });
+};
+
+export const sendJobCompleteNotification = async (io, employerId, workerName, jobTitle, jobId) => {
+  return sendRealTimeNotification(io, employerId, {
+    type: 'JOB_COMPLETE',
+    title: 'Job Marked Complete',
+    message: `${workerName} has marked "${jobTitle}" as completed. Please review and close.`,
+    jobId,
+    additionalData: { action: 'close_job' }
+  });
+};
+
+export const sendJobClosedNotification = async (io, workerId, employerName, jobTitle, jobId) => {
+  return sendRealTimeNotification(io, workerId, {
+    type: 'JOB_CLOSED',
+    title: 'Job Closed',
+    message: `${employerName} has closed "${jobTitle}". Please rate your experience.`,
+    jobId,
+    additionalData: { action: 'rate_job' }
+  });
+};
+
 export const sendSystemNotification = async (io, userId, title, message, metadata = {}) => {
   return sendRealTimeNotification(io, userId, {
     type: 'SYSTEM',
