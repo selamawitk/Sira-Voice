@@ -170,6 +170,9 @@ const COPY = {
     postedDateLabel: 'የተለጠፈበት ቀን',
     employerLabel: 'አሰሪ',
     generalLabel: 'አጠቃላይ',
+    addisAbaba: 'አዲስ አበባ',
+    chatUnlocksUponHiring: 'ቅጥር ሲሆን ቻት ይከፈታል',
+    etbCurrency: 'ብር',
 
     jobStatusOpen: 'ክፍት',
     jobStatusClosed: 'ዝግ',
@@ -419,6 +422,9 @@ const COPY = {
     postedDateLabel: 'Guyyaa Maxxanfame',
     employerLabel: 'Hojjeessisaa',
     generalLabel: 'Waliigala',
+    addisAbaba: 'Finfinnee',
+    chatUnlocksUponHiring: 'Yeroo qaxaramaa ergaa walitti dabarfachuu banama',
+    etbCurrency: 'Birrii',
 
     jobStatusOpen: 'Banamaa',
     jobStatusClosed: 'Cufame',
@@ -674,6 +680,9 @@ const COPY = {
     postedDateLabel: 'Posted',
     employerLabel: 'Employer',
     generalLabel: 'General',
+    addisAbaba: 'Addis Ababa',
+    chatUnlocksUponHiring: 'Chat unlocks upon hiring',
+    etbCurrency: 'ETB',
 
     jobStatusOpen: 'Open',
     jobStatusClosed: 'Closed',
