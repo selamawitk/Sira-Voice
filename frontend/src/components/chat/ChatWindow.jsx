@@ -108,8 +108,8 @@ const ChatWindow = ({ conversation, currentUser, activeLang }) => {
           </div>
           <div>
             <h3 className="text-white font-bold text-sm flex items-center gap-1.5 leading-snug">
-              {targetParticipant?.name || 'User'}
-              {targetParticipant?.verified && <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />}
+              {targetParticipant?.fullName || 'User'}
+              {targetParticipant?.isVerified && <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />}
             </h3>
             <p className="text-[10px] text-white/40 tracking-wide font-medium uppercase mt-0.5">
               {conversation.job?.title}
@@ -129,7 +129,8 @@ const ChatWindow = ({ conversation, currentUser, activeLang }) => {
           </div>
         ) : (
           messages.map((msg) => {
-            const isMe = msg.sender === currentUser?._id;
+            const senderId = msg.sender?._id || msg.sender;
+            const isMe = senderId === currentUser?._id;
             return (
               <div key={msg._id || msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm font-medium tracking-wide break-words shadow-md transition-all normal-case ${
