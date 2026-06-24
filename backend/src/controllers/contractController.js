@@ -60,6 +60,21 @@ export const createContract = asyncHandler(async (req, res) => {
   });
 });
 
+export const getWorkerContracts = asyncHandler(async (req, res) => {
+  const { workerId } = req.params;
+
+  const contracts = await Contract.find({ workerId })
+    .populate('employerId', 'fullName phone')
+    .populate('jobId', 'title salary location status')
+    .sort({ createdAt: -1 });
+
+  res.json({
+    success: true,
+    count: contracts.length,
+    data: contracts
+  });
+});
+
 export const getEmployerContracts = asyncHandler(async (req, res) => {
   const { employerId } = req.params;
 
