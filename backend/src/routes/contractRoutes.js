@@ -2,28 +2,33 @@ import express from 'express';
 import {
   createContract,
   getEmployerContracts,
+  getWorkerContracts,
   completeContract,
   markContractAsPaid,
   cancelContract
 } from '../controllers/contractController.js';
 
-import { protect, employerOnly } from '../middleware/authMiddleware.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.post('/', protect, employerOnly, createContract);
+router.post('/', protect, createContract);
 
 router.get(
   '/employer/:employerId',
   protect,
-  employerOnly,
   getEmployerContracts
+);
+
+router.get(
+  '/worker/:workerId',
+  protect,
+  getWorkerContracts
 );
 
 router.put(
   '/:id/complete',
   protect,
-  employerOnly,
   completeContract
 );
 
@@ -36,7 +41,6 @@ router.put(
 router.delete(
   '/:id',
   protect,
-  employerOnly,
   cancelContract
 );
 
