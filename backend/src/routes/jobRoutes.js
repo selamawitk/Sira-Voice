@@ -6,6 +6,8 @@ import {
   getJobMatches,
   startJob,
   completeJob,
+  workerMarkComplete,
+  employerCloseJob,
   updateJob,
   deleteJob
 } from '../controllers/jobController.js';
@@ -24,6 +26,10 @@ router.get('/:id/matches', protect, employerOnly, getJobMatches);
 router.patch('/:id/start', protect, workerOnly, startJob);
 
 router.patch('/:id/complete', protect, employerOnly, completeJob);
+
+router.patch('/:id/worker-complete', protect, workerOnly, workerMarkComplete);
+
+router.patch('/:id/employer-close', protect, employerOnly, employerCloseJob);
 
 router.route('/:id')
   .get(getJobById)
