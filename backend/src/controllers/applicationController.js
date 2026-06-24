@@ -2,11 +2,13 @@ import Application from '../models/Application.js';
 import Job from '../models/Job.js';
 import Contract from '../models/Contract.js';
 import User from '../models/User.js';
+import Rating from '../models/Rating.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import {
   sendRealTimeNotification,
   sendHireNotification,
-  sendJobMatchNotification
+  sendJobMatchNotification,
+  sendJobCompleteNotification
 } from '../services/notificationService.js';
 
 export const getMyApplicationHistory = asyncHandler(async (req, res) => {
@@ -113,12 +115,18 @@ export const getApplicationsForJob = asyncHandler(async (req, res) => {
 export const applyToJob = asyncHandler(async (req, res) => {
   const { jobId } = req.params;
   const workerId = req.user._id;
+  const { includeCv, cvData, source, message } = req.body;
 
   const application = await createApplicationLogic(
     jobId,
     workerId,
     req.io,
-    false
+    false,
+    0,
+    includeCv,
+    cvData,
+    source || 'FORM',
+    message || ''
   );
 
   res.status(201).json(application);
@@ -129,7 +137,11 @@ export const createApplicationLogic = async (
   workerId,
   io,
   isAutoApply = false,
-  matchScore = 0
+  matchScore = 0,
+  includeCv = false,
+  cvData = null,
+  source = 'FORM',
+  message = ''
 ) => {
   const alreadyApplied = await Application.findOne({
     job: jobId,
@@ -152,42 +164,59 @@ export const createApplicationLogic = async (
 
   const worker = await User.findById(workerId);
 
+  const snapshot = {
+    fullName: worker?.fullName,
+    profileImage: worker?.profileImage,
+    skills: worker?.workerProfile?.skills,
+    bio: worker?.workerProfile?.bio,
+    experienceYears: worker?.workerProfile?.experienceYears,
+    hourlyRate: worker?.workerProfile?.hourlyRate,
+    location: worker?.location,
+    averageRating: worker?.workerProfile?.averageRating,
+    totalRatings: worker?.workerProfile?.totalRatings,
+    completedJobs: worker?.workerProfile?.completedJobs,
+    availability: worker?.workerProfile?.availability,
+    ...(includeCv && cvData ? {
+      cv: cvData.cv || '',
+      cvSkills: cvData.skills || worker?.workerProfile?.skills,
+      cvExperience: cvData.experienceYears || worker?.workerProfile?.experienceYears,
+      cvLocation: cvData.location || '',
+      cvBio: cvData.bio || worker?.workerProfile?.bio,
+    } : {})
+  };
+
   const application = await Application.create({
     job: jobId,
     worker: workerId,
     employer: job.employer,
     status: 'pending',
+    source: isAutoApply ? 'AI' : source,
+    message: message || '',
     appliedByAI: isAutoApply,
     matchScore: matchScore || (isAutoApply ? 85 : 0),
-    workerSnapshot: {
-      fullName: worker?.fullName,
-      profileImage: worker?.profileImage,
-      skills: worker?.workerProfile?.skills,
-      bio: worker?.workerProfile?.bio,
-      experienceYears: worker?.workerProfile?.experienceYears,
-      hourlyRate: worker?.workerProfile?.hourlyRate,
-      location: worker?.location,
-      averageRating: worker?.workerProfile?.averageRating,
-      totalRatings: worker?.workerProfile?.totalRatings,
-      completedJobs: worker?.workerProfile?.completedJobs,
-      availability: worker?.workerProfile?.availability
-    }
+    includeCv,
+    workerSnapshot: snapshot
   });
 
-  const notifType = isAutoApply ? 'AI_AGENT' : 'SYSTEM';
+  const notifType = isAutoApply ? 'AI_AGENT' : 'APPLICATION';
   await sendRealTimeNotification(io, job.employer, {
-    title: isAutoApply ? 'Sira AI Match' : 'New Applicant',
+    title: isAutoApply ? 'Sira AI Match' : 'New Application',
     message: isAutoApply
       ? `AI matched a worker for "${job.title}"`
-      : `New applicant for "${job.title}"`,
+      : `New application received for "${job.title}" from ${worker?.fullName || 'a worker'}`,
     jobId: job._id,
     type: notifType,
+    workerId: workerId,
     additionalData: isAutoApply ? { action: 'view_agent', matchScore } : { action: 'view_applications' }
   });
 
-  if (isAutoApply) {
-    await sendJobMatchNotification(io, workerId, job._id, job.title);
-  }
+  await sendRealTimeNotification(io, workerId, {
+    title: 'Application Submitted',
+    message: `Your application for "${job.title}" has been submitted successfully.`,
+    jobId: job._id,
+    type: 'APPLICATION',
+    additionalData: { action: 'view_job' }
+  });
 
   return application;
 };
@@ -222,7 +251,7 @@ export const updateApplicationStatus = asyncHandler(async (req, res) => {
 
   if (status === 'accepted') {
     await Job.findByIdAndUpdate(job._id, {
-      status: 'in-progress',
+      status: 'hired',
       worker: application.worker._id
     });
 
@@ -270,6 +299,36 @@ export const updateApplicationStatus = asyncHandler(async (req, res) => {
   });
 });
 
+export const getWorkerHistory = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const applications = await Application.find({ worker: userId })
+    .populate('job', 'title salary location status paymentType')
+    .populate('employer', 'fullName email phone')
+    .sort({ createdAt: -1 });
+
+  const completedJobs = applications.filter(a => a.status === 'completed');
+
+  const contracts = await Contract.find({ workerId: userId })
+    .populate('jobId', 'title salary location status')
+    .populate('employerId', 'fullName')
+    .sort({ createdAt: -1 });
+
+  const ratings = await Rating.find({ to: userId })
+    .populate('from', 'fullName')
+    .sort('-createdAt');
+
+  res.status(200).json({
+    success: true,
+    data: {
+      applications,
+      completedJobs,
+      contracts,
+      ratings
+    }
+  });
+});
+
 export const workerMarkFinished = asyncHandler(async (req, res) => {
   const { contractId } = req.params;
 
@@ -302,12 +361,21 @@ export const workerMarkFinished = asyncHandler(async (req, res) => {
     }
   );
 
-  await sendRealTimeNotification(req.io, contract.employerId, {
-    title: 'Work Finished',
-    message: `Worker marked service for "${contract.jobId.title}" as done. Please review and release payment.`,
-    type: 'SYSTEM',
+  await sendJobCompleteNotification(
+    req.io,
+    contract.employerId,
+    req.user?.fullName || 'Worker',
+    contract.jobId.title,
+    contract.jobId._id
+  );
+
+  await sendRealTimeNotification(req.io, req.user._id, {
+    title: 'Job Marked Complete',
+    message: `You have marked "${contract.jobId.title}" as finished. The employer will review and close.`,
+    type: 'JOB_COMPLETE',
+    jobId: contract.jobId._id,
     contractId: contract._id,
-    jobId: contract.jobId._id
+    additionalData: { action: 'view_job' }
   });
 
   res.status(200).json({
