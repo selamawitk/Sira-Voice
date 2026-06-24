@@ -33,6 +33,7 @@ const Ratings = lazy(() => import('../pages/Shared/Ratings.jsx'));
 const Notifications = lazy(() => import('../pages/Shared/Notifications.jsx'));
 const ChatLayout = lazy(() => import('../pages/chat/ChatLayout.jsx'));
 const SiraTalkPage = lazy(() => import('../pages/sira/SiraTalkPage.jsx'));
+const PaymentSuccess = lazy(() => import('../pages/Shared/PaymentSuccess.jsx'));
 const AdminDashboard = lazy(() => import('../pages/Admin/Dashboard.jsx'));
 const AdminUsers = lazy(() => import('../pages/Admin/Users.jsx'));
 const ScamLog = lazy(() => import('../pages/Admin/ScamLog.jsx'));
@@ -133,6 +134,7 @@ const AppRouter = () => {
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/chat" element={<ChatLayout />} />
               <Route path="/sira" element={<SiraTalkPage />} />
+              <Route path="/payment/success" element={<PaymentSuccess />} />
             </Route>
 
             <Route element={<AdminSection />}>
