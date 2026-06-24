@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { Mic, TrendingUp, Star, CheckCircle2, Map as MapIcon, Mic2, Sparkles, Zap, ZapOff, MapPin, DollarSign, X } from 'lucide-react';
+import { Mic, TrendingUp, Star, CheckCircle2, Map as MapIcon, Mic2, Sparkles, Zap, ZapOff, MapPin, DollarSign, X, Loader2, Briefcase, Wallet, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useVoice } from '../../hooks/useVoice.js';
 import api from '../../services/api.js';
@@ -32,6 +32,51 @@ const Dashboard = () => {
 
   const [voiceJobs, setVoiceJobs] = useState([]);
   const [voiceApplyJob, setVoiceApplyJob] = useState(null);
+
+  const [contracts, setContracts] = useState([]);
+  const [contractsLoading, setContractsLoading] = useState(true);
+  const [completingContract, setCompletingContract] = useState(null);
+
+  const [earningsData, setEarningsData] = useState({ totalEarnings: 0, count: 0 });
+  const [showEarnings, setShowEarnings] = useState(true);
+
+  useEffect(() => {
+    const fetchContracts = async () => {
+      setContractsLoading(true);
+      try {
+        const res = await api.get(`/contracts/worker/${user?._id}`);
+        setContracts(res.data?.data?.filter(c => c.status === 'active') ?? []);
+      } catch {} finally {
+        setContractsLoading(false);
+      }
+    };
+    if (user?._id) fetchContracts();
+  }, [user?._id]);
+
+  useEffect(() => {
+    const fetchEarnings = async () => {
+      try {
+        const res = await api.get('/payments/worker-earnings');
+        if (res.data?.success) {
+          setEarningsData({ totalEarnings: res.data.totalEarnings, count: res.data.count });
+        }
+      } catch {}
+    };
+    fetchEarnings();
+  }, []);
+
+  const handleMarkComplete = async (contractId) => {
+    setCompletingContract(contractId);
+    try {
+      await api.put(`/applications/${contractId}/mark-finished`);
+      toast?.show?.('Marked as complete! Employer has been notified.', 'success');
+      setContracts(prev => prev.filter(c => c._id !== contractId));
+    } catch {
+      toast?.show?.('Failed to mark complete', 'error');
+    } finally {
+      setCompletingContract(null);
+    }
+  };
 
   useEffect(() => {
     const run = async () => {
@@ -196,11 +241,28 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
+        <div className="bg-white/[0.02] border border-white/5 p-6 rounded-[2.5rem] hover:bg-white/[0.04] transition-all relative overflow-hidden group">
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-500 opacity-[0.03] blur-[80px] pointer-events-none" />
+          <div className="relative z-10">
+            <div className="flex justify-between items-start mb-4">
+              <span className="text-gray-600 text-[10px] font-black uppercase tracking-widest">Total Earnings</span>
+              <button onClick={() => setShowEarnings(!showEarnings)} className="text-white/30 hover:text-white/60 transition-colors">
+                {showEarnings ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <h3 className="text-2xl font-black text-emerald-400">
+              {showEarnings ? `${earningsData.totalEarnings.toLocaleString()} ETB` : '•••• ETB'}
+            </h3>
+            <p className="text-[10px] text-emerald-500/60 font-bold mt-1 tracking-tight">
+              {earningsData.count} completed {earningsData.count === 1 ? 'payment' : 'payments'}
+            </p>
+          </div>
+        </div>
         {[
-          { label: copy.weeklyEarnings, val: `${stats.weeklyEarningsETB} ETB`, sub: copy.calculatedSoon, icon: TrendingUp },
           { label: copy.workerRating, val: `${stats.rating.toFixed(1)} / 5.0`, sub: `${stats.completedJobs} ${copy.completedJobsCount}`, icon: Star },
           { label: copy.activeApplications, val: String(stats.activeApplications).padStart(2, '0'), sub: appsLoading ? '...' : copy.liveFromHistory, icon: CheckCircle2 },
+          { label: 'Contracts', val: String(contracts.length).padStart(2, '0'), sub: 'Active contracts', icon: Briefcase },
         ].map((stat, i) => (
           <div key={i} className="bg-white/[0.02] border border-white/5 p-6 rounded-[2.5rem] hover:bg-white/[0.04] transition-all">
             <div className="flex justify-between items-start mb-4">
@@ -212,6 +274,39 @@ const Dashboard = () => {
           </div>
         ))}
       </div>
+
+      {contracts.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-black text-white flex items-center gap-2">
+              <Briefcase className="w-5 h-5 text-[#2BB8B8]" />
+              Active Contracts
+            </h3>
+          </div>
+          <div className="space-y-3">
+            {contracts.map((c) => (
+              <div key={c._id} className="bg-white/[0.03] border border-[#2BB8B8]/20 p-5 rounded-3xl flex items-center justify-between gap-4 animate-fade-in">
+                <div>
+                  <p className="text-white font-bold">{c.jobId?.title || 'Contract'}</p>
+                  <p className="text-white/45 text-sm mt-1">{c.jobId?.location?.address} • {c.agreedAmount} ETB</p>
+                </div>
+                <button
+                  onClick={() => handleMarkComplete(c._id)}
+                  disabled={completingContract === c._id}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-500/30 transition-all disabled:opacity-50"
+                >
+                  {completingContract === c._id ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4" />
+                  )}
+                  Mark Complete
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
