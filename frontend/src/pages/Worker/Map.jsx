@@ -1,13 +1,13 @@
 import React, { useContext, useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { LocationContext } from '../../context/LocationContextInstance.jsx';
 import api from '../../services/api.js';
-import { useVoice } from '../../hooks/useVoice.js';
 import { jobService } from '../../services/jobService.js';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
-import { MapPin, Navigation, Share2, Mic, Info } from 'lucide-react';
+import { MapPin, Navigation, Share2, Mic, Info, ArrowLeft, DollarSign, Briefcase } from 'lucide-react';
 
 const jobPin = new L.DivIcon({
   className: '',
@@ -72,6 +72,23 @@ const userDot = new L.DivIcon({
   iconAnchor: [9, 9],
 });
 
+const focusJobPin = new L.DivIcon({
+  className: '',
+  html: `
+    <div style="
+      width: 24px; height: 24px;
+      border-radius: 999px;
+      background: #2BB8B8;
+      border: 3px solid rgba(255,255,255,0.95);
+      box-shadow: 0 0 30px rgba(43,184,184,0.6), 0 8px 32px rgba(0,0,0,0.4);
+      transition: transform 0.2s;
+    "></div>
+  `,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+  popupAnchor: [0, -12]
+});
+
 const normalizeCoordinates = (coords = []) => {
   if (!Array.isArray(coords) || coords.length !== 2) return null;
   return [coords[1], coords[0]];
@@ -103,15 +120,34 @@ function RecenterMap({ coords }) {
 const Map = () => {
   const location = useContext(LocationContext);
   const lang = useContext(LanguageContext);
+  const [searchParams] = useSearchParams();
+  const focusJobId = searchParams.get('jobId');
+
   const [jobs, setJobs] = useState([]);
+  const [focusJob, setFocusJob] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const { isListening, isProcessing, startListening } = useVoice();
   const [applyJobId, setApplyJobId] = useState('');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   const center = useMemo(() => {
+    if (focusJob?.location?.coordinates) {
+      const coords = normalizeCoordinates(focusJob.location.coordinates);
+      if (coords) return coords;
+    }
     return [location?.coords?.lat ?? 9.03, location?.coords?.lng ?? 38.74];
-  }, [location?.coords?.lat, location?.coords?.lng]);
+  }, [focusJob, location?.coords?.lat, location?.coords?.lng]);
+
+  useEffect(() => {
+    if (focusJobId) {
+      (async () => {
+        try {
+          const res = await api.get(`/jobs/${focusJobId}`);
+          if (res.data?.success) setFocusJob(res.data.data);
+        } catch {}
+      })();
+    }
+  }, [focusJobId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -195,6 +231,25 @@ const Map = () => {
   };
 
   return (
+    <div className="relative">
+      {focusJob && (
+        <div className="mb-4">
+          <button
+            onClick={() => window.history.back()}
+            className="inline-flex items-center gap-2 text-white/60 hover:text-white text-sm font-semibold mb-1 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to job details
+          </button>
+          <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+            <h2 className="font-black text-white text-lg">{focusJob.title}</h2>
+            <p className="text-white/60 text-sm">{focusJob.location?.locationName || focusJob.location?.address}</p>
+            {focusJob.salary && (
+              <p className="text-emerald-400 font-black text-sm mt-1">{focusJob.salary} ETB</p>
+            )}
+          </div>
+        </div>
+      )}
     <div className="h-75 md:h-150 w-full rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl relative bg-[#060D0F]">
       {!isOnline && (
         <div className="absolute top-0 left-0 right-0 z-30 bg-red-600 text-white text-center py-2 text-xs font-black uppercase tracking-wider shadow-md">
@@ -226,6 +281,25 @@ const Map = () => {
         <RecenterMap coords={center} />
         
         <Marker position={center} icon={userDot} />
+
+        {focusJob && focusJob.location?.coordinates && (() => {
+          const pos = normalizeCoordinates(focusJob.location.coordinates);
+          if (!pos) return null;
+          return (
+            <Marker key="focus-job" position={pos} icon={focusJobPin}>
+              <Popup className="dark-map-popup" maxWidth={260}>
+                <div className="p-2 space-y-3">
+                  <h4 className="font-black text-white text-sm">{focusJob.title}</h4>
+                  <p className="text-white/60 text-xs">{focusJob.location?.locationName || focusJob.location?.address}</p>
+                  <div className="bg-white/[0.03] border border-white/5 p-2 rounded-xl flex items-center justify-between text-xs">
+                    <span className="text-white/40 font-bold">Est. Compensation</span>
+                    <span className="font-black text-emerald-400">{focusJob.salary ?? 0} ETB</span>
+                  </div>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })()}
         
         {jobs.filter(j => {
           if (!j.location?.coordinates) return false;
@@ -304,6 +378,7 @@ const Map = () => {
         </span>
       </div>
     </div>
+  </div>
   );
 };
 
