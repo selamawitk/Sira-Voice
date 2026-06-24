@@ -71,8 +71,21 @@ const Header = ({ onMobileMenuToggle }) => {
   }, [user?._id, toast]);
 
   const clearNotifications = () => {
+    setHasUnread(0);
     navigate('/notifications');
   };
+
+  useEffect(() => {
+    const onFocus = async () => {
+      if (!user?._id) return;
+      try {
+        const res = await api.get('/notifications');
+        setHasUnread(res.data?.unreadCount || 0);
+      } catch {}
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [user?._id]);
 
   return (
     // Reverted to sticky top-0 and added w-full with relative limits so it honors your sidebar layout boundary
