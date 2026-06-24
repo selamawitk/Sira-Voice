@@ -1,14 +1,17 @@
 import React, { useContext, useEffect, useState } from 'react';
 import api from '../../services/api.js';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
-import { Loader2, Receipt, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { AuthContext } from '../../context/AuthContextInstance.jsx';
+import { Loader2, Receipt, CheckCircle2, Clock, AlertCircle, DollarSign, User, Briefcase } from 'lucide-react';
 
 const PaymentHistory = () => {
   const lang = useContext(LanguageContext);
+  const auth = useContext(AuthContext);
   const t = lang?.copy || {};
 
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [totalPaid, setTotalPaid] = useState(0);
 
   useEffect(() => {
     loadPayments();
@@ -16,8 +19,11 @@ const PaymentHistory = () => {
 
   const loadPayments = async () => {
     try {
-      const res = await api.get('/payments/history');
-      setPayments(res.data.data || []);
+      const res = await api.get('/payments/employer-history');
+      if (res.data?.success) {
+        setPayments(res.data.data || []);
+        setTotalPaid(res.data.totalPaid || 0);
+      }
     } catch (err) {
       console.error("History fetch error:", err);
     } finally {
@@ -94,6 +100,16 @@ const PaymentHistory = () => {
         </p>
       </div>
 
+      {totalPaid > 0 && (
+        <div className="bg-gradient-to-r from-emerald-500/10 to-transparent border border-emerald-500/20 rounded-2xl p-5 mb-6 flex items-center gap-4">
+          <DollarSign className="w-8 h-8 text-emerald-400" />
+          <div>
+            <p className="text-white/50 text-xs font-bold uppercase tracking-wider">Total Paid</p>
+            <p className="text-emerald-400 font-black text-2xl">{totalPaid.toLocaleString()} ETB</p>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-xl">
         {loading ? (
           <div className="py-20 flex flex-col items-center gap-4">
@@ -106,7 +122,7 @@ const PaymentHistory = () => {
           <div className="py-20 text-center">
             <Receipt className="w-12 h-12 text-white/10 mx-auto mb-4" />
             <p className="text-white/20 font-black italic uppercase">
-              {lang?.lang === 'am' ? 'ምንም የክፍያ ታሪክ አልተገኘም' : lang?.lang === 'or' ? 'Seenaan kafaltii hin argamne' : 'No transaction history found'}
+              {lang?.lang === 'am' ? 'ምንም የክፍያ ታሪክ አልተገኘም' : lang?.lang === 'or' ? 'Seenaan kafaltii hin argamne' : 'No payment history found'}
             </p>
           </div>
         ) : (
@@ -124,12 +140,18 @@ const PaymentHistory = () => {
                         <Receipt className="w-5 h-5 text-white/40 group-hover:text-[#2BB8B8] transition-colors" />
                       </div>
                       <div>
-                        <h2 className="text-white font-black uppercase italic tracking-tight text-lg">
-                          {payment.worker?.fullName || (lang?.lang === 'am' ? 'የውጭ ማስተላለፊያ' : lang?.lang === 'or' ? 'Dabarsa Alaa' : 'External Transfer')}
-                        </h2>
-                        <p className="text-white/40 text-xs font-bold uppercase tracking-wider">
-                          {lang?.lang === 'am' ? 'ፕሮጀክት' : lang?.lang === 'or' ? 'Hojii' : 'Project'}: {payment.job?.title || (lang?.lang === 'am' ? 'አጠቃላይ አገልግሎት' : lang?.lang === 'or' ? 'Tajaajila Waliigalaa' : 'General Service')}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-white/30" />
+                          <h2 className="text-white font-black uppercase italic tracking-tight text-lg">
+                            {payment.workerId?.fullName || 'Worker'}
+                          </h2>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Briefcase className="w-3 h-3 text-white/30" />
+                          <p className="text-white/40 text-xs font-bold uppercase tracking-wider">
+                            {payment.jobId?.title || 'Job Service'}
+                          </p>
+                        </div>
                         <p className="text-white/20 text-[10px] font-mono mt-1">
                           TXID: {payment.tx_ref || payment._id}
                         </p>
@@ -138,7 +160,7 @@ const PaymentHistory = () => {
 
                     <div className="flex flex-row md:flex-col items-center md:items-end justify-between gap-2">
                       <p className="text-[#2BB8B8] font-black text-xl italic">
-                        +{payment.amount} <span className="text-[10px] not-italic opacity-60">{payment.currency || 'ETB'}</span>
+                        {payment.amount?.toLocaleString()} <span className="text-[10px] not-italic opacity-60">{payment.currency || 'ETB'}</span>
                       </p>
                       
                       <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${styles.bg} ${styles.text} ${styles.border}`}>
