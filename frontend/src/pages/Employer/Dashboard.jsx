@@ -200,14 +200,12 @@ const EmployerDashboard = () => {
         return;
       }
 
-      await api.put(`/applications/${app._id}/status`, { status: 'accepted' });
+      const jobRes = await api.get(`/jobs/${selectedJobId}`);
+      const jobData = jobRes.data?.data;
 
-      await api.post('/contracts', {
-        employerId,
+      await api.post(`/applications/${app._id}/hire`, {
         workerId,
-        jobId: selectedJobId,
-        agreedAmount: app?.expectedSalary || 500,
-        paymentType: 'daily',
+        agreedAmount: jobData?.salary || 500,
       });
 
       toast?.show?.(

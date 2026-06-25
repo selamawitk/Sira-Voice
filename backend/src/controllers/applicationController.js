@@ -259,7 +259,7 @@ export const updateApplicationStatus = asyncHandler(async (req, res) => {
       employerId: job.employer,
       workerId: application.worker._id,
       jobId: job._id,
-      agreedAmount: job.salary,
+      agreedAmount: req.customAgreedAmount || job.salary,
       paymentType: 'daily',
       status: 'active'
     });
@@ -387,5 +387,9 @@ export const workerMarkFinished = asyncHandler(async (req, res) => {
 
 export const hireWorker = asyncHandler(async (req, res) => {
   req.body.status = 'accepted';
+  // Pass agreedAmount through for contract creation
+  if (req.body.agreedAmount) {
+    req.customAgreedAmount = req.body.agreedAmount;
+  }
   return updateApplicationStatus(req, res);
 });

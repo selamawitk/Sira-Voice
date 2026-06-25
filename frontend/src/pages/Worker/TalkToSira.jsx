@@ -11,7 +11,7 @@ const TalkToSira = () => {
   const [localProcessing, setLocalProcessing] = useState(false);
   const lang = useContext(LanguageContext);
   const copy = lang?.copy;
-  const currentLang = lang?.language || 'english'; 
+  const currentLang = lang?.lang || lang?.language || 'en'; 
   const toast = useContext(ToastContext);
   const [jobs, setJobs] = useState([]);
 
@@ -55,9 +55,10 @@ const TalkToSira = () => {
     if (!editable.trim()) return;
     setLocalProcessing(true);
     try {
-      const res = await api.post('/ai/process-intent', { 
-        prompt: editable,
-        lang: currentLang 
+      const res = await api.post('/ai/voice-action', { 
+        transcript: editable,
+        lang: currentLang,
+        action: 'process-intent'
       });
       if (res.data?.success) {
         handleVoiceIntentPayload(res.data.result);
@@ -72,7 +73,7 @@ const TalkToSira = () => {
 
   const handleApplyToJob = async (jobId) => {
     try {
-      const res = await api.post(`/jobs/${jobId}/apply`);
+      const res = await api.post(`/applications/${jobId}/apply`);
       if (res.data?.success) {
         toast?.show?.('Application submitted successfully!', 'success');
         setJobs(prev => prev.filter(j => j._id !== jobId));

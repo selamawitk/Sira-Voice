@@ -167,15 +167,9 @@ const Applicants = () => {
       const jobRes = await api.get(`/jobs/${jobId}`);
       const job = jobRes.data?.data;
 
-      await api.put(`/applications/${app._id}/status`, { status: 'accepted' });
-
-      await api.post('/contracts', {
-        employerId: auth?.user?._id,
+      await api.post(`/applications/${app._id}/hire`, {
         workerId,
-        jobId,
-        agreedAmount: app?.expectedSalary || job?.salary || 500,
-        paymentType: 'daily',
-        status: 'active',
+        agreedAmount: job?.salary || 500,
       });
 
       toast?.show?.(
