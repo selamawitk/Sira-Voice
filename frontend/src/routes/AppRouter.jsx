@@ -126,7 +126,7 @@ const AppRouter = () => {
               <Route path="/voice-job-posting" element={<VoiceJobPosting />} />
               <Route path="/applicants" element={<Applicants />} />
               <Route path="/contracts" element={<ActiveContracts />} />
-              <Route path="/payments" element={<PaymentHistory />} />
+              <Route path="/employer-payments" element={<PaymentHistory />} />
             </Route>
 
             <Route element={<SharedSection />}>

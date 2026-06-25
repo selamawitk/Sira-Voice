@@ -93,6 +93,35 @@ export const updateAgentPreferences = asyncHandler(async (req, res) => {
   }
 });
 
+export const getWorkers = asyncHandler(async (req, res) => {
+  const { lat, lng, maxDistance, category } = req.query;
+
+  const filter = { role: 'worker', isActive: true };
+
+  if (category) {
+    filter['workerProfile.category'] = { $regex: category, $options: 'i' };
+  }
+
+  if (lat && lng) {
+    filter.location = {
+      $near: {
+        $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
+        $maxDistance: (parseInt(maxDistance) || 50) * 1000,
+      }
+    };
+  }
+
+  const workers = await User.find(filter)
+    .select('fullName workerProfile location')
+    .limit(50);
+
+  res.json({
+    success: true,
+    data: workers,
+    count: workers.length
+  });
+});
+
 export const updateProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
 

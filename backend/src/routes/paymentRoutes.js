@@ -14,22 +14,22 @@ import {
   getWorkerEarningsHistory,
   getJobPaymentStatus
 } from '../controllers/paymentController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { protect, employerOnly, workerOnly } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 router.post('/initialize', protect, initializeChapa);
 router.post('/contract', protect, payContract);
-router.post('/initiate-job-payment', protect, initiateJobPayment);
+router.post('/initiate-job-payment', protect, employerOnly, initiateJobPayment);
 router.post('/verify-transaction', protect, verifyChapaTransaction);
 router.post('/webhook', verifyChapaWebhook);
 router.get('/history', protect, getUserTransactions);
-router.get('/employer/:id', protect, getEmployerPayments);
+router.get('/employer/:id', protect, employerOnly, getEmployerPayments);
 router.get('/worker/:id', protect, getWorkerPayments);
 router.put('/profile', protect, updatePaymentProfile);
 router.get('/profile', protect, getPaymentProfile);
-router.get('/employer-history', protect, getEmployerPaymentHistory);
-router.get('/worker-earnings', protect, getWorkerEarningsHistory);
+router.get('/employer-history', protect, employerOnly, getEmployerPaymentHistory);
+router.get('/worker-earnings', protect, workerOnly, getWorkerEarningsHistory);
 router.get('/job-status/:jobId', protect, getJobPaymentStatus);
 
 export default router;

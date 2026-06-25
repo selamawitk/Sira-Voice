@@ -68,7 +68,7 @@ const jobSchema = new mongoose.Schema(
 
     paymentType: {
       type: String,
-      enum: ['daily', 'weekly', 'monthly', 'fixed'],
+      enum: ['daily', 'weekly', 'monthly', 'fixed', 'hourly'],
       default: 'daily',
     },
 

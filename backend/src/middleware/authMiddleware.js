@@ -34,6 +34,12 @@ export const protect = async (req, res, next) => {
       });
     }
 
+    if (!user.isActive) {
+      return res.status(403).json({
+        message: 'Account deactivated. Contact support.',
+      });
+    }
+
     req.user = user;
     req.userId = decoded.id; 
     req.userRole = decoded.role;

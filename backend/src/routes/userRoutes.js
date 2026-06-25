@@ -1,6 +1,7 @@
 import express from 'express'
 import {
   getWorkerProfile,
+  getWorkers,
   updateLiveLocation,
   toggleAgentMode,
   updateAgentPreferences,
@@ -9,6 +10,8 @@ import {
 import { protect, workerOnly } from '../middleware/authMiddleware.js'
 
 const router = express.Router()
+
+router.get('/workers', protect, getWorkers)
 
 router.get('/profile/:id', protect, getWorkerProfile)
 

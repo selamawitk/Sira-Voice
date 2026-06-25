@@ -77,6 +77,7 @@ const userSchema = new mongoose.Schema(
       },
       averageRating: { type: Number, default: 0 },
       totalRatings: { type: Number, default: 0 },
+      balance: { type: Number, default: 0 },
       agentPreferences: {
         autoApply: { type: Boolean, default: false },
         maxDistance: { type: Number, default: 10 },
@@ -96,6 +97,7 @@ const userSchema = new mongoose.Schema(
       industry: { type: String, default: '' },
       businessAddress: { type: String, default: '' },
       totalJobsPosted: { type: Number, default: 0 },
+      employerRating: { type: Number, default: 0 },
     },
     location: {
       type: { type: String, enum: ['Point'], default: 'Point' },
