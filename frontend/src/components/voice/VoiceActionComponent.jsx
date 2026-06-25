@@ -46,24 +46,13 @@ const VoiceActionComponent = ({
           let endpoint = '/ai/voice-action';
 
           if (action === 'apply-job') {
-            endpoint = '/jobs/apply-voice';
+            endpoint = '/applications/voice-apply';
           }
 
-          if (action === 'post-job') {
-            endpoint = '/jobs/process-text';
-          }
-
-          const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${auth?.token || ''}`
-            },
-            body: JSON.stringify({
-              text: voiceResult.transcript,
-              action,
-              jobId
-            })
+          const response = await api.post(endpoint, {
+            text: voiceResult.transcript,
+            action,
+            jobId
           });
 
           const data = await response.json();
@@ -90,7 +79,6 @@ const VoiceActionComponent = ({
     );
   }, [
     action,
-    auth?.token,
     isListening,
     jobId,
     onError,

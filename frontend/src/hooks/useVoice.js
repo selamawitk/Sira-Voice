@@ -118,8 +118,8 @@ export const useVoice = (onCompleteCallback, externalLang) => {
       let endpoint = '/ai/voice-action';
       if (action === 'register' || action === 'login') {
         endpoint = '/auth/voice-auth';
-      } else if (action === 'post-job-ai') {
-        endpoint = '/voice/process-job';
+      } else if (action === 'post-job-ai' || action === 'profile') {
+        endpoint = '/ai/voice-action';
       }
 
       const payload = {
