@@ -109,9 +109,9 @@ const SiraApply = () => {
           <div className="w-20 h-20 rounded-full bg-emerald-500/20 mx-auto flex items-center justify-center">
             <CheckCircle2 className="w-10 h-10 text-emerald-400" />
           </div>
-          <h2 className="text-3xl font-black text-white">{copy.applicationSubmitted}</h2>
-          <p className="text-white/60">{copy.yourApplicationFor} "{job.title}" {copy.hasBeenSent}</p>
-          <p className="text-white/40 text-sm">{copy.redirectingToJobDetails}</p>
+          <h2 className="text-3xl font-black text-white">{copy?.applicationSubmitted ?? 'Application Submitted'}</h2>
+          <p className="text-white/60">{copy?.yourApplicationFor ?? 'Your application for'} "{job.title}" {copy?.hasBeenSent ?? 'has been sent'}</p>
+          <p className="text-white/40 text-sm">{copy?.redirectingToJobDetails ?? 'Redirecting to job details...'}</p>
         </div>
       </div>
     );
@@ -123,7 +123,7 @@ const SiraApply = () => {
         onClick={() => navigate(`/jobs/${id}`)}
         className="flex items-center gap-2 text-white/50 hover:text-white transition text-sm"
       >
-        <ArrowLeft className="w-4 h-4" /> {copy.backToJob}
+        <ArrowLeft className="w-4 h-4" /> {copy?.backToJob ?? 'Back to Job'}
       </button>
 
       <div className="bg-white/[0.03] border border-white/10 p-6 rounded-[2rem] space-y-6">
@@ -132,7 +132,7 @@ const SiraApply = () => {
             <Sparkles className="w-6 h-6 text-[#2BB8B8]" />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-white">{copy.applyThroughSira}</h2>
+            <h2 className="text-2xl font-black text-white">{copy?.applyThroughSira ?? 'Apply Through Sira'}</h2>
             <p className="text-white/50 text-sm">{job.title} • {job.location?.address}</p>
           </div>
         </div>
@@ -154,8 +154,8 @@ const SiraApply = () => {
               <div className="w-16 h-16 rounded-2xl bg-[#2BB8B8]/10 mx-auto flex items-center justify-center group-hover:bg-[#2BB8B8]/20 transition-all">
                 <Mic className="w-8 h-8 text-[#2BB8B8]" />
               </div>
-              <h3 className="text-white font-bold">{copy.voiceApplication}</h3>
-              <p className="text-white/40 text-xs">{copy.speakYourApplicationDesc}</p>
+              <h3 className="text-white font-bold">{copy?.voiceApplication ?? 'Voice Application'}</h3>
+              <p className="text-white/40 text-xs">{copy?.speakYourApplicationDesc ?? 'Speak your application'}</p>
             </button>
             <button
               onClick={() => setMode('form')}
@@ -164,8 +164,8 @@ const SiraApply = () => {
               <div className="w-16 h-16 rounded-2xl bg-white/5 mx-auto flex items-center justify-center group-hover:bg-white/10 transition-all">
                 <FileText className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-white font-bold">{copy.manualForm}</h3>
-              <p className="text-white/40 text-xs">{copy.fillManuallyDesc}</p>
+              <h3 className="text-white font-bold">{copy?.manualForm ?? 'Manual Form'}</h3>
+              <p className="text-white/40 text-xs">{copy?.fillManuallyDesc ?? 'Fill in the form manually'}</p>
             </button>
           </div>
         )}
@@ -191,22 +191,22 @@ const SiraApply = () => {
                 )}
               </button>
               <p className="text-white/60 text-sm mt-4">
-                {isListening ? copy.listeningTapToStop : isProcessing ? copy.processing : copy.tapToSpeakApplication}
+                {isListening ? (copy?.listeningTapToStop ?? 'Listening... tap to stop') : isProcessing ? (copy?.processing ?? 'Processing...') : (copy?.tapToSpeakApplication ?? 'Tap to speak')}
               </p>
             </div>
 
             <div>
               <label className="text-xs font-black uppercase tracking-widest text-white/40 mb-2 block">
-                {copy.generatedApplicationText}
+                {copy?.generatedApplicationText ?? 'Your application text'}
               </label>
               <textarea
                 value={voiceText}
                 onChange={(e) => setVoiceText(e.target.value)}
                 rows={6}
                 className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-[#2BB8B8]/50 transition-all resize-none"
-                placeholder={copy.spokenAppPlaceholder}
+                placeholder={copy?.spokenAppPlaceholder ?? 'Your spoken application will appear here...'}
               />
-              <p className="text-[10px] text-white/30 mt-1">{copy.editToCorrect}</p>
+              <p className="text-[10px] text-white/30 mt-1">{copy?.editToCorrect ?? 'Edit to correct any mistakes'}</p>
             </div>
 
             <label className="flex items-center gap-3 p-4 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
@@ -217,9 +217,9 @@ const SiraApply = () => {
                 className="w-5 h-5 rounded border-white/20 bg-white/5 text-[#2BB8B8]"
               />
               <div>
-                <p className="text-white text-sm font-semibold">{copy.attachCVWithApplication}</p>
+                <p className="text-white text-sm font-semibold">{copy?.attachCVWithApplication ?? 'Attach CV with application'}</p>
                 {cvInfo && (
-                  <p className="text-white/40 text-xs mt-0.5">{cvInfo.skills?.join(', ') || 'General'} • {cvInfo.experienceYears} {copy.yrsExp}</p>
+                  <p className="text-white/40 text-xs mt-0.5">{cvInfo.skills?.join(', ') || 'General'} • {cvInfo.experienceYears} {copy?.yrsExp ?? 'yrs exp'}</p>
                 )}
               </div>
             </label>
@@ -234,7 +234,7 @@ const SiraApply = () => {
               ) : (
                 <Send className="w-5 h-5" />
               )}
-              {copy.apply}
+              {copy?.apply ?? 'Apply'}
             </button>
           </div>
         )}
@@ -242,47 +242,47 @@ const SiraApply = () => {
         {mode === 'form' && (
           <div className="space-y-4">
             <div>
-              <label className="text-xs font-black uppercase tracking-widest text-white/40 mb-2 block">{copy.coverMessage}</label>
+              <label className="text-xs font-black uppercase tracking-widest text-white/40 mb-2 block">{copy?.coverMessage ?? 'Cover Message'}</label>
               <textarea
                 value={coverMessage}
                 onChange={(e) => setCoverMessage(e.target.value)}
                 rows={4}
                 className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-[#2BB8B8]/50 transition-all resize-none"
-                placeholder={copy.writeMessagePlaceholder}
+                placeholder={copy?.writeMessagePlaceholder ?? 'Write your message...'}
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-black uppercase tracking-widest text-white/40 mb-2 block">{copy.experienceYears}</label>
+                <label className="text-xs font-black uppercase tracking-widest text-white/40 mb-2 block">{copy?.experienceYears ?? 'Experience (Years)'}</label>
                 <input
                   value={experience}
                   onChange={(e) => setExperience(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl p-3.5 text-white outline-none focus:border-[#2BB8B8]/50 transition-all"
-                  placeholder={copy.experiencePlaceholder}
+                  placeholder={copy?.experiencePlaceholder ?? 'e.g. 5'}
                 />
               </div>
               <div>
-                <label className="text-xs font-black uppercase tracking-widest text-white/40 mb-2 block">{copy.availability}</label>
+                <label className="text-xs font-black uppercase tracking-widest text-white/40 mb-2 block">{copy?.availability ?? 'Availability'}</label>
                 <select
                   value={availability}
                   onChange={(e) => setAvailability(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl p-3.5 text-white outline-none focus:border-[#2BB8B8]/50 transition-all"
                 >
-                  <option value="immediate" className="bg-[#1A2E35]">{copy.immediate}</option>
-                  <option value="within_week" className="bg-[#1A2E35]">{copy.withinWeek}</option>
-                  <option value="within_month" className="bg-[#1A2E35]">{copy.withinMonth}</option>
+                  <option value="immediate" className="bg-[#1A2E35]">{copy?.immediate ?? 'Immediate'}</option>
+                  <option value="within_week" className="bg-[#1A2E35]">{copy?.withinWeek ?? 'Within a Week'}</option>
+                  <option value="within_month" className="bg-[#1A2E35]">{copy?.withinMonth ?? 'Within a Month'}</option>
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-black uppercase tracking-widest text-white/40 mb-2 block">{copy.skillsLabel}</label>
+              <label className="text-xs font-black uppercase tracking-widest text-white/40 mb-2 block">{copy?.skillsLabel ?? 'Skills'}</label>
               <input
                 value={skills}
                 onChange={(e) => setSkills(e.target.value)}
                 className="w-full bg-white/5 border border-white/10 rounded-2xl p-3.5 text-white outline-none focus:border-[#2BB8B8]/50 transition-all"
-                placeholder={copy.skillsPlaceholder}
+                placeholder={copy?.skillsPlaceholder ?? 'e.g. Plumbing, Carpentry'}
               />
             </div>
 
@@ -294,9 +294,9 @@ const SiraApply = () => {
                 className="w-5 h-5 rounded border-white/20 bg-white/5 text-[#2BB8B8]"
               />
               <div>
-                <p className="text-white text-sm font-semibold">{copy.attachCVWithApplication}</p>
+                <p className="text-white text-sm font-semibold">{copy?.attachCVWithApplication ?? 'Attach CV with application'}</p>
                 {cvInfo && (
-                  <p className="text-white/40 text-xs mt-0.5">{cvInfo.skills?.join(', ') || 'General'} • {cvInfo.experienceYears} {copy.yrsExp}</p>
+                  <p className="text-white/40 text-xs mt-0.5">{cvInfo.skills?.join(', ') || 'General'} • {cvInfo.experienceYears} {copy?.yrsExp ?? 'yrs exp'}</p>
                 )}
               </div>
             </label>
@@ -311,7 +311,7 @@ const SiraApply = () => {
               ) : (
                 <Send className="w-5 h-5" />
               )}
-              Apply
+              {copy?.apply ?? 'Apply'}
             </button>
           </div>
         )}

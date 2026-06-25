@@ -129,7 +129,7 @@ const JobDetails = () => {
         onClick={() => navigate('/available-jobs')}
         className="flex items-center gap-2 text-white/50 hover:text-white transition text-sm"
       >
-        <ArrowLeft className="w-4 h-4" /> {copy.backToJobs}
+        <ArrowLeft className="w-4 h-4" /> {copy?.backToJobs ?? 'Back to Jobs'}
       </button>
 
       <div className="bg-white/[0.03] border border-white/10 p-6 rounded-[2rem] space-y-6 animate-fade-in">
@@ -168,21 +168,21 @@ const JobDetails = () => {
         {!isOwner && job.employer?.employerProfile?.employerRating && (
           <div className="flex items-center gap-2 p-3 bg-white/5 rounded-xl text-sm text-white/50">
             <Star className="w-4 h-4 shrink-0 text-yellow-400 fill-yellow-400" />
-            {copy.employerRating} {Number(job.employer.employerProfile.employerRating).toFixed(1)}
+            {copy?.employerRating ?? 'Employer Rating'} {Number(job.employer.employerProfile.employerRating).toFixed(1)}
           </div>
         )}
 
         {!isOwner && (
           <div className="flex items-center gap-2 p-3 bg-white/5 rounded-xl text-sm text-white/50">
             <User className="w-4 h-4 shrink-0" />
-            {copy.postedBy} {job.employer?.fullName ?? tr('employerLabel', 'Employer')}
+            {copy?.postedBy ?? 'Posted by'} {job.employer?.fullName ?? tr('employerLabel', 'Employer')}
           </div>
         )}
 
         {myApplication && (
           <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-sm text-emerald-400">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
-            {copy.alreadyAppliedStatus} {translateValue('applicationStatus', myApplication.status)}
+            {copy?.alreadyAppliedStatus ?? 'Status:'} {translateValue('applicationStatus', myApplication.status)}
           </div>
         )}
 
@@ -192,7 +192,7 @@ const JobDetails = () => {
             className="flex items-center justify-center gap-2 w-full p-3 bg-[#2BB8B8]/5 border border-[#2BB8B8]/20 rounded-xl text-[#2BB8B8] text-sm font-semibold hover:bg-[#2BB8B8]/10 transition-all"
           >
             <Navigation className="w-4 h-4" />
-            {copy.viewJobAddress}
+            {copy?.viewJobAddress ?? 'View Job Address'}
           </button>
         )}
 
@@ -209,7 +209,7 @@ const JobDetails = () => {
                 <div>
                   <div className="flex items-center gap-2 text-white text-sm font-semibold">
                     <FileText className="w-4 h-4 text-[#2BB8B8]" />
-                    {copy.sendCVWithApplication}
+                    {copy?.sendCVWithApplication ?? 'Send CV with application'}
                   </div>
                   <p className="text-white/40 text-xs mt-0.5">
                     {cvInfo.skills?.join(', ') || tr('generalLabel', 'General')} • {cvInfo.experienceYears} yrs exp
@@ -224,7 +224,7 @@ const JobDetails = () => {
                   className="flex-1 flex items-center justify-center gap-2 bg-purple-500/20 text-purple-400 border border-purple-500/30 font-black text-sm py-3 rounded-xl hover:bg-purple-500/30 transition-all"
                 >
                   <Sparkles className="w-4 h-4" />
-                  {copy.applyThroughSira}
+                  {copy?.applyThroughSira ?? 'Apply Through Sira'}
                 </button>
                 <button
                   onClick={handleApply}
@@ -236,7 +236,7 @@ const JobDetails = () => {
                   ) : (
                     <Send className="w-4 h-4" />
                   )}
-                  {copy.quickApply}
+                  {copy?.quickApply ?? 'Quick Apply'}
                 </button>
               </div>
               <button
@@ -249,7 +249,7 @@ const JobDetails = () => {
                 ) : (
                   <MessageSquare className="w-4 h-4" />
                 )}
-                {copy.messageEmployer}
+                {copy?.messageEmployer ?? 'Message Employer'}
               </button>
             </div>
           </div>

@@ -21,7 +21,8 @@ const statusPill = (status) => {
 };
 
 const ApplicationHistory = () => {
-  const { copy } = useContext(LanguageContext);
+  const lang = useContext(LanguageContext);
+  const copy = lang?.copy;
   const auth = useContext(AuthContext);
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -165,7 +166,7 @@ const ApplicationHistory = () => {
                         <p>Applied: {new Date(a.createdAt).toLocaleDateString()}</p>
                         <p>Updated: {new Date(a.updatedAt).toLocaleDateString()}</p>
                         {a.matchScore && <p>AI Match Score: {a.matchScore}%</p>}
-                        {a.expectedSalary && <p>Expected Salary: {a.expectedSalary} ETB</p>}
+                        {a.job?.salary && <p>Salary: {a.job.salary} ETB</p>}
                       </div>
                     )}
                   </div>

@@ -164,6 +164,7 @@ const Ratings = () => {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSubmit={handleRatingSubmit}
+        role={active?.roleAtTime || 'employer'}
       />
     </div>
   );

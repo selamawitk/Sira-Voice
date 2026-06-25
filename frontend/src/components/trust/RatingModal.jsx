@@ -48,7 +48,7 @@ const RatingModal = ({ open, onClose, onSubmit, initialComment = '', role = 'emp
 
   const handleSubmit = () => {
     const dims = dimensions.map(d => ({
-      name: d.key,
+      label: d.label,
       score: scores[d.key] || 5,
     }));
     onSubmit({ dimensions: dims, overall, comment });

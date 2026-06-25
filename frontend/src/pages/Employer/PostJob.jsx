@@ -105,7 +105,14 @@ const PostJob = () => {
   const fetchAndRankApplicants = async () => {
     setLoadingApplicants(true);
     try {
-      const response = await api.get('/workers/discover'); 
+      const response = await api.get('/users/workers', {
+        params: {
+          lat: mapCenter[0],
+          lng: mapCenter[1],
+          maxDistance: 50,
+          category: category || undefined,
+        }
+      });
       const workersData = response.data?.data || [];
 
       const processed = workersData.map((worker) => {
@@ -114,7 +121,7 @@ const PostJob = () => {
         const distance = calculateDistance(mapCenter[0], mapCenter[1], workerLat, workerLng);
 
         const hasSkillMatch = category 
-          ? worker.skills?.some(skill => skill.toLowerCase().includes(category.toLowerCase()))
+          ? (worker.workerProfile?.skills || []).some(skill => skill.toLowerCase().includes(category.toLowerCase()))
           : false;
 
         let matchScore = 0;
