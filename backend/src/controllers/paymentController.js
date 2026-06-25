@@ -283,15 +283,16 @@ export const verifyChapaTransaction = asyncHandler(async (req, res) => {
       if (transaction && transaction.purpose === 'job_payment') {
         const io = req.app.get('io');
 
-        const worker = await User.findById(transaction.worker);
-        if (worker) {
-          await User.findByIdAndUpdate(transaction.worker, {
-            $inc: { totalEarnings: transaction.amount }
-          });
-        }
-
+        // Only increment earnings if webhook hasn't already processed this
         const existingPayment = await Payment.findOne({ tx_ref });
         if (!existingPayment) {
+          const worker = await User.findById(transaction.worker);
+          if (worker) {
+            await User.findByIdAndUpdate(transaction.worker, {
+              $inc: { totalEarnings: transaction.amount }
+            });
+          }
+
           await Payment.create({
             employerId: transaction.employer,
             workerId: transaction.worker,

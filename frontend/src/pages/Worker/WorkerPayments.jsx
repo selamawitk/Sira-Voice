@@ -54,8 +54,8 @@ const WorkerPayments = () => {
   }, [user?._id, toast]);
 
   const stats = useMemo(() => {
-    const successfulEarnings = payments.filter(p => p.status === 'success' && p.purpose.includes('Earning'));
-    const pendingWithdrawals = payments.filter(p => p.status === 'pending' && p.purpose.includes('payout'));
+    const successfulEarnings = payments.filter(p => p.status === 'success' && (p.purpose === 'job_payment' || p.purpose?.includes('Job')));
+    const pendingWithdrawals = payments.filter(p => p.status === 'pending' && p.purpose === 'worker_payout_withdrawal');
 
     return {
       totalReceived: successfulEarnings.reduce((sum, p) => sum + (p.amount || 0), 0),

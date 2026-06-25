@@ -29,10 +29,16 @@ export const getWorkerHistory = asyncHandler(async (req, res) => {
     return {
       _id: tx._id,
       title: titleContext,
+      job: tx.job ? { title: tx.job.title, _id: tx.job._id } : null,
       employer: tx.employer?.fullName || 'Sira Platform Partner',
+      employerId: tx.employer ? { fullName: tx.employer.fullName, _id: tx.employer._id } : null,
+      amount: tx.amount,
       payout: tx.amount,
+      tx_ref: tx.tx_ref,
+      purpose: tx.purpose,
       status: tx.status,
       date: tx.paidAt ? new Date(tx.paidAt).toLocaleDateString() : new Date(tx.createdAt).toLocaleDateString(),
+      createdAt: tx.createdAt,
     };
   });
 
