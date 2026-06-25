@@ -86,6 +86,27 @@ export const markAsRead = asyncHandler(async (req, res) => {
   });
 });
 
+export const deleteNotification = asyncHandler(async (req, res) => {
+  const notification = await Notification.findById(req.params.id);
+
+  if (!notification) {
+    res.status(404);
+    throw new Error('Notification not found');
+  }
+
+  if (notification.userId.toString() !== req.user._id.toString()) {
+    res.status(401);
+    throw new Error('Not authorized');
+  }
+
+  await Notification.findByIdAndDelete(req.params.id);
+
+  res.status(200).json({
+    success: true,
+    message: 'Notification deleted'
+  });
+});
+
 export const markAllAsRead = asyncHandler(async (req, res) => {
   await Notification.updateMany(
     { userId: req.user._id, isRead: false },
