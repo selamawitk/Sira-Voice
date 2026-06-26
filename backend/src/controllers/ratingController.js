@@ -75,3 +75,11 @@ export const getJobRatingStatus = asyncHandler(async (req, res) => {
   const myRating = await Rating.findOne({ job: jobId, from: req.user._id });
   res.json({ success: true, hasRated: !!myRating, rating: myRating });
 });
+
+export const getMyGivenRatings = asyncHandler(async (req, res) => {
+  const ratings = await Rating.find({ from: req.user._id })
+    .populate('to', 'fullName')
+    .populate('job', 'title')
+    .sort('-createdAt');
+  res.json({ success: true, data: ratings });
+});

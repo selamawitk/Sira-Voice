@@ -36,6 +36,8 @@ const Dashboard = () => {
   const [contracts, setContracts] = useState([]);
   const [contractsLoading, setContractsLoading] = useState(true);
   const [completingContract, setCompletingContract] = useState(null);
+  const [completedContracts, setCompletedContracts] = useState([]);
+  const [ratingsGiven, setRatingsGiven] = useState(new Set());
 
   const [earningsData, setEarningsData] = useState({ totalEarnings: 0, count: 0 });
   const [showEarnings, setShowEarnings] = useState(true);
@@ -51,6 +53,25 @@ const Dashboard = () => {
       }
     };
     if (user?._id) fetchContracts();
+
+    const fetchCompletedContracts = async () => {
+      try {
+        const res = await api.get(`/contracts/worker/${user?._id}`);
+        const allContracts = res.data?.data ?? [];
+        const completed = allContracts.filter(c => c.status === 'completed');
+        setCompletedContracts(completed);
+
+        const rated = new Set();
+        const ratingsRes = await api.get(`/ratings/${user?._id}`).catch(() => ({ data: { data: [] } }));
+        const myRatings = ratingsRes.data?.data ?? [];
+        const givenRatingsRes = await api.get('/ratings/job-given-ratings').catch(() => ({ data: { data: [] } }));
+        (givenRatingsRes.data?.data ?? []).forEach(r => {
+          if (r.job) rated.add(r.job.toString());
+        });
+        setRatingsGiven(rated);
+      } catch {}
+    };
+    fetchCompletedContracts();
   }, [user?._id]);
 
   useEffect(() => {
@@ -301,6 +322,34 @@ const Dashboard = () => {
                     <CheckCircle2 className="w-4 h-4" />
                   )}
                   Mark Complete
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {completedContracts.filter(c => !ratingsGiven.has(c.jobId?._id?.toString())).length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-black text-white flex items-center gap-2">
+              <Star className="w-5 h-5 text-yellow-400" />
+              Give Feedback
+            </h3>
+          </div>
+          <div className="space-y-3">
+            {completedContracts.filter(c => !ratingsGiven.has(c.jobId?._id?.toString())).map((c) => (
+              <div key={c._id} className="bg-white/[0.03] border border-yellow-500/20 p-5 rounded-3xl flex items-center justify-between gap-4 animate-fade-in">
+                <div>
+                  <p className="text-white font-bold">{c.jobId?.title || 'Completed Job'}</p>
+                  <p className="text-white/45 text-sm mt-1">Your job is completed — rate your experience</p>
+                </div>
+                <button
+                  onClick={() => navigate(`/ratings?jobId=${c.jobId?._id}`)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-yellow-500/30 transition-all"
+                >
+                  <Star className="w-4 h-4" />
+                  Give Feedback
                 </button>
               </div>
             ))}

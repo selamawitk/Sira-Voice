@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
-import { Loader2, DollarSign, Star, Briefcase, CheckCircle2, MessageSquare, MapPin } from 'lucide-react';
+import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
+import { Loader2, DollarSign, Star, Briefcase, CheckCircle2, MessageSquare, MapPin, User, Calendar } from 'lucide-react';
 
 const GlassCard = ({ children, className = '' }) => (
   <div className={`bg-white/[0.03] border border-white/10 rounded-3xl p-6 backdrop-blur-md ${className}`}>
@@ -152,7 +153,7 @@ const ApplicationHistory = () => {
                       >
                         {expandedApp === a._id ? 'Less' : 'Details'}
                       </button>
-                      {a.status === 'accepted' && (
+                      {(a.status === 'accepted' || a.status === 'hired') && (
                         <button
                           onClick={() => handleMessage(a)}
                           className="text-[10px] text-[#2BB8B8] hover:text-white font-semibold uppercase tracking-wider flex items-center gap-1"
@@ -190,9 +191,25 @@ const ApplicationHistory = () => {
                   <div key={c._id} className="bg-[#1A2E35]/70 border border-emerald-500/20 rounded-xl p-3">
                     <p className="text-white font-semibold text-sm truncate">{c.jobId?.title || 'Contract'}</p>
                     <p className="text-emerald-400 text-xs font-bold mt-1">{c.agreedAmount} ETB</p>
-                    <a href={`/chat?jobId=${c.jobId?._id}`} className="text-[10px] text-[#2BB8B8] hover:underline mt-1 inline-block">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await api.post('/chat/conversations', {
+                            jobId: c.jobId?._id,
+                            workerId: auth?.user?._id,
+                            employerId: c.employerId?._id || c.employerId,
+                          });
+                          if (res.data?.success) {
+                            navigate('/chat', { state: { autoSelectConversation: res.data.data } });
+                          }
+                        } catch {
+                          toast?.show?.('Chat not available', 'error');
+                        }
+                      }}
+                      className="text-[10px] text-[#2BB8B8] hover:underline mt-1 inline-block"
+                    >
                       Message Employer →
-                    </a>
+                    </button>
                   </div>
                 ))}
               </div>
@@ -202,24 +219,42 @@ const ApplicationHistory = () => {
           <GlassCard>
             <h3 className="text-white font-black text-sm mb-4 flex items-center gap-2">
               <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-              Recent Ratings ({ratings.length})
+              Review History
             </h3>
-            {ratings.length === 0 ? (
-              <p className="text-white/50 text-sm">No ratings yet</p>
-            ) : (
-              <div className="space-y-3">
-                {ratings.slice(0, 5).map((r) => (
-                  <div key={r._id} className="bg-[#1A2E35]/70 border border-white/10 rounded-xl p-3">
-                    <div className="flex items-center gap-1 text-yellow-400 text-xs">
-                      {'★'.repeat(Math.round(r.overall || r.score || 0))}
-                      {'☆'.repeat(5 - Math.round(r.overall || r.score || 0))}
-                    </div>
-                    <p className="text-white/60 text-[10px] mt-1 line-clamp-2">{r.comment || 'No comment'}</p>
-                    <p className="text-white/30 text-[9px] mt-1">{new Date(r.createdAt).toLocaleDateString()}</p>
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-white/60 text-[10px] font-black uppercase tracking-widest mb-2">Received ({ratings.length})</h4>
+                {ratings.length === 0 ? (
+                  <p className="text-white/50 text-sm">No ratings yet</p>
+                ) : (
+                  <div className="space-y-2">
+                    {ratings.slice(0, 5).map((r) => (
+                      <div key={r._id} className="bg-[#1A2E35]/70 border border-white/10 rounded-xl p-3">
+                        <div className="flex items-center gap-2 text-yellow-400 text-xs">
+                          {'★'.repeat(Math.round(r.overall || r.score || 0))}
+                          {'☆'.repeat(5 - Math.round(r.overall || r.score || 0))}
+                          <span className="text-white/40 text-[9px]">{r.from?.fullName || 'User'}</span>
+                        </div>
+                        {r.comment && <p className="text-white/60 text-[10px] mt-1 line-clamp-2">{r.comment}</p>}
+                        <p className="text-white/30 text-[9px] mt-1">{new Date(r.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
+              <div>
+                <h4 className="text-white/60 text-[10px] font-black uppercase tracking-widest mb-2">
+                  <Briefcase className="w-3 h-3 inline mr-1" />
+                  Quick Links
+                </h4>
+                <button
+                  onClick={() => navigate('/ratings')}
+                  className="w-full text-center py-2 rounded-xl bg-[#2BB8B8]/10 border border-[#2BB8B8]/20 text-[#2BB8B8] text-xs font-bold hover:bg-[#2BB8B8]/20 transition-all"
+                >
+                  {copy?.viewAllRatings || 'View All Ratings & Feedback'}
+                </button>
+              </div>
+            </div>
           </GlassCard>
         </div>
       </div>

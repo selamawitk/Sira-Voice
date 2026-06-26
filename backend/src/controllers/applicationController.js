@@ -375,7 +375,16 @@ export const workerMarkFinished = asyncHandler(async (req, res) => {
     type: 'JOB_COMPLETE',
     jobId: contract.jobId._id,
     contractId: contract._id,
-    additionalData: { action: 'view_job' }
+    additionalData: { action: 'rate_employer' }
+  });
+
+  await sendRealTimeNotification(req.io, req.user._id, {
+    title: 'Give Feedback',
+    message: `Your job "${contract.jobId.title}" is completed. Please rate your experience with the employer.`,
+    type: 'REVIEW',
+    jobId: contract.jobId._id,
+    contractId: contract._id,
+    additionalData: { action: 'rate_employer' }
   });
 
   res.status(200).json({
