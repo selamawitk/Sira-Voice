@@ -188,7 +188,7 @@ export const getJobs = asyncHandler(async (req, res) => {
     limit = 20,
   } = req.query;
 
-  const query = {};
+  const query = { status: 'open' };
 
   if (lat && lng) {
     query.location = {

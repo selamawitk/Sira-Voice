@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Clock, Briefcase, DollarSign, User, Loader2, MessageSquare, Send, FileText, CheckCircle2, Star, Navigation, Sparkles } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Briefcase, DollarSign, User, Loader2, Send, FileText, CheckCircle2, Star, Navigation, Sparkles } from 'lucide-react';
 import api from '../../services/api.js';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
@@ -79,26 +79,6 @@ const JobDetails = () => {
     };
     fetchCV();
   }, [isWorker]);
-
-  const handleMessageEmployer = async () => {
-    if (!job || actionLoading) return;
-    setActionLoading('message');
-    try {
-      const employerId = job.employer?._id || job.employer;
-      const res = await api.post('/chat/conversations', {
-        jobId: job._id,
-        workerId: auth?.user?._id,
-        employerId,
-      });
-      if (res.data?.success) {
-        navigate('/chat', { state: { autoSelectConversation: res.data.data } });
-      }
-    } catch {
-      toast?.show?.('Failed to open chat', 'error');
-    } finally {
-      setActionLoading(null);
-    }
-  };
 
   const handleApply = async () => {
     if (!job || actionLoading) return;
@@ -239,18 +219,6 @@ const JobDetails = () => {
                   {copy?.quickApply ?? 'Quick Apply'}
                 </button>
               </div>
-              <button
-                onClick={handleMessageEmployer}
-                disabled={!!actionLoading}
-                className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-white font-black text-sm py-3 rounded-xl hover:bg-white/10 transition-all disabled:opacity-50"
-              >
-                {actionLoading === 'message' ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <MessageSquare className="w-4 h-4" />
-                )}
-                {copy?.messageEmployer ?? 'Message Employer'}
-              </button>
             </div>
           </div>
         )}

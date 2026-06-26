@@ -1,6 +1,7 @@
 import express from 'express';
 import Conversation from '../models/Conversation.js'; 
 import Message from '../models/Message.js';
+import Contract from '../models/Contract.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -29,6 +30,17 @@ router.post('/conversations', protect, async (req, res) => {
     
     if (!workerId || !employerId || !jobId) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    const contractExists = await Contract.findOne({
+      employerId,
+      workerId,
+      jobId,
+      status: { $in: ['active', 'completed', 'paid'] }
+    });
+
+    if (!contractExists) {
+      return res.status(403).json({ success: false, message: 'Chat is only available after a contract is created. You must be hired first.' });
     }
 
     let conversation = await Conversation.findOne({
