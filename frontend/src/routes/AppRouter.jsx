@@ -21,6 +21,7 @@ const VoiceToCV = lazy(() => import('../pages/Worker/VoiceToCV.jsx'));
 const ApplicationHistory = lazy(() => import('../pages/Worker/ApplicationHistory.jsx'));
 const WorkerPayments = lazy(() => import('../pages/Worker/WorkerPayments.jsx'));
 const JobDetails = lazy(() => import('../pages/Worker/JobDetails.jsx'));
+const SiraApply = lazy(() => import('../pages/Worker/SiraApply.jsx'));
 
 const EmployerDashboard = lazy(() => import('../pages/Employer/Dashboard.jsx'));
 const PostJob = lazy(() => import('../pages/Employer/PostJob.jsx'));
@@ -118,6 +119,7 @@ const AppRouter = () => {
               <Route path="/voice-to-cv" element={<VoiceToCV />} />
               <Route path="/application-history" element={<ApplicationHistory />} />
               <Route path="/payments" element={<WorkerPayments />} />
+              <Route path="/sira-apply/:id" element={<SiraApply />} />
             </Route>
 
             <Route element={<EmployerSection />}>

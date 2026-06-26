@@ -12,6 +12,7 @@ const SiraApply = () => {
   const navigate = useNavigate();
   const auth = useContext(AuthContext);
   const lang = useContext(LanguageContext);
+  const copy = lang?.copy;
   const toast = useContext(ToastContext);
 
   const [job, setJob] = useState(null);
