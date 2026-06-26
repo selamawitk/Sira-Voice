@@ -263,7 +263,7 @@ const WorkerPayments = () => {
                         <td className="py-4 px-4">
                           <div>
                             <p className="text-white font-medium">
-                              {payment.job?.title || (isWithdrawal ? 'Chapa Wallet Outflow Payout' : 'Platform Operations')}
+                              {payment.title || payment.job?.title || (isWithdrawal ? 'Chapa Wallet Outflow Payout' : 'Platform Operations')}
                             </p>
                             <p className="text-white/40 text-xs mt-1 truncate max-w-xs">
                               Ref: {payment.tx_ref}
@@ -271,7 +271,7 @@ const WorkerPayments = () => {
                           </div>
                         </td>
                         <td className="py-4 px-4 text-white/70">
-                          {isWithdrawal ? 'Personal Bank Account' : (payment.employer?.fullName || 'Sira Platform')}
+                          {isWithdrawal ? 'Personal Bank Account' : (payment.employerId?.fullName || payment.employer || 'Sira Platform')}
                         </td>
                         <td className="py-4 px-4 text-right">
                           <p className={`font-semibold ${isWithdrawal ? 'text-rose-400' : 'text-emerald-400'}`}>
