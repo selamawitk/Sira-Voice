@@ -1,4 +1,5 @@
 import React, { useContext, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useVoice } from '../../hooks/useVoice.js';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
@@ -17,10 +18,17 @@ const SiraTalkPage = () => {
   const [jobs, setJobs] = useState([]);
   const [voiceMode, setVoiceMode] = useState('general'); // 'general', 'search', 'job_creation'
 
+  const navigate = useNavigate();
   const auth = useContext(AuthContext);
   const user = auth?.user;
   const lang = useContext(LanguageContext);
   const toast = useContext(ToastContext);
+
+  const modeToAction = {
+    general: 'post-job-ai',
+    search: 'search-jobs',
+    job_creation: 'post-job-ai',
+  };
 
   const start = async () => {
     await startListening(result => {
@@ -33,10 +41,12 @@ const SiraTalkPage = () => {
         toast?.show?.('Profile updated with voice!', 'success');
       } else if (result?.actionTaken === 'JOB_CREATED') {
         toast?.show?.('Job posted successfully!', 'success');
+      } else if (result?.actionTaken === 'APPLICATION_SUBMITTED') {
+        toast?.show?.('Application submitted!', 'success');
       } else {
         toast?.show?.('Voice processed.', 'info');
       }
-    });
+    }, { action: modeToAction[voiceMode] || 'post-job-ai' });
   };
 
   const copyToClipboard = () => {
@@ -178,7 +188,10 @@ const SiraTalkPage = () => {
                       </p>
                     </div>
                     {user?.role === 'worker' && (
-                      <button className="px-6 py-2 rounded-xl bg-[#2BB8B8] text-slate-950 font-semibold hover:scale-105 transition-transform">
+                      <button
+                        onClick={() => navigate(`/sira-apply/${job._id}`)}
+                        className="px-6 py-2 rounded-xl bg-[#2BB8B8] text-slate-950 font-semibold hover:scale-105 transition-transform"
+                      >
                         Apply
                       </button>
                     )}
