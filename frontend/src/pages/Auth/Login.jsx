@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, LogIn, Fingerprint } from 'lucide-react';
-import AuthLayout from '../../components/ui/AuthLayout';
-import Input from '../../components/ui/Input';
+import AuthLayout from '../../components/ui/AuthLayout.jsx';
+import Input from '../../components/ui/Input.jsx';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
 import { baseAPI } from '../../services/api.js';
