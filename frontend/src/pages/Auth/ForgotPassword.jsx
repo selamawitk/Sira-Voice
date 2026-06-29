@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Phone, ArrowLeft, ShieldCheck, Send, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import api from '../../services/api.js';
-import AuthLayout from '../../components/ui/AuthLayout';
-import Input from '../../components/ui/Input';
+import AuthLayout from '../../components/ui/AuthLayout.jsx';
+import Input from '../../components/ui/Input.jsx';
 
 const ForgotPasswordPage = () => {
   const navigate = useNavigate();
