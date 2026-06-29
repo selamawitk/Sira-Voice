@@ -218,6 +218,14 @@ export const createApplicationLogic = async (
     additionalData: { action: 'view_job' }
   });
 
+  if (io) {
+    io.to(workerId.toString()).emit('application_status', {
+      status: 'pending',
+      jobId: job._id,
+      message: 'Application submitted successfully',
+    });
+  }
+
   return application;
 };
 
@@ -291,6 +299,14 @@ export const updateApplicationStatus = asyncHandler(async (req, res) => {
 
   if (status !== 'accepted') {
     await sendRealTimeNotification(req.io, application.worker._id, workerNotification);
+  }
+
+  if (req.io) {
+    req.io.to(application.worker._id.toString()).emit('application_status', {
+      status,
+      jobId: job._id,
+      message: status === 'accepted' ? 'You were hired!' : `Application ${status}`,
+    });
   }
 
   res.status(200).json({
