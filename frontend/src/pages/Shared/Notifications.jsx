@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { Bell, Trash2, CheckCircle2, AlertCircle, Zap, Gift } from 'lucide-react';
+import { Bell, Trash2, CheckCircle2, AlertCircle, Zap, Gift, Shield, Briefcase, MessageSquare, FileText, XCircle, Star, UserCheck, UserX } from 'lucide-react';
 import api from '../../services/api.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
@@ -20,7 +20,26 @@ const NotificationIcon = ({ type }) => {
     case 'PAYMENT':
       return <CheckCircle2 className="w-5 h-5 text-blue-400" />;
     case 'RATING':
-      return <AlertCircle className="w-5 h-5 text-purple-400" />;
+      return <Star className="w-5 h-5 text-purple-400" />;
+    case 'MESSAGE':
+      return <MessageSquare className="w-5 h-5 text-cyan-400" />;
+    case 'CONTRACT':
+      return <FileText className="w-5 h-5 text-orange-400" />;
+    case 'REVIEW':
+      return <AlertCircle className="w-5 h-5 text-pink-400" />;
+    case 'AI_AGENT':
+      return <Zap className="w-5 h-5 text-indigo-400" />;
+    case 'SCAM':
+    case 'FRAUD':
+      return <Shield className="w-5 h-5 text-red-400" />;
+    case 'APPLICATION':
+      return <Briefcase className="w-5 h-5 text-emerald-400" />;
+    case 'JOB_COMPLETE':
+      return <CheckCircle2 className="w-5 h-5 text-teal-400" />;
+    case 'JOB_CLOSED':
+      return <XCircle className="w-5 h-5 text-gray-400" />;
+    case 'SYSTEM':
+      return <Bell className="w-5 h-5 text-white/60" />;
     default:
       return <Bell className="w-5 h-5 text-white/60" />;
   }
@@ -129,6 +148,24 @@ const Notifications = () => {
         return getLabel('filterPayment', 'Payment', 'ክፍያ', 'Kaffaltii');
       case 'RATING': 
         return getLabel('filterRating', 'Rating', 'ደረጃ', 'Sadarkaa');
+      case 'MESSAGE':
+        return getLabel('filterMessage', 'Message', 'መልእክት', 'Ergaa');
+      case 'CONTRACT':
+        return getLabel('filterContract', 'Contract', 'ውል', 'Waliigaltee');
+      case 'REVIEW':
+        return getLabel('filterReview', 'Review', 'ግምገማ', 'Madaallii');
+      case 'AI_AGENT':
+        return getLabel('filterAIAgent', 'AI Agent', 'AI ወኪል', 'Bakka bu\'aa AI');
+      case 'SCAM':
+        return getLabel('filterScam', 'Scam Alert', 'ማጭበርበሪያ', 'Fee\'si of eeggannoo');
+      case 'APPLICATION':
+        return getLabel('filterApplication', 'Application', 'ማመልከቻ', 'Iyyannoo');
+      case 'JOB_COMPLETE':
+        return getLabel('filterComplete', 'Complete', 'ተጠናቋል', 'Xumurame');
+      case 'JOB_CLOSED':
+        return getLabel('filterClosed', 'Closed', 'ተዘግቷል', 'Cufame');
+      case 'SYSTEM':
+        return getLabel('filterSystem', 'System', 'ሲስተም', 'Sirna');
       default: 
         return type.replace('_', ' ');
     }
@@ -163,7 +200,7 @@ const Notifications = () => {
       )}
 
       <div className="flex flex-wrap gap-2 mb-8 pb-4 border-b border-white/10">
-        {['all', 'unread', 'JOB_MATCH', 'HIRE', 'PAYMENT', 'RATING'].map(type => (
+        {['all', 'unread', 'JOB_MATCH', 'HIRE', 'PAYMENT', 'RATING', 'REVIEW', 'MESSAGE', 'CONTRACT', 'AI_AGENT', 'SCAM', 'APPLICATION', 'JOB_COMPLETE', 'JOB_CLOSED', 'SYSTEM'].map(type => (
           <button
             key={type}
             onClick={() => setFilter(type)}
