@@ -5,10 +5,11 @@ import Payment from '../models/Payment.js';
 import ScamAnalysis from '../models/ScamAnalysis.js';
 
 import asyncHandler from '../utils/asyncHandler.js';
+import { calculateDistance } from '../utils/distance.js';
 
 import { findMatchingWorkers } from '../services/jobMatcher.js';
 import { analyzeJobForScam } from '../services/aiService.js';
-import { sendPaymentNotification, sendContractNotification, sendAIAgentNotification, sendRealTimeNotification } from '../services/notificationService.js';
+import { sendPaymentNotification, sendContractNotification, sendAIAgentNotification, sendRealTimeNotification, sendJobClosedNotification } from '../services/notificationService.js';
 
 import { createApplicationLogic } from './applicationController.js';
 
@@ -256,6 +257,69 @@ export const getJobById = asyncHandler(
   }
 );
 
+export const getPassiveMatches = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user || user.role !== 'worker') {
+    return res.status(403).json({ success: false, message: 'Workers only' });
+  }
+
+  const workerSkills = (user.workerProfile?.skills || []).map(s => s.toLowerCase());
+  const workerCategory = (user.workerProfile?.category || '').toLowerCase();
+  const workerLocation = user.location?.coordinates;
+  const workerLang = (user.workerProfile?.preferredLanguage || 'amharic').toLowerCase();
+  const experienceYears = user.workerProfile?.experienceYears || 0;
+  const rating = user.workerProfile?.averageRating || 0;
+
+  const jobs = await Job.find({ status: 'open' })
+    .populate('employer', 'fullName')
+    .sort({ createdAt: -1 })
+    .limit(50);
+
+  const scored = jobs.map(job => {
+    const jobCorpus = `${job.category || ''} ${job.title || ''} ${job.description || ''}`.toLowerCase();
+    const jobLang = (job.preferredLanguage || 'amharic').toLowerCase();
+    const reasons = [];
+
+    const skillHits = workerSkills.filter(s => s && jobCorpus.includes(s)).length;
+    const isCategoryMatch = workerCategory && jobCorpus.includes(workerCategory);
+    const isLanguageMatch = workerLang === jobLang;
+
+    let distance = Infinity;
+    if (workerLocation && workerLocation.length >= 2 && job.location?.coordinates?.length >= 2) {
+      const d = calculateDistance(
+        workerLocation[1], workerLocation[0],
+        job.location.coordinates[1], job.location.coordinates[0]
+      );
+      distance = parseFloat(d || 0);
+    }
+
+    if (skillHits === 0 && !isCategoryMatch) return null;
+
+    if (skillHits > 0) reasons.push('Skill matched');
+    if (isCategoryMatch) reasons.push('Category match');
+    if (distance <= 2) reasons.push('Very nearby');
+    else if (distance <= 5) reasons.push('Nearby');
+    if (experienceYears >= 3) reasons.push('Experienced');
+    if (rating >= 4) reasons.push('Good rating');
+
+    const skillScore = Math.min(25, skillHits * 10 + 5);
+    const categoryScore = isCategoryMatch ? 15 : 0;
+    const langScore = isLanguageMatch ? 5 : 0;
+    const proxScore = distance <= 30 ? Math.max(0, 25 - distance * 1.2) : 0;
+    const expScore = Math.min(10, experienceYears * 1.5);
+    const ratingScore = Math.min(10, rating * 2);
+    const totalScore = Math.min(100, Math.round(skillScore + categoryScore + langScore + proxScore + expScore + ratingScore));
+
+    return {
+      ...job.toObject(),
+      matchScore: totalScore,
+      matchReasons: reasons.slice(0, 5),
+    };
+  }).filter(Boolean).sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+
+  res.json({ success: true, count: scored.length, data: scored });
+});
+
 export const getJobMatches = asyncHandler(
   async (req, res) => {
     const job = await Job.findById(req.params.id);
@@ -455,13 +519,13 @@ export const employerCloseJob = asyncHandler(
       purpose: 'job_payment',
     });
 
-    sendRealTimeNotification(req.io, job.worker._id.toString(), {
-      title: 'Job Closed — Payment Pending',
-      message: `"${job.title}" was closed by employer. Payment of ETB ${amount} is being processed.`,
-      type: 'PAYMENT',
-      jobId: job._id,
-      additionalData: { action: 'view_job' }
-    });
+    sendJobClosedNotification(
+      req.io,
+      job.worker._id.toString(),
+      req.user.fullName || 'Employer',
+      job.title,
+      job._id
+    );
 
     res.json({
       success: true,
