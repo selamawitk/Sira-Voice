@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useContext, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Mic, MicOff, Loader2, Send, FileText, User, MapPin, DollarSign, MessageSquare, ArrowLeft, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Mic, MicOff, Loader2, Send, FileText, User, MapPin, DollarSign, MessageSquare, ArrowLeft, Sparkles, CheckCircle2, Pencil, X } from 'lucide-react';
 import api from '../../services/api.js';
-import { useVoice } from '../../hooks/useVoice.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
@@ -19,7 +18,6 @@ const SiraApply = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [mode, setMode] = useState('choose');
-  const [voiceText, setVoiceText] = useState('');
   const [coverMessage, setCoverMessage] = useState('');
   const [experience, setExperience] = useState('');
   const [skills, setSkills] = useState('');
@@ -28,7 +26,67 @@ const SiraApply = () => {
   const [cvInfo, setCvInfo] = useState(null);
   const [submitted, setSubmitted] = useState(false);
 
-  const { isListening, transcript, isProcessing, startListening, stopListening } = useVoice();
+  const [voiceState, setVoiceState] = useState('idle');
+  const [transcript, setTranscript] = useState('');
+  const [editedTranscript, setEditedTranscript] = useState('');
+  const [isEditingTranscript, setIsEditingTranscript] = useState(false);
+
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+
+  const startRecording = async () => {
+    try {
+      audioChunksRef.current = [];
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        await uploadAudio(blob);
+      };
+
+      recorder.start();
+      setVoiceState('recording');
+    } catch {
+      toast?.show?.('Microphone access denied', 'error');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop();
+      setVoiceState('transcribing');
+    }
+  };
+
+  const uploadAudio = async (blob) => {
+    try {
+      const formData = new FormData();
+      formData.append('audio', blob, 'recording.webm');
+      const res = await api.post('/voice/job-preview', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setTranscript(res.data.transcript || '');
+      setEditedTranscript(res.data.transcript || '');
+      setVoiceState('done');
+    } catch {
+      toast?.show?.('Voice processing failed', 'error');
+      setVoiceState('idle');
+    }
+  };
+
+  const cancelVoice = () => {
+    setVoiceState('idle');
+    setTranscript('');
+    setEditedTranscript('');
+    setIsEditingTranscript(false);
+  };
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -44,13 +102,6 @@ const SiraApply = () => {
     };
     fetchJob();
   }, [id, navigate]);
-
-  useEffect(() => {
-    if (transcript && transcript.trim()) {
-      setVoiceText(transcript);
-      setCoverMessage(transcript);
-    }
-  }, [transcript]);
 
   useEffect(() => {
     const fetchCV = async () => {
@@ -71,12 +122,12 @@ const SiraApply = () => {
     fetchCV();
   }, [auth?.user?._id]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (fromVoice) => {
     if (!job || submitting) return;
     setSubmitting(true);
     try {
-      const source = mode === 'voice' ? 'VOICE' : 'FORM';
-      const message = mode === 'voice' ? voiceText : coverMessage;
+      const source = fromVoice ? 'VOICE' : 'FORM';
+      const message = fromVoice ? editedTranscript : coverMessage;
 
       await api.post(`/applications/${job._id}/apply`, {
         includeCv,
@@ -174,69 +225,133 @@ const SiraApply = () => {
         {mode === 'voice' && (
           <div className="space-y-4">
             <div className="bg-[#1A2E35]/70 border border-white/10 rounded-3xl p-6 text-center">
-              <button
-                onClick={isListening ? stopListening : () => startListening()}
-                className={`relative w-24 h-24 rounded-full mx-auto flex items-center justify-center transition-all ${
-                  isListening
-                    ? 'bg-red-500/20 border-2 border-red-500/50'
-                    : 'bg-[#2BB8B8] hover:scale-105'
-                }`}
-              >
-                {isListening ? (
-                  <MicOff className="w-10 h-10 text-red-400" />
-                ) : (
-                  <Mic className="w-10 h-10 text-white" />
-                )}
-                {isListening && (
-                  <span className="absolute inset-0 rounded-full animate-ping bg-red-500/20" />
-                )}
-              </button>
-              <p className="text-white/60 text-sm mt-4">
-                {isListening ? (copy?.listeningTapToStop ?? 'Listening... tap to stop') : isProcessing ? (copy?.processing ?? 'Processing...') : (copy?.tapToSpeakApplication ?? 'Tap to speak')}
-              </p>
-            </div>
-
-            <div>
-              <label className="text-xs font-black uppercase tracking-widest text-white/40 mb-2 block">
-                {copy?.generatedApplicationText ?? 'Your application text'}
-              </label>
-              <textarea
-                value={voiceText}
-                onChange={(e) => setVoiceText(e.target.value)}
-                rows={6}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-[#2BB8B8]/50 transition-all resize-none"
-                placeholder={copy?.spokenAppPlaceholder ?? 'Your spoken application will appear here...'}
-              />
-              <p className="text-[10px] text-white/30 mt-1">{copy?.editToCorrect ?? 'Edit to correct any mistakes'}</p>
-            </div>
-
-            <label className="flex items-center gap-3 p-4 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
-              <input
-                type="checkbox"
-                checked={includeCv}
-                onChange={(e) => setIncludeCv(e.target.checked)}
-                className="w-5 h-5 rounded border-white/20 bg-white/5 text-[#2BB8B8]"
-              />
-              <div>
-                <p className="text-white text-sm font-semibold">{copy?.attachCVWithApplication ?? 'Attach CV with application'}</p>
-                {cvInfo && (
-                  <p className="text-white/40 text-xs mt-0.5">{cvInfo.skills?.join(', ') || 'General'} • {cvInfo.experienceYears} {copy?.yrsExp ?? 'yrs exp'}</p>
-                )}
-              </div>
-            </label>
-
-            <button
-              onClick={handleSubmit}
-              disabled={submitting || !voiceText.trim()}
-              className="w-full flex items-center justify-center gap-2 bg-[#2BB8B8] text-slate-950 font-black text-sm py-4 rounded-xl hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-50"
-            >
-              {submitting ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
+              {voiceState === 'idle' && (
+                <>
+                  <button
+                    onClick={startRecording}
+                    className="w-24 h-24 rounded-full mx-auto flex items-center justify-center bg-[#2BB8B8] hover:scale-105 transition-all"
+                  >
+                    <Mic className="w-10 h-10 text-white" />
+                  </button>
+                  <p className="text-white/60 text-sm mt-4">
+                    {copy?.tapToSpeakApplication ?? 'Tap to speak your application'}
+                  </p>
+                </>
               )}
-              {copy?.apply ?? 'Apply'}
-            </button>
+
+              {voiceState === 'recording' && (
+                <>
+                  <button
+                    onClick={stopRecording}
+                    className="relative w-24 h-24 rounded-full mx-auto flex items-center justify-center bg-red-500/20 border-2 border-red-500/50 transition-all"
+                  >
+                    <MicOff className="w-10 h-10 text-red-400" />
+                    <span className="absolute inset-0 rounded-full animate-ping bg-red-500/20" />
+                  </button>
+                  <p className="text-white/60 text-sm mt-4">
+                    {copy?.listeningTapToStop ?? 'Recording... tap to stop'}
+                  </p>
+                </>
+              )}
+
+              {voiceState === 'transcribing' && (
+                <div className="py-4">
+                  <Loader2 className="w-12 h-12 animate-spin text-[#2BB8B8] mx-auto mb-3" />
+                  <p className="text-white/60 text-sm">
+                    {copy?.processing ?? 'Processing voice...'}
+                  </p>
+                </div>
+              )}
+
+              {voiceState === 'done' && (
+                <>
+                  <div className="w-24 h-24 rounded-full mx-auto flex items-center justify-center bg-emerald-500/10 border border-emerald-500/20">
+                    <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+                  </div>
+                  <p className="text-white/60 text-sm mt-4">
+                    {copy?.transcriptionComplete ?? 'Transcription complete'}
+                  </p>
+                </>
+              )}
+            </div>
+
+            {voiceState === 'done' && (
+              <>
+                <div>
+                  <label className="text-xs font-black uppercase tracking-widest text-white/40 mb-2 block">
+                    {copy?.generatedApplicationText ?? 'Your application text'}
+                  </label>
+                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl p-3">
+                    {isEditingTranscript ? (
+                      <div className="flex-1 flex items-center gap-2">
+                        <input
+                          value={editedTranscript}
+                          onChange={(e) => setEditedTranscript(e.target.value)}
+                          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-white text-xs outline-none focus:border-[#2BB8B8]/50"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => { setIsEditingTranscript(false); setEditedTranscript(transcript); }}
+                          className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white/70 transition-all"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-xs text-white/70 text-left leading-relaxed truncate flex-1">
+                          {editedTranscript || transcript}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingTranscript(true)}
+                          className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-[#2BB8B8] transition-all shrink-0"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-3 p-4 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={includeCv}
+                    onChange={(e) => setIncludeCv(e.target.checked)}
+                    className="w-5 h-5 rounded border-white/20 bg-white/5 text-[#2BB8B8]"
+                  />
+                  <div>
+                    <p className="text-white text-sm font-semibold">{copy?.attachCVWithApplication ?? 'Attach CV with application'}</p>
+                    {cvInfo && (
+                      <p className="text-white/40 text-xs mt-0.5">{cvInfo.skills?.join(', ') || 'General'} • {cvInfo.experienceYears} {copy?.yrsExp ?? 'yrs exp'}</p>
+                    )}
+                  </div>
+                </label>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={cancelVoice}
+                    className="flex-1 px-4 py-3 rounded-xl bg-white/5 text-white/70 font-semibold text-sm hover:bg-white/10 transition-all"
+                  >
+                    {copy?.cancel ?? 'Cancel'}
+                  </button>
+                  <button
+                    onClick={() => handleSubmit(true)}
+                    disabled={submitting || !editedTranscript.trim()}
+                    className="flex-1 flex items-center justify-center gap-2 bg-[#2BB8B8] text-slate-950 font-black text-sm py-3 rounded-xl hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {submitting ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                    {copy?.apply ?? 'Apply'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -303,7 +418,7 @@ const SiraApply = () => {
             </label>
 
             <button
-              onClick={handleSubmit}
+              onClick={() => handleSubmit(false)}
               disabled={submitting || !coverMessage.trim()}
               className="w-full flex items-center justify-center gap-2 bg-[#2BB8B8] text-slate-950 font-black text-sm py-4 rounded-xl hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-50"
             >
