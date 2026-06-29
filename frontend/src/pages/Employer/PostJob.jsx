@@ -52,15 +52,16 @@ const PostJob = () => {
   const [mapCenter, setMapCenter] = useState([8.9806, 38.7578]);
 
   const handleVoiceData = (data) => {
-    if (data.title) setTitle(data.title);
-    if (data.category) setCategory(data.category);
-    if (data.address || data.location) setAddress(data.address || data.location);
-    if (data.salary) setSalary(String(data.salary));
-    if (data.description) setDescription(data.description);
-    if (data.paymentType) setPaymentType(data.paymentType);
+    const jobData = data?.data || data;
+    if (jobData.title) setTitle(jobData.title);
+    if (jobData.category) setCategory(jobData.category);
+    if (jobData.address || jobData.location) setAddress(jobData.address || jobData.location);
+    if (jobData.salary) setSalary(String(jobData.salary));
+    if (jobData.description) setDescription(jobData.description);
+    if (jobData.paymentType) setPaymentType(jobData.paymentType);
 
-    if (data.coordinates) {
-      setMapCenter([data.coordinates[1], data.coordinates[0]]);
+    if (jobData.coordinates) {
+      setMapCenter([jobData.coordinates[1], jobData.coordinates[0]]);
     }
 
     toast?.show?.(

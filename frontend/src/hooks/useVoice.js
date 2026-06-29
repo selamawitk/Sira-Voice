@@ -163,8 +163,22 @@ export const useVoice = (onCompleteCallback, externalLang) => {
       }
     } catch (err) {
       console.error(err);
-      setError('AI processing failed. Try again.');
-      toastContext?.show?.('AI processing failed. Try again.', 'error');
+      if (err.code === 'ECONNABORTED' || err.message === 'TIMEOUT') {
+        setError('Request timed out. Check your connection and try again.');
+        toastContext?.show?.('Request timed out. Check your connection.', 'error');
+      } else if (err.response?.status === 401) {
+        setError('Session expired. Please refresh and log in again.');
+        toastContext?.show?.('Session expired. Please refresh and log in again.', 'error');
+      } else if (err.response?.status === 429) {
+        setError('Too many requests. Please wait a moment.');
+        toastContext?.show?.('Too many requests. Please slow down.', 'error');
+      } else if (err.response?.status >= 500) {
+        setError('Server error. Please try again later.');
+        toastContext?.show?.('Server error. Please try again later.', 'error');
+      } else {
+        setError('AI processing failed. Try again.');
+        toastContext?.show?.('AI processing failed. Try again.', 'error');
+      }
     } finally {
       setIsProcessing(false);
     }
