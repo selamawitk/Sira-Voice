@@ -3,144 +3,67 @@ import asyncHandler from '../utils/asyncHandler.js';
 import {
   analyzeJobForScam,
   extractProfileFromText,
-  processTextToData
+  processTextToData,
+  enhanceJobSearchWithRanking,
 } from '../services/aiService.js';
 
 import { transcribeAudio } from '../services/voiceService.js';
-import { createApplicationLogic } from './applicationController.js';
+import { processIntent } from '../services/voiceActionService.js';
 import { processNewJobMatches } from './jobController.js';
-import { findMatchingWorkers } from '../services/jobMatcher.js';
+import { sendScamAlertNotification } from '../services/notificationService.js';
 
 import Job from '../models/Job.js';
 import User from '../models/User.js';
+import ScamAnalysis from '../models/ScamAnalysis.js';
 
 export const processVoiceAction = asyncHandler(async (req, res) => {
-  let text = req.body.transcript;
-  let detectedLang = req.body.language || 'unknown';
+  let text = req.body.transcript || req.body.text || '';
+  const detectedLang = req.body.lang || req.body.language || 'en';
 
   if (req.file) {
     const transcription = await transcribeAudio(req.file.path);
     text = transcription.text;
   }
 
-  if (!text) {
-    return res.json({
-      success: false,
-      transcript: '',
-      aiInterpreted: {},
-      actionTaken: 'NO_SPEECH'
-    });
-  }
+  const result = await processIntent({
+    text,
+    detectedLang,
+    user: req.user,
+    jobId: req.body.jobId,
+  });
 
-  const intent = await processTextToData(text);
+  if (result.actionTaken === 'JOB_CREATED' && req.io) {
+    await processNewJobMatches(result.data, req.io);
 
-  const response = {
-    transcript: text,
-    language: detectedLang,
-    aiInterpreted: intent,
-    actionTaken: '',
-    data: []
-  };
-
-  if (intent.intent === 'post' && req.user?.role === 'employer') {
-    const job = await Job.create({
-      employer: req.user._id,
-      title: intent.category
-        ? `${intent.category} Job`
-        : 'New Job',
-      category: intent.category || 'General',
-      description: text,
-      salary: intent.salary || 0,
-      location: {
-        address: intent.location || 'Addis Ababa',
-        type: 'Point',
-        coordinates: [38.7578, 8.9806]
-      },
-      status: 'open'
-    });
-
-    await processNewJobMatches(job, req.io);
-    await findMatchingWorkers(job);
-
-    response.actionTaken = 'JOB_CREATED';
-    response.data = job;
-  }
-
-  else if (intent.intent === 'apply' && req.user?.role === 'worker') {
-    const jobId = req.body.jobId;
-
-    if (!jobId) {
-      return res.json({
-        success: false,
-        actionTaken: 'ERROR',
-        error: 'Missing jobId'
-      });
-    }
-
-    const application = await createApplicationLogic(
-      jobId,
-      req.user._id,
-      req.io,
-      false
-    );
-
-    response.actionTaken = 'JOB_APPLICATION_CREATED';
-    response.data = {
-      applicationId: application._id,
-      jobId
-    };
-  }
-
-  else if (intent.intent === 'search') {
-    const jobs = await Job.find({
-      $or: [
-        {
-          category: {
-            $regex: intent.category || '',
-            $options: 'i'
-          }
-        },
-        {
-          title: {
-            $regex: intent.category || '',
-            $options: 'i'
-          }
-        }
-      ]
-    })
-      .limit(10)
-      .populate('employer', 'fullName');
-
-    response.actionTaken = 'JOB_SEARCH_RESULTS';
-    response.data = jobs;
-  }
-
-  else if (intent.intent === 'profile' && req.user) {
-    const user = await User.findById(req.user._id);
-
-    if (user && user.role === 'worker') {
-      user.workerProfile.skills = [
-        ...new Set([
-          ...(user.workerProfile.skills || []),
-          ...(intent.skills || [])
-        ])
-      ];
-
-      user.workerProfile.bio =
-        intent.summary || user.workerProfile.bio;
-
-      await user.save();
-
-      response.actionTaken = 'PROFILE_UPDATED';
-      response.data = user.workerProfile;
+    if (result.scamCheck && !result.scamCheck.isSafe) {
+      sendScamAlertNotification(
+        req.io,
+        req.user._id,
+        'Job Flagged — Review Required',
+        `Your job "${result.data?.title}" was flagged by AI (risk: ${result.scamCheck.score}/100). ${result.scamCheck.reason}`,
+        result.data?._id
+      );
+      try {
+        await ScamAnalysis.create({
+          jobId: result.data?._id,
+          isSafe: result.scamCheck.isSafe,
+          score: result.scamCheck.score,
+          reason: result.scamCheck.reason,
+          flags: result.scamCheck.flags || [],
+          analyzedAt: new Date(),
+        });
+      } catch (err) {
+        console.error('Scam analysis save failed:', err.message);
+      }
     }
   }
 
-  return res.json(response);
+  return res.json({ success: true, ...result });
 });
 
 export const voiceJobSearch = asyncHandler(async (req, res) => {
   let text = req.body.transcript;
+  const detectedLang = req.body.lang || 'en';
 
   if (req.file) {
     const transcription = await transcribeAudio(req.file.path);
@@ -172,12 +95,24 @@ export const voiceJobSearch = asyncHandler(async (req, res) => {
       }
     ]
   })
-    .limit(10)
+    .limit(20)
     .populate('employer', 'fullName');
 
+  const rankings = await enhanceJobSearchWithRanking(text, jobs, detectedLang);
+  const rankedJobs = jobs.map((job, i) => {
+    const rank = rankings.find(r => r.index === i) || {};
+    return {
+      ...job.toObject(),
+      matchScore: rank.matchScore || 50,
+      matchReasons: rank.reasons || ['Available job'],
+    };
+  }).sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+
   res.json({
+    success: true,
+    transcript: text,
     aiInterpreted: intent,
-    jobs
+    jobs: rankedJobs
   });
 });
 
