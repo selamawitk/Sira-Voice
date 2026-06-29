@@ -32,6 +32,7 @@ export const findMatchingWorkers = async (job) => {
       const experienceYears = worker.workerProfile?.experienceYears || 0;
       const rating = worker.workerProfile?.averageRating || worker.workerProfile?.rating || 0;
       const maxDistance = worker.workerProfile?.agentPreferences?.maxDistance || 15;
+      const reasons = [];
 
       if (
         !worker.location?.coordinates ||
@@ -51,7 +52,6 @@ export const findMatchingWorkers = async (job) => {
         ) || 0
       );
 
-      // Boundary check using worker baseline max preference or 30km safety buffer
       if (distance > maxDistance && distance > 30) {
         return null;
       }
@@ -65,10 +65,19 @@ export const findMatchingWorkers = async (job) => {
       
       const isLanguageMatch = preferredLanguage === jobLanguage;
 
-      // Tight requirement constraint: Worker must match either specific baseline skills OR the overall profile job category
       if (skillHits === 0 && !isCategoryMatch) {
         return null;
       }
+
+      if (skillHits > 0) reasons.push('Skill matched');
+      if (isCategoryMatch) reasons.push('Category match');
+      if (isLanguageMatch) reasons.push('Language match');
+      if (distance <= 2) reasons.push('Very nearby');
+      else if (distance <= 5) reasons.push('Nearby');
+      if (experienceYears >= 3) reasons.push('Experienced');
+      if (rating >= 4) reasons.push('Good rating');
+      if (rating >= 4.5) reasons.push('High rating');
+      if (worker.isVerified) reasons.push('Verified worker');
 
       const skillScore = skillHits > 0 ? Math.min(25, skillHits * 10 + 5) : 0;
       const categoryScore = isCategoryMatch ? 15 : 0;
@@ -95,14 +104,16 @@ export const findMatchingWorkers = async (job) => {
           fullName: worker.fullName,
           phone: worker.phone,
           isVerified: worker.isVerified,
-          workerProfile: worker.workerProfile
+          workerProfile: worker.workerProfile,
+          location: worker.location,
         },
         _id: worker._id,
         fullName: worker.fullName,
         distance: distance.toFixed(2),
         score: finalMatchScore,
+        reasons: reasons.slice(0, 5),
         breakdown: {
-          requirementsMatch: Math.round((totalRequirementsScore / 45) * 100), // % match of skills/category
+          requirementsMatch: Math.round((totalRequirementsScore / 45) * 100),
           proximityScore: Math.round(proximityScore),
           rating
         },
