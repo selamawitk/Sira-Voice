@@ -4,6 +4,7 @@ import {
   getJobs, 
   getJobById,
   getJobMatches,
+  getPassiveMatches,
   startJob,
   completeJob,
   workerMarkComplete,
@@ -20,6 +21,8 @@ router.route('/')
   .get(getJobs); 
 
 router.get('/nearby', getJobs); 
+
+router.get('/passive-matches', protect, workerOnly, getPassiveMatches);
 
 router.get('/:id/matches', protect, employerOnly, getJobMatches);
 
