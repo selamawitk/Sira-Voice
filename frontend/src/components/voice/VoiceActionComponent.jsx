@@ -35,7 +35,7 @@ const VoiceActionComponent = ({
     }
 
     await startListening(
-      async (voiceResult) => {
+      (voiceResult) => {
         try {
           if (voiceResult?.error) {
             toast?.show?.(voiceResult.error, 'error');
@@ -43,33 +43,17 @@ const VoiceActionComponent = ({
             return;
           }
 
-          let endpoint = '/ai/voice-action';
+          const actionTaken = voiceResult?.actionTaken || '';
 
-          if (action === 'apply-job') {
-            endpoint = '/applications/voice-apply';
-          }
-
-          const response = await api.post(endpoint, {
-            text: voiceResult.transcript,
-            action,
-            jobId
-          });
-
-          const data = await response.json();
-
-          if (!response.ok) {
-            throw new Error(data?.message || 'Voice processing failed');
-          }
-
-          if (action === 'apply-job') {
+          if (actionTaken === 'APPLICATION_SUBMITTED') {
             toast?.show?.('Application submitted successfully!', 'success');
-          } else if (action === 'post-job') {
+          } else if (actionTaken === 'JOB_CREATED') {
             toast?.show?.('Job posted successfully!', 'success');
           } else {
             toast?.show?.('Voice command processed!', 'success');
           }
 
-          onSuccess?.(data);
+          onSuccess?.(voiceResult.data || voiceResult);
         } catch (err) {
           toast?.show?.(err.message || 'Voice processing failed', 'error');
           onError?.(err.message);
@@ -167,15 +151,19 @@ const VoiceActionComponent = ({
       {result && !isProcessing && (
         <div className="mt-4 p-4 bg-green-500/10 border border-green-500/20 rounded-2xl">
           <p className="text-green-400 text-sm font-medium">
-            ✓ {result.message || 'Action completed successfully'}
+            ✓ {result.actionTaken?.replace(/_/g, ' ') || 'Action completed'}
           </p>
 
           {result.data && (
             <div className="mt-2 text-xs text-green-300">
-              {action === 'apply-job' && 'Application submitted'}
-              {action === 'post-job' &&
+              {result.actionTaken === 'APPLICATION_SUBMITTED' && 'Application submitted'}
+              {result.actionTaken === 'JOB_CREATED' &&
                 `Job: ${result.data?.title || 'Created'}`}
-              {action === 'voice-action' &&
+              {result.actionTaken === 'JOB_SEARCH_RESULTS' &&
+                `${Array.isArray(result.data) ? result.data.length : 0} jobs found`}
+              {result.actionTaken === 'PROFILE_UPDATED' &&
+                'Profile updated'}
+              {!['APPLICATION_SUBMITTED','JOB_CREATED','JOB_SEARCH_RESULTS','PROFILE_UPDATED'].includes(result.actionTaken) &&
                 'Voice command executed'}
             </div>
           )}
