@@ -43,6 +43,27 @@ export const deleteJob = asyncHandler(async (req, res) => {
   }
 });
 
+export const getScamAnalysis = asyncHandler(async (req, res) => {
+  const flaggedJobs = await Job.find({ isAiFlagged: true })
+    .populate('employer', 'fullName email phone')
+    .sort({ createdAt: -1 })
+    .limit(100);
+
+  const data = flaggedJobs.map(job => ({
+    _id: job._id,
+    title: job.title,
+    description: job.description?.substring(0, 200),
+    employer: job.employer,
+    salary: job.salary,
+    status: job.status,
+    aiRiskScore: job.aiRiskScore || 0,
+    aiReason: job.aiAnalysis?.reason || job.aiAnalysis?.isSafe === false ? 'Flagged by AI' : 'No reason',
+    flaggedAt: job.createdAt,
+  }));
+
+  res.json({ success: true, count: data.length, data });
+});
+
 export const getScamHistory = asyncHandler(async (req, res) => {
   const history = await ScamAnalysis.find()
     .populate({ path: 'jobId', select: 'title location salary employer' })
