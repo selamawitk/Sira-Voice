@@ -1,12 +1,13 @@
 import cron from 'node-cron';
 import Job from '../models/Job.js';
 import User from '../models/User.js';
-import { sendAIAgentNotification } from '../services/notificationService.js';
+import { findMatchingWorkers } from '../services/jobMatcher.js';
+import { sendAIAgentNotification, sendJobMatchNotification } from '../services/notificationService.js';
 import { createApplicationLogic } from '../controllers/applicationController.js';
 
 export const initCronJobs = (io) => {
   cron.schedule('*/5 * * * *', async () => {
-    console.log('🤖 Sira Agent: Scanning for new matches...');
+    console.log('AI Agent: Scanning for new matches...');
     
     try {
       const recentThreshold = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -16,28 +17,38 @@ export const initCronJobs = (io) => {
       });
 
       for (const job of newJobs) {
-        const matchingWorkers = await User.find({
-          role: 'worker',
-          isAgentActive: true,
-          $or: [
-            { 'workerProfile.skills': { $regex: job.category, $options: 'i' } },
-            { 'workerProfile.bio': { $regex: job.category, $options: 'i' } }
-          ],
-          'location.address': { $regex: job.location.address, $options: 'i' }
-        }).limit(10);
+        const rankedMatches = await findMatchingWorkers(job);
 
-        for (const worker of matchingWorkers) {
-          if (worker.workerProfile.agentPreferences?.autoApply) {
+        for (const match of rankedMatches) {
+          const workerId = match._id;
+          const score = match.score;
+          const reasons = match.reasons || [];
+
+          if (!workerId) continue;
+
+          const worker = await User.findById(workerId);
+          if (!worker) continue;
+
+          const autoApply = worker.workerProfile?.agentPreferences?.autoApply;
+
+          if (autoApply && score >= 60) {
             try {
-              await createApplicationLogic(job._id, worker._id, io, true);
-              console.log(`✅ Auto-Applied: Worker ${worker.fullName} to Job ${job.title}`);
+              await createApplicationLogic(job._id, workerId, io, true);
+              console.log(`Auto-Applied: Worker ${worker.fullName} (score: ${score}) to Job ${job.title}`);
             } catch (err) {
               if (err.statusCode !== 400) {
-                console.error(`Auto-Apply failed for worker ${worker._id}:`, err.message);
+                console.error(`Auto-Apply failed for worker ${workerId}:`, err.message);
               }
             }
           } else {
-            await sendAIAgentNotification(io, worker._id, 'Sira Agent found a match', `A new ${job.category} job was posted in ${job.location.address}. It fits your profile perfectly!`, { jobId: job._id });
+            const reasonText = reasons.length > 0 ? reasons.slice(0, 3).join(', ') : `${score}% match`;
+            await sendAIAgentNotification(
+              io,
+              workerId,
+              `Match: ${score}% - ${job.title}`,
+              `New ${job.category} job matches your profile. ${reasonText}.`,
+              { jobId: job._id, matchScore: score, matchReasons: reasons }
+            );
           }
         }
       }
