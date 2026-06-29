@@ -72,19 +72,7 @@ const PostJob = () => {
     );
   };
 
-  const {
-    isListening,
-    transcript,
-    error: voiceError,
-    startListening,
-    stopListening
-  } = useVoice(handleVoiceData, activeLang);
-
-  useEffect(() => {
-    if (voiceError) {
-      toast?.show?.(voiceError, 'error');
-    }
-  }, [voiceError, toast]);
+  useVoice(handleVoiceData, activeLang);
 
   useEffect(() => {
     if (activeTab === 'applicants') {
@@ -247,32 +235,17 @@ const PostJob = () => {
             </div>
           </div>
 
-          <div className={`mb-8 border transition-all duration-300 rounded-4xl p-8 flex flex-col items-center justify-center text-center relative overflow-hidden backdrop-blur-xl ${
-            isListening 
-              ? 'bg-[#2BB8B8]/10 border-[#2BB8B8]/40 shadow-xl shadow-[#2BB8B8]/5' 
-              : 'bg-white/5 border-white/10'
-          }`}>
+          <div className="mb-8 border transition-all duration-300 rounded-4xl p-8 flex flex-col items-center justify-center text-center relative overflow-hidden backdrop-blur-xl bg-white/5 border-white/10 hover:bg-white/[0.07] hover:border-[#2BB8B8]/20 cursor-pointer" onClick={() => navigate('/voice-job-posting')}>
             <div className="absolute -left-20 -top-20 w-48 h-48 bg-[#2BB8B8] opacity-[0.02] blur-3xl pointer-events-none" />
             <div className="absolute -right-20 -bottom-20 w-48 h-48 bg-[#2BB8B8] opacity-[0.02] blur-3xl pointer-events-none" />
 
             <div className="relative flex items-center justify-center mb-4">
-              {isListening && (
-                <>
-                  <div className="absolute w-28 h-28 rounded-full bg-red-500/20 animate-ping opacity-70" />
-                  <div className="absolute w-36 h-36 rounded-full bg-red-500/10 animate-pulse opacity-40" />
-                </>
-              )}
-              
               <button
                 type="button"
-                onClick={isListening ? stopListening : startListening}
-                className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 transform active:scale-95 shadow-xl relative z-10 ${
-                  isListening 
-                    ? 'bg-gradient-to-tr from-red-600 to-red-500 text-white shadow-red-500/30' 
-                    : 'bg-[#2BB8B8] text-slate-950 hover:scale-105 shadow-[#2BB8B8]/20'
-                }`}
+                onClick={() => navigate('/voice-job-posting')}
+                className="w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 transform active:scale-95 shadow-xl relative z-10 bg-gradient-to-br from-[#2BB8B8] to-emerald-500 text-slate-950 hover:scale-105 shadow-[#2BB8B8]/20 cursor-pointer"
               >
-                {isListening ? <MicOff className="w-10 h-10 animate-bounce" /> : <Mic className="w-10 h-10" />}
+                <Mic className="w-10 h-10" />
               </button>
             </div>
 
@@ -281,28 +254,20 @@ const PostJob = () => {
                 {activeLang === 'am' ? 'የሲራ ድምፅ ረዳት' : activeLang === 'or' ? 'Gargaara Sagalee Sira' : 'Sira Voice AI Agent'}
               </span>
               <h3 className="text-white font-semibold text-lg mt-2 normal-case">
-                {isListening 
-                  ? (activeLang === 'am' ? 'እያዳመጥኩ ነው... ለመጨረስ አዝራሩን ይጫኑ' : activeLang === 'or' ? 'Dhaggeeffachaan jira... Xumuruuf cuqaasi' : 'Listening... Click button to finalize') 
-                  : (activeLang === 'am' ? 'በድምፅዎ በፍጥነት ስራ ለመለጠፍ ይጫኑ' : activeLang === 'or' ? 'Sagaleen hojii galchuuf cuqaasi' : 'Click microphone to dictate job description')}
+                {activeLang === 'am' ? 'በድምፅ ስራ ለመለጠፍ እዚህ ይጫኑ' : activeLang === 'or' ? 'Sagaleen hojii galchuuf as cuqaasi' : 'Click to post a job with voice'}
               </h3>
               <p className="text-white/40 text-xs normal-case">
-                {activeLang === 'am' ? 'አማርኛ • Afan Oromo • English ይናገሩ' : 'Speak in Amharic • Afaan Oromoo • English'}
+                {activeLang === 'am' ? 'አማርኛ • Afan Oromo • English' : 'Works in Amharic • Afaan Oromoo • English'}
               </p>
             </div>
 
-            {(isListening || transcript) && (
-              <div className="mt-6 w-full max-w-xl p-4 bg-slate-950/40 border border-white/5 rounded-2xl text-center backdrop-blur-md">
-                <p className="text-[10px] text-[#2BB8B8] font-bold uppercase tracking-wider mb-2.5 flex items-center justify-center gap-1.5">
-                  <span className="w-2 h-2 bg-[#2BB8B8] rounded-full animate-ping" />
-                  {activeLang === 'am' ? 'የተቀዳ ፅሁፍ' : activeLang === 'or' ? 'Waraabbama Sagalee' : 'Voice Live Transcript'}
-                </p>
-                <p className="text-white/90 text-sm italic font-medium leading-relaxed">
-                  {isListening && !transcript
-                    ? (activeLang === 'am' ? '"በቦሌ አዲስ አበባ ነገ የሚሰራ..."' : activeLang === 'or' ? '"Finfinnee Booleetti..."' : '"I need a professional plumber tomorrow..."') 
-                    : transcript}
-                </p>
-              </div>
-            )}
+            <p className="mt-4 text-[11px] text-white/30 max-w-md mx-auto leading-relaxed">
+              {activeLang === 'am' 
+                ? 'ለምርጥ ውጤት እንደዚህ ይበሉ፡ "የቧንቧ ሰራተኛ እፈልጋለሁ፣ በቦሌ፣ በቀን 800 ብር" — የስራ ርዕስ፣ ቦታ፣ ደሞዝ እና የክፍያ አይነት ይጥቀሱ' 
+                : activeLang === 'or' 
+                ? 'Ittaatti jedhaa: "Hojjetaa boombii nan barbaada, Finfinnee Booleetti, guyyaa 800 birr" — mata duree hojii, iddoo, kafaltii fi gosa kafaltii ibsi' 
+                : 'For best results say: "I need a plumber in Bole, 800 birr per day" — include job title, location, salary, and payment type'}
+            </p>
           </div>
 
           <form onSubmit={submit} className="bg-white/3 border border-white/10 rounded-4xl p-6 space-y-5 backdrop-blur-md relative overflow-hidden text-left">

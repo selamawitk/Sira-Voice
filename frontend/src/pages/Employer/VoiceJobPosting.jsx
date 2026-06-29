@@ -3,10 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api.js';
 import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
-import { useVoice } from '../../hooks/useVoice.js';
 import {
   Mic, Square, Keyboard, Send, CheckCircle2,
-  Briefcase, MapPin, Calendar, DollarSign, Users,
 } from 'lucide-react';
 
 const VoiceJobPosting = () => {
@@ -16,13 +14,10 @@ const VoiceJobPosting = () => {
   const copy = lang?.copy || {};
   const activeLang = lang?.lang || 'en';
 
-  const {
-    isListening,
-    transcript,
-    isProcessing,
-    startListening,
-    stopListening,
-  } = useVoice();
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   const [showKeyboard, setShowKeyboard] = useState(false);
   const [manualText, setManualText] = useState('');
@@ -42,27 +37,78 @@ const VoiceJobPosting = () => {
     description: '',
   });
 
-  const handleVoiceResult = (voiceResult) => {
-    if (voiceResult?.job) {
-      setPreview(voiceResult);
-      setEditableJob({
-        jobTitle: voiceResult.job.jobTitle || '',
-        quantity: voiceResult.job.quantity || 1,
-        location: voiceResult.job.location || '',
-        urgency: voiceResult.job.urgency || 'flexible',
-        salary: voiceResult.job.salary || 0,
-        paymentType: voiceResult.job.paymentType || 'daily',
-        description: voiceResult.transcript || '',
-      });
-      setSaved(false);
-      toast?.show?.('Voice processed! Review the details below.', 'success');
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        await uploadAudio(audioBlob);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      toast?.show?.('Microphone access denied. Please allow microphone permissions.', 'error');
     }
   };
 
-  const startVoice = async () => {
-    setPreview(null);
-    setSaved(false);
-    await startListening(handleVoiceResult, { action: 'post-job-ai' });
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      setIsProcessing(true);
+    }
+  };
+
+  const uploadAudio = async (audioBlob) => {
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
+
+      const res = await api.post('/voice/job-preview', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000,
+      });
+
+      const data = res.data;
+      if (data?.job) {
+        setPreview(data);
+        setEditableJob({
+          jobTitle: data.job.jobTitle || '',
+          quantity: data.job.quantity || 1,
+          location: data.job.location || '',
+          urgency: data.job.urgency || 'flexible',
+          salary: data.job.salary || 0,
+          paymentType: data.job.paymentType || 'daily',
+          description: data.transcript || '',
+        });
+        setSaved(false);
+        toast?.show?.('Voice processed! Review the details below.', 'success');
+      } else {
+        toast?.show?.('Could not extract job details from voice. Try speaking clearly.', 'error');
+      }
+    } catch (err) {
+      if (err.response?.status === 401) {
+        toast?.show?.('Session expired. Please refresh and log in again.', 'error');
+      } else if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+        toast?.show?.('Request timed out. Try a shorter recording.', 'error');
+      } else {
+        toast?.show?.(err.response?.data?.message || 'Voice processing failed. Try again.', 'error');
+      }
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleManualSubmit = async (e) => {
@@ -138,26 +184,26 @@ const VoiceJobPosting = () => {
           <div className="absolute -top-40 -right-40 w-[520px] h-[520px] bg-[#2BB8B8] opacity-[0.07] blur-[140px] pointer-events-none" />
 
           <p className="text-xs font-black uppercase tracking-[0.24em] text-white/40 mb-4">
-            Speak Your Job
+            {activeLang === 'am' ? 'በድምጽዎ ይናገሩ' : activeLang === 'or' ? 'Sagaleen Dubbadhu' : 'Speak Your Job'}
           </p>
 
           <div className="flex flex-col items-center gap-6 py-4">
             <div className="flex items-center gap-4 w-full justify-center">
               <button
-                onClick={isListening ? stopListening : startVoice}
+                onClick={isRecording ? stopRecording : startRecording}
                 disabled={isBusy}
                 className="relative w-40 h-40 rounded-full grid place-items-center bg-[#1A2E35] border border-white/10 group disabled:opacity-40 transition-all cursor-pointer"
-                aria-label={isListening ? 'Stop recording' : 'Start recording'}
+                aria-label={isRecording ? 'Stop recording' : 'Start recording'}
               >
                 <span className={`absolute inset-[-12px] rounded-full border transition-all ${
-                  isListening
+                  isRecording
                     ? 'border-red-500/70 shadow-[0_0_70px_rgba(239,68,68,0.35)]'
                     : 'border-white/10 group-hover:border-[#2BB8B8]/30'
                 }`} />
                 <span className={`absolute inset-0 rounded-full transition-all ${
-                  isListening ? 'animate-ping bg-red-500/20' : 'bg-transparent'
+                  isRecording ? 'animate-ping bg-red-500/20' : 'bg-transparent'
                 }`} />
-                {isListening ? (
+                {isRecording ? (
                   <Square className="w-12 h-12 text-red-500 fill-red-500" />
                 ) : (
                   <Mic className="w-12 h-12 text-[#2BB8B8]" />
@@ -177,16 +223,20 @@ const VoiceJobPosting = () => {
               </button>
             </div>
 
-            <div className="text-center">
+            <div className="text-center space-y-2">
               <p className="text-white font-black text-lg">
-                {isListening
-                  ? 'Listening… say your job requirements'
+                {isRecording
+                  ? (activeLang === 'am' ? 'እየቀረጸ ነው... ሲጨርሱ አዝራሩን ይጫኑ' : activeLang === 'or' ? 'Ni waraabamaa jira... Xumuruuf cuqaasi' : 'Recording... tap to stop')
                   : isBusy
-                  ? 'Processing…'
-                  : 'Tap the mic and speak'}
+                  ? (activeLang === 'am' ? 'እየተሰራ ነው...' : activeLang === 'or' ? 'Ni hojjetamaa jira...' : 'Processing...')
+                  : (activeLang === 'am' ? 'ማይክሮፎኑን ይንኩ እና ይናገሩ' : activeLang === 'or' ? 'Maayikiroofonii cuqaasiitii dubbadhu' : 'Tap the mic and speak')}
               </p>
-              <p className="text-white/45 text-sm mt-1">
-                "I need 2 cleaners tomorrow in Bole"
+              <p className="text-white/30 text-xs leading-relaxed max-w-xs mx-auto">
+                {activeLang === 'am'
+                  ? 'ለምርጥ ውጤት ይህን ያካትቱ፡ የስራ አይነት፣ ቦታ፣ ቁጥር፣ ደመወዝ እና የክፍያ ዘዴ። ለምሳሌ፡ "በቀን 500 ብር በቦሌ 2 ሰራተኞች እፈልጋለሁ" — በአማርኛ፣ ኦሮሞ፣ ወይም እንግሊዝኛ መናገር ይችላሉ'
+                  : activeLang === 'or'
+                  ? 'Ittiin of eegaa: gosa hojii, iddoo, baay\'ina, kafaltii fi mala kafaltii. Fakkeenyaaf: "Hojjettoota 2 nan barbaada Finfinnee Booleetti, guyyaa 500 birr"'
+                  : 'Include: job type, location, quantity, salary, and payment type. e.g. "I need 2 cleaners in Bole, 500 birr per day"'}
               </p>
             </div>
           </div>
