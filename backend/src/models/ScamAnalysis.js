@@ -19,6 +19,10 @@ const scamAnalysisSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    flags: {
+      type: [String],
+      default: [],
+    },
     analyzedAt: {
       type: Date,
       default: Date.now,
