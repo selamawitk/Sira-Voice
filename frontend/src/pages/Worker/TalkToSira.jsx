@@ -3,7 +3,25 @@ import { useVoice } from '../../hooks/useVoice.js';
 import api from '../../services/api.js';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
-import { Mic, Send, Sparkles, CheckCircle2, Briefcase, MapPin, DollarSign } from 'lucide-react';
+import { Mic, Send, Sparkles, CheckCircle2, Briefcase, MapPin, DollarSign, Star, TrendingUp } from 'lucide-react';
+
+const MatchScoreBadge = ({ score, reasons }) => {
+  const color = score >= 80 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                score >= 60 ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+  return (
+    <div className="flex flex-wrap items-center gap-2 mt-2">
+      <span className={`text-[10px] font-black px-2 py-1 rounded-full border ${color}`}>
+        {score}% Match
+      </span>
+      {reasons?.map((r, i) => (
+        <span key={i} className="text-[9px] text-white/50 bg-white/5 px-2 py-0.5 rounded-full border border-white/5">
+          {r}
+        </span>
+      ))}
+    </div>
+  );
+};
 
 const TalkToSira = () => {
   const { isListening, transcript, isProcessing, startListening, stopListening } = useVoice();
@@ -25,19 +43,20 @@ const TalkToSira = () => {
     return copy?.[key] ?? defaultStr;
   };
 
-
   const handleVoiceIntentPayload = (result) => {
     if (result?.actionTaken === 'JOB_SEARCH_RESULTS') {
       setJobs(result?.data || []);
-      toast?.show?.('AI found jobs for you!', 'success');
+      toast?.show?.(`AI found ${result?.data?.length || 0} jobs for you!`, 'success');
     } else if (result?.actionTaken === 'PROFILE_UPDATED') {
-      toast?.show?.('Profile updated successfully!', 'success');
+      toast?.show?.(getCopy('profileUpdateSuccess', 'Profile updated successfully!'), 'success');
     } else if (result?.actionTaken === 'JOB_CREATED') {
-      toast?.show?.('Job posted successfully!', 'success');
-    } else if (result?.actionTaken === 'APPLICATION_SUBMITTED') {
-      toast?.show?.('Application dispatched directly to employer!', 'success');
+      toast?.show?.(getCopy('jobCreateSuccess', 'Job posted successfully!'), 'success');
+    } else if (result?.actionTaken === 'APPLICATION_SUBMITTED' || result?.actionTaken === 'JOB_APPLICATION_CREATED') {
+      toast?.show?.(getCopy('applicationSuccess', 'Application dispatched directly to employer!'), 'success');
+    } else if (result?.actionTaken === 'WORKER_SEARCH_RESULTS') {
+      toast?.show?.(`AI found ${result?.data?.length || 0} workers!`, 'success');
     } else {
-      toast?.show?.('Voice query processed.', 'info');
+      toast?.show?.(getCopy('voiceProcessed', 'Voice query processed.'), 'info');
     }
   };
 
@@ -61,11 +80,15 @@ const TalkToSira = () => {
         action: 'process-intent'
       });
       if (res.data?.success) {
-        handleVoiceIntentPayload(res.data.result);
+        handleVoiceIntentPayload({
+          actionTaken: res.data.actionTaken,
+          data: res.data.data,
+          transcript: res.data.transcript,
+        });
       }
     } catch (err) {
       console.error('Failed parsing statement text:', err);
-      toast?.show?.('Could not process instructions.', 'error');
+      toast?.show?.(getCopy('processError', 'Could not process instructions.'), 'error');
     } finally {
       setLocalProcessing(false);
     }
@@ -75,11 +98,11 @@ const TalkToSira = () => {
     try {
       const res = await api.post(`/applications/${jobId}/apply`);
       if (res.data?.success) {
-        toast?.show?.('Application submitted successfully!', 'success');
+        toast?.show?.(getCopy('applySuccess', 'Application submitted successfully!'), 'success');
         setJobs(prev => prev.filter(j => j._id !== jobId));
       }
     } catch (err) {
-      toast?.show?.(err.response?.data?.message || 'Application submission failed.', 'error');
+      toast?.show?.(err.response?.data?.message || getCopy('applyError', 'Application submission failed.'), 'error');
     }
   };
 
@@ -178,29 +201,37 @@ const TalkToSira = () => {
                 {jobs.map((j) => (
                   <div 
                     key={j._id} 
-                    className="bg-[#1A2E35]/40 border border-white/10 rounded-2xl p-5 hover:border-[#2BB8B8]/30 transition-all flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 group"
+                    className="bg-[#1A2E35]/40 border border-white/10 rounded-2xl p-5 hover:border-[#2BB8B8]/30 transition-all flex flex-col gap-4 group"
                   >
-                    <div className="space-y-1.5">
-                      <p className="text-white font-bold text-lg group-hover:text-[#2BB8B8] transition-colors">{j.title}</p>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/50">
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-gray-500" />
-                          {j.location?.address ?? 'Addis Ababa'}
-                        </span>
-                        <span className="flex items-center gap-1 font-medium text-emerald-400">
-                          <DollarSign className="w-3.5 h-3.5" />
-                          {j.salary?.toLocaleString() ?? 0} ETB
-                        </span>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="space-y-1.5">
+                        <p className="text-white font-bold text-lg group-hover:text-[#2BB8B8] transition-colors">{j.title}</p>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/50">
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-gray-500" />
+                            {j.location?.address ?? 'Addis Ababa'}
+                          </span>
+                          <span className="flex items-center gap-1 font-medium text-emerald-400">
+                            <DollarSign className="w-3.5 h-3.5" />
+                            {j.salary?.toLocaleString() ?? 0} ETB
+                          </span>
+                        </div>
+                        {j.matchScore && (
+                          <MatchScoreBadge score={j.matchScore} reasons={j.matchReasons} />
+                        )}
                       </div>
+                      
+                      <button
+                        onClick={() => handleApplyToJob(j._id)}
+                        className="bg-white/5 hover:bg-[#2BB8B8] border border-white/10 hover:border-transparent text-white font-medium px-5 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 text-sm sm:self-center self-stretch"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        {getCopy('applyNowButton', 'Apply via Profile')}
+                      </button>
                     </div>
-                    
-                    <button
-                      onClick={() => handleApplyToJob(j._id)}
-                      className="bg-white/5 hover:bg-[#2BB8B8] border border-white/10 hover:border-transparent text-white font-medium px-5 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 text-sm sm:self-center self-stretch"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      {getCopy('applyNowButton', 'Apply via Profile')}
-                    </button>
+                    {j.jobDetailsUrl && (
+                      <p className="text-xs text-gray-500 italic">{j.description?.slice(0, 150)}...</p>
+                    )}
                   </div>
                 ))}
               </div>
