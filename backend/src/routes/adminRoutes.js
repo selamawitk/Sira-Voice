@@ -3,6 +3,7 @@ import {
   deleteJob,
   getPlatformStats,
   getScamHistory,
+  getScamAnalysis,
   listUsers,
   suspendUser,
   activateUser,
@@ -15,6 +16,7 @@ const router = express.Router();
 
 router.get('/stats', protect, adminOnly, getPlatformStats);
 router.get('/scam-history', protect, adminOnly, getScamHistory);
+router.get('/scam-analysis', protect, adminOnly, getScamAnalysis);
 
 router.get('/users', protect, adminOnly, listUsers);
 
