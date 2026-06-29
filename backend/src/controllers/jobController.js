@@ -9,7 +9,7 @@ import { calculateDistance } from '../utils/distance.js';
 
 import { findMatchingWorkers } from '../services/jobMatcher.js';
 import { analyzeJobForScam } from '../services/aiService.js';
-import { sendPaymentNotification, sendContractNotification, sendAIAgentNotification, sendRealTimeNotification, sendJobClosedNotification } from '../services/notificationService.js';
+import { sendContractNotification, sendAIAgentNotification, sendRealTimeNotification, sendJobClosedNotification } from '../services/notificationService.js';
 
 import { createApplicationLogic } from './applicationController.js';
 
@@ -80,7 +80,7 @@ export const processNewJobMatches = async (job, io) => {
           worker._id,
           io,
           true,
-          0,
+          match.score,
           false,
           null
         );
@@ -102,17 +102,7 @@ export const processNewJobMatches = async (job, io) => {
       const userId = match.worker?._id?.toString();
       if (!userId) continue;
 
-      const payload = {
-        title: 'Sira Agent Match',
-        message: `New ${job.category || 'job'} matches your profile`,
-        jobId: job._id,
-        score: match.score,
-      };
-
-      io.to(userId).emit('new_job_match', payload);
-      io.to(userId).emit('new_match', payload);
-
-      sendAIAgentNotification(io, userId, payload.title, payload.message, { jobId: job._id, score: match.score });
+      sendAIAgentNotification(io, userId, `Sira Agent Match`, `New ${job.category || 'job'} matches your profile`, { jobId: job._id, score: match.score });
     }
   }
 
@@ -538,21 +528,14 @@ export const employerCloseJob = asyncHandler(
 
 export const completeJob = asyncHandler(
   async (req, res) => {
-    const job = await Job.findById(req.params.id);
+    const job = await Job.findById(req.params.id).populate('worker', 'fullName');
 
     if (!job) {
-      return res
-        .status(404)
-        .json({ message: 'Job not found' });
+      return res.status(404).json({ message: 'Job not found' });
     }
 
-    if (
-      job.employer.toString() !==
-      req.user._id.toString()
-    ) {
-      return res
-        .status(403)
-        .json({ message: 'Unauthorized' });
+    if (job.employer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized' });
     }
 
     if (job.status !== 'in-progress') {
@@ -573,49 +556,40 @@ export const completeJob = asyncHandler(
 
     const amount = Number(job.salary) || 0;
 
-    const txRef = `EARN-${job._id}-${Date.now()}`;
-
-    await Transaction.create({
-      employer: job.employer,
-      worker: job.worker,
-      job: job._id,
+    await Payment.create({
+      employerId: job.employer,
+      workerId: job.worker._id,
+      jobId: job._id,
+      contractId: null,
       amount,
       currency: 'ETB',
-      tx_ref: txRef,
-      status: 'success',
-      purpose: `Job: ${job.title}`,
-      paidAt: new Date(),
+      tx_ref: `PENDING-${job._id}-${Date.now()}`,
+      status: 'pending',
+      purpose: 'job_payment',
     });
 
-    const worker = await User.findById(job.worker);
-
-    if (worker) {
-      worker.workerProfile =
-        worker.workerProfile || {};
-
-      worker.workerProfile.balance =
-        worker.workerProfile.balance || 0;
-
-      worker.workerProfile.balance += amount;
-
-      await worker.save();
-
-      sendPaymentNotification(req.io, worker._id.toString(), amount, job.title, null);
-    }
-
-    sendRealTimeNotification(req.io, job.worker.toString(), {
+    sendRealTimeNotification(req.io, job.worker._id.toString(), {
       title: 'Job Completed',
-      message: `"${job.title}" was marked complete. Please rate your experience.`,
-      type: 'SYSTEM',
+      message: `"${job.title}" was marked complete. Payment will be released once processed.`,
+      type: 'JOB_COMPLETE',
       jobId: job._id,
       additionalData: { action: 'rate_job' }
     });
 
+    sendRealTimeNotification(req.io, job.employer.toString(), {
+      title: 'Release Payment',
+      message: `Job "${job.title}" is complete. Process payment to release funds to the worker.`,
+      type: 'PAYMENT',
+      jobId: job._id,
+      additionalData: { action: 'process_payment' }
+    });
+
     res.json({
       success: true,
-      message: 'Job completed successfully',
+      message: 'Job completed. Process payment to release funds.',
       job,
       redirectToRating: true,
+      requiresPayment: true,
     });
   }
 );
