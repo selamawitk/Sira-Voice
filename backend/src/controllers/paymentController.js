@@ -176,7 +176,7 @@ export const verifyChapaWebhook = asyncHandler(async (req, res) => {
     const worker = await User.findById(transaction.worker);
     if (worker) {
       await User.findByIdAndUpdate(transaction.worker, {
-        $inc: { totalEarnings: transaction.amount }
+        $inc: { totalEarnings: transaction.amount, 'workerProfile.balance': transaction.amount }
       });
     }
 
@@ -289,7 +289,7 @@ export const verifyChapaTransaction = asyncHandler(async (req, res) => {
           const worker = await User.findById(transaction.worker);
           if (worker) {
             await User.findByIdAndUpdate(transaction.worker, {
-              $inc: { totalEarnings: transaction.amount }
+              $inc: { totalEarnings: transaction.amount, 'workerProfile.balance': transaction.amount }
             });
           }
 
