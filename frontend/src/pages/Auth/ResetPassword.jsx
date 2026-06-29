@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Lock, KeySquare, CheckCircle2, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 import api from '../../services/api.js';
-import AuthLayout from '../../components/ui/AuthLayout';
-import Input from '../../components/ui/Input';
+import AuthLayout from '../../components/ui/AuthLayout.jsx';
+import Input from '../../components/ui/Input.jsx';
 
 const ResetPasswordPage = () => {
   const navigate = useNavigate();
