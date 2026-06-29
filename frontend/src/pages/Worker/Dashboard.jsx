@@ -41,6 +41,21 @@ const Dashboard = () => {
 
   const [earningsData, setEarningsData] = useState({ totalEarnings: 0, count: 0 });
   const [showEarnings, setShowEarnings] = useState(true);
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      setSuggestionsLoading(true);
+      try {
+        const res = await api.post('/voice/suggestions');
+        if (res.data?.success) setSuggestions(res.data.suggestions);
+      } catch {} finally {
+        setSuggestionsLoading(false);
+      }
+    };
+    fetchSuggestions();
+  }, []);
 
   useEffect(() => {
     const fetchContracts = async () => {
@@ -488,6 +503,29 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {suggestions.length > 0 && (
+        <div className="bg-gradient-to-r from-[#2BB8B8]/5 to-purple-500/5 border border-[#2BB8B8]/20 rounded-[2.5rem] p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-5 h-5 text-[#2BB8B8]" />
+            <h3 className="text-white font-black text-sm uppercase tracking-widest">AI Suggestions</h3>
+          </div>
+          <div className="space-y-2">
+            {suggestions.map((s, i) => (
+              <div key={i} className="flex items-start gap-3 bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                  s.type === 'skill' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                  s.type === 'profile' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                  'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                }`}>
+                  {s.type}
+                </span>
+                <p className="text-white/80 text-sm">{s.message}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {voiceApplyJob && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-200">
