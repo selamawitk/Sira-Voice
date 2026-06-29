@@ -6,6 +6,7 @@ import Job from '../models/Job.js';
 import Transaction from '../models/Transaction.js';
 import Contract from '../models/Contract.js';
 import Payment from '../models/Payment.js';
+import Application from '../models/Application.js';
 
 import asyncHandler from '../utils/asyncHandler.js';
 import { sendRealTimeNotification, sendPaymentNotification } from '../services/notificationService.js';
@@ -66,6 +67,10 @@ export const initializeChapa = asyncHandler(async (req, res) => {
     purpose,
     status: 'pending'
   });
+
+  if (contractId) {
+    await Contract.findByIdAndUpdate(contractId, { escrowStatus: 'held' });
+  }
 
   res.status(200).json({
     success: true,
@@ -232,6 +237,13 @@ export const verifyChapaWebhook = asyncHandler(async (req, res) => {
       await Job.findByIdAndUpdate(transaction.job, { isPaid: true, paidAt: new Date() });
     }
 
+    if (transaction.job) {
+      await Application.findOneAndUpdate(
+        { job: transaction.job, worker: transaction.worker },
+        { paymentStatus: 'paid' }
+      );
+    }
+
     await sendPaymentNotification(
       io,
       transaction.worker,
@@ -310,6 +322,10 @@ export const verifyChapaTransaction = asyncHandler(async (req, res) => {
 
         if (transaction.job) {
           await Job.findByIdAndUpdate(transaction.job, { isPaid: true, paidAt: new Date() });
+          await Application.findOneAndUpdate(
+            { job: transaction.job, worker: transaction.worker },
+            { paymentStatus: 'paid' }
+          );
         }
 
         await sendPaymentNotification(
