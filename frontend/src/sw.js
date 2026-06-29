@@ -1,19 +1,77 @@
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
-import { registerRoute } from 'workbox-routing';
+import { registerRoute, setCatchHandler } from 'workbox-routing';
 import { NetworkFirst, NetworkOnly } from 'workbox-strategies';
+import { ExpirationPlugin } from 'workbox-expiration';
+
+const CACHE_VERSION = 'v1';
+const CACHE_NAMES = ['jobs', 'ai', 'users', 'notifications', 'ratings', 'contracts', 'pages'];
 
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
+const cacheConfig = (name, maxEntries, maxAgeSeconds) => ({
+  cacheName: `${name}-${CACHE_VERSION}`,
+  plugins: [
+    new ExpirationPlugin({ maxEntries, maxAgeSeconds }),
+  ],
+});
+
 registerRoute(
   /^https?:\/\/.*\/api\/jobs/,
-  new NetworkFirst({ cacheName: 'jobs-cache' })
+  new NetworkFirst(cacheConfig('jobs', 20, 86400))
 );
 
 registerRoute(
   /^https?:\/\/.*\/api\/ai/,
-  new NetworkOnly({ cacheName: 'ai-cache' })
+  new NetworkOnly()
 );
+
+registerRoute(
+  /^https?:\/\/.*\/api\/users/,
+  new NetworkFirst(cacheConfig('users', 20, 3600))
+);
+
+registerRoute(
+  /^https?:\/\/.*\/api\/notifications/,
+  new NetworkFirst(cacheConfig('notifications', 10, 300))
+);
+
+registerRoute(
+  /^https?:\/\/.*\/api\/ratings/,
+  new NetworkFirst(cacheConfig('ratings', 10, 3600))
+);
+
+registerRoute(
+  /^https?:\/\/.*\/api\/contracts/,
+  new NetworkFirst(cacheConfig('contracts', 10, 3600))
+);
+
+registerRoute(
+  ({ request }) => request.mode === 'navigate',
+  new NetworkFirst(cacheConfig('pages', 5, 86400))
+);
+
+setCatchHandler(async ({ event }) => {
+  if (event.request.mode === 'navigate') {
+    const fallback = await caches.match('/offline.html');
+    if (fallback) return fallback;
+  }
+  return Response.error();
+});
+
+self.addEventListener('activate', (event) => {
+  const currentCaches = CACHE_NAMES.map(name => `${name}-${CACHE_VERSION}`);
+
+  event.waitUntil(
+    caches.keys().then((allCaches) => {
+      const obsolete = allCaches.filter((cache) => {
+        const matched = CACHE_NAMES.some((name) => cache.startsWith(`${name}-`));
+        return matched && !currentCaches.includes(cache);
+      });
+      return Promise.all(obsolete.map((cache) => caches.delete(cache)));
+    })
+  );
+});
 
 self.addEventListener('push', (event) => {
   let data;
