@@ -1,101 +1,68 @@
 import asyncHandler from '../utils/asyncHandler.js';
 import {
   analyzeJobForScam,
-  processTextToData,
   extractWorkerProfileFromText,
   extractJobFromText,
+  processRatingFromVoice,
+  generateSuggestions,
+  enhanceJobSearchWithRanking,
+  processTextToData,
 } from '../services/aiService.js';
 import {
   processWorkerVoiceToCV,
   processEmployerVoiceToJob,
-  processVoiceToData,
 } from '../services/voiceService.js';
-import { createApplicationLogic } from './applicationController.js';
+import { processIntent } from '../services/voiceActionService.js';
+import { processNewJobMatches } from './jobController.js';
+import { findMatchingWorkers } from '../services/jobMatcher.js';
+import { transcribeAudio } from '../services/voiceService.js';
+import { sendScamAlertNotification } from '../services/notificationService.js';
 import Job from '../models/Job.js';
 import User from '../models/User.js';
+import ScamAnalysis from '../models/ScamAnalysis.js';
 
 export const processVoiceAction = asyncHandler(async (req, res) => {
-  const text = req.body.text || req.body.transcript || '';
-  const detectedLang = req.body.lang || req.body.language || 'en';
+  let text = req.body.text || req.body.transcript || '';
 
-  if (!text || !text.trim()) {
-    return res.json({ success: false, transcript: '', aiInterpreted: {}, actionTaken: 'NO_SPEECH' });
+  if (req.file) {
+    const transcription = await transcribeAudio(req.file.path);
+    text = transcription.text;
   }
 
-  const intent = await processTextToData(text, detectedLang);
+  const result = await processIntent({
+    text,
+    detectedLang: req.body.lang || req.body.language || 'en',
+    user: req.user,
+    jobId: req.body.jobId,
+  });
 
-  const response = {
-    success: true,
-    transcript: text,
-    language: detectedLang,
-    aiInterpreted: intent,
-    actionTaken: '',
-    data: [],
-  };
+  if (result.actionTaken === 'JOB_CREATED' && req.io) {
+    await processNewJobMatches(result.data, req.io);
 
-  if (intent?.intent === 'post' && req.user?.role === 'employer') {
-    const job = await Job.create({
-      employer: req.user._id,
-      title: intent.title || (intent.category ? `${intent.category} Job` : 'New Job'),
-      category: intent.category || 'General',
-      description: intent.description || text,
-      salary: intent.salary || 0,
-      paymentType: intent.paymentType || 'daily',
-      location: {
-        address: intent.location || 'Addis Ababa',
-        type: 'Point',
-        coordinates: intent.coordinates || [38.7578, 8.9806],
-      },
-      status: 'open',
-    });
-
-    response.actionTaken = 'JOB_CREATED';
-    response.data = job;
-  }
-
-  else if (intent?.intent === 'apply' && req.user?.role === 'worker') {
-    const jobId = req.body.jobId;
-    if (!jobId) {
-      return res.json({ success: false, actionTaken: 'ERROR', error: 'Missing jobId' });
-    }
-
-    const application = await createApplicationLogic(jobId, req.user._id, req.io, false);
-    response.actionTaken = 'JOB_APPLICATION_CREATED';
-    response.data = { applicationId: application._id, jobId };
-  }
-
-  else if (intent?.intent === 'search') {
-    const jobs = await Job.find({
-      $or: [
-        { category: { $regex: intent.category || '', $options: 'i' } },
-        { title: { $regex: intent.category || '', $options: 'i' } },
-      ],
-    })
-      .limit(10)
-      .populate('employer', 'fullName');
-
-    response.actionTaken = 'JOB_SEARCH_RESULTS';
-    response.data = jobs;
-  }
-
-  else if (intent?.intent === 'profile' && req.user) {
-    const user = await User.findById(req.user._id);
-    if (user && user.role === 'worker') {
-      user.workerProfile.skills = [...new Set([...(user.workerProfile.skills || []), ...(intent.skills || [])])];
-      user.workerProfile.bio = intent.summary || user.workerProfile.bio;
-      user.workerProfile.rawVoiceTranscript = text;
-      user.workerProfile.preferredLanguage = detectedLang;
-      await user.save();
-      response.actionTaken = 'PROFILE_UPDATED';
-      response.data = user.workerProfile;
+    if (result.scamCheck && !result.scamCheck.isSafe) {
+      sendScamAlertNotification(
+        req.io,
+        req.user._id,
+        'Job Flagged — Review Required',
+        `Your job "${result.data?.title}" was flagged by AI (risk: ${result.scamCheck.score}/100). ${result.scamCheck.reason}`,
+        result.data?._id
+      );
+      try {
+        await ScamAnalysis.create({
+          jobId: result.data?._id,
+          isSafe: result.scamCheck.isSafe,
+          score: result.scamCheck.score,
+          reason: result.scamCheck.reason,
+          flags: result.scamCheck.flags || [],
+          analyzedAt: new Date(),
+        });
+      } catch (err) {
+        console.error('Scam analysis save failed:', err.message);
+      }
     }
   }
 
-  else {
-    response.actionTaken = 'TEXT_PROCESSED';
-  }
-
-  return res.json(response);
+  return res.json({ success: true, ...result });
 });
 
 export const voiceJobSearch = asyncHandler(async (req, res) => {
@@ -114,10 +81,20 @@ export const voiceJobSearch = asyncHandler(async (req, res) => {
       { title: { $regex: intent?.category || '', $options: 'i' } },
     ],
   })
-    .limit(10)
+    .limit(20)
     .populate('employer', 'fullName');
 
-  res.json({ success: true, transcript: text, aiInterpreted: intent, jobs });
+  const rankings = await enhanceJobSearchWithRanking(text, jobs, detectedLang);
+  const rankedJobs = jobs.map((job, i) => {
+    const rank = rankings.find(r => r.index === i) || {};
+    return {
+      ...job.toObject(),
+      matchScore: rank.matchScore || 50,
+      matchReasons: rank.reasons || ['Available job'],
+    };
+  }).sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+
+  res.json({ success: true, transcript: text, aiInterpreted: intent, jobs: rankedJobs });
 });
 
 export const processVoiceCVPreview = asyncHandler(async (req, res) => {
@@ -164,6 +141,7 @@ export const processVoiceCVSave = asyncHandler(async (req, res) => {
     'workerProfile.bio': translatedText || transcript || '',
     'workerProfile.preferredLanguage': detectedLanguage || 'am',
     'workerProfile.experienceYears': profile.experienceYears || 0,
+    'workerProfile.availability': profile.availability || 'not specified',
     'workerProfile.category': profile.skill || '',
   };
 
@@ -218,6 +196,8 @@ export const processVoiceJobCreate = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Invalid job data' });
   }
 
+  const scamCheck = await analyzeJobForScam(transcript || jobData.description || '');
+
   const job = await Job.create({
     employer: req.user._id,
     title: jobData.jobTitle || 'New Job',
@@ -231,13 +211,107 @@ export const processVoiceJobCreate = asyncHandler(async (req, res) => {
       type: 'Point',
       coordinates: [38.7578, 8.9806],
     },
+    isAiFlagged: !scamCheck.isSafe,
+    aiRiskScore: scamCheck.score,
+    aiAnalysis: scamCheck,
     status: 'open',
   });
 
-  res.json({ success: true, job });
+  await processNewJobMatches(job, req.io);
+
+  if (!scamCheck.isSafe) {
+    sendScamAlertNotification(
+      req.io,
+      req.user._id,
+      'Job Flagged — Review Required',
+      `Your job "${job.title}" was flagged by AI (risk: ${scamCheck.score}/100). ${scamCheck.reason}`,
+      job._id
+    );
+    try {
+      await ScamAnalysis.create({
+        jobId: job._id,
+        isSafe: scamCheck.isSafe,
+        score: scamCheck.score,
+        reason: scamCheck.reason,
+        flags: scamCheck.flags || [],
+        analyzedAt: new Date(),
+      });
+    } catch (err) {
+      console.error('Scam analysis save failed:', err.message);
+    }
+  }
+
+  res.json({ success: true, job, scamCheck });
 });
 
-// Legacy: kept for backward compat
+export const processVoiceRating = asyncHandler(async (req, res) => {
+  const text = req.body.text || req.body.transcript || '';
+  const detectedLang = req.body.lang || 'en';
+
+  if (!text.trim()) {
+    return res.status(400).json({ success: false, message: 'No rating text provided' });
+  }
+
+  const extracted = await processRatingFromVoice(text, detectedLang);
+
+  if (!extracted.targetName || !extracted.rating) {
+    return res.json({ success: false, message: 'Could not extract rating from voice', extracted });
+  }
+
+  const targetUser = await User.findOne({
+    $or: [
+      { fullName: { $regex: extracted.targetName, $options: 'i' } },
+      { fullName: { $regex: extracted.targetName.split(' ')[0], $options: 'i' } },
+    ],
+  });
+
+  if (!targetUser) {
+    return res.json({ success: false, message: 'Could not find user to rate', targetName: extracted.targetName });
+  }
+
+  res.json({
+    success: true,
+    extracted,
+    targetUserId: targetUser._id,
+    message: 'Voice rating extracted. Submit via /ratings to save.',
+  });
+});
+
+export const processVoiceSuggestions = asyncHandler(async (req, res) => {
+  const role = req.user?.role || 'worker';
+  let suggestions = [];
+
+  if (role === 'worker') {
+    const user = await User.findById(req.user._id);
+    suggestions = await generateSuggestions('worker', user?.workerProfile || {});
+  } else if (role === 'employer') {
+    const jobId = req.body.jobId;
+    if (jobId) {
+      const job = await Job.findById(jobId);
+      suggestions = await generateSuggestions('employer', {}, job);
+    }
+  }
+
+  res.json({ success: true, suggestions });
+});
+
+export const voiceJobMatchesWithReasons = asyncHandler(async (req, res) => {
+  const job = await Job.findById(req.params.jobId);
+  if (!job) {
+    return res.status(404).json({ success: false, message: 'Job not found' });
+  }
+
+  const matches = await findMatchingWorkers(job);
+
+  const matchesWithReasons = matches.map(m => ({
+    ...m,
+    matchScore: m.score,
+    matchReasons: m.reasons || [],
+  }));
+
+  res.json({ success: true, jobTitle: job.title, matches: matchesWithReasons });
+});
+
 export const processVoiceCV = asyncHandler(async (req, res) => {
   const filePath = req.file?.path;
   const text = req.body.text || req.body.transcript || '';
@@ -253,6 +327,7 @@ export const processVoiceCV = asyncHandler(async (req, res) => {
       'workerProfile.bio': result.translatedText || result.transcript || '',
       'workerProfile.preferredLanguage': detectedLang,
       'workerProfile.experienceYears': profile.experienceYears || 0,
+      'workerProfile.availability': profile.availability || 'not specified',
       'workerProfile.category': profile.skill || '',
     };
 
@@ -275,6 +350,7 @@ export const processVoiceCV = asyncHandler(async (req, res) => {
     'workerProfile.bio': text,
     'workerProfile.preferredLanguage': detectedLang,
     'workerProfile.experienceYears': profile.experienceYears || 0,
+    'workerProfile.availability': profile.availability || 'not specified',
     'workerProfile.category': profile.skill || '',
   };
 
