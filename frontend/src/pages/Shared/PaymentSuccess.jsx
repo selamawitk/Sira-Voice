@@ -24,17 +24,16 @@ const PaymentSuccess = () => {
     const verify = async () => {
       try {
         const res = await api.post('/payments/verify-transaction', { tx_ref: txRef });
+        const chapaData = res.data?.data?.data || {};
         if (res.data?.success) {
-          const paymentRes = await api.get('/payments/worker-earnings');
-          const lastPayment = paymentRes.data?.data?.[0] || null;
           setPayment({
-            amount: res.data?.data?.data?.amount || 0,
-            currency: 'ETB',
-            workerName: auth?.user?.fullName || 'Worker',
-            jobTitle: lastPayment?.jobId?.title || 'Job',
-            employerName: lastPayment?.employerId?.fullName || 'Employer',
+            amount: Number(chapaData.amount) || 0,
+            currency: chapaData.currency || 'ETB',
+            workerName: chapaData.first_name || auth?.user?.fullName || 'Worker',
+            jobTitle: chapaData?.customization?.description || 'Job Payment',
+            employerName: auth?.user?.fullName || 'Employer',
             tx_ref: txRef,
-            paidAt: new Date().toISOString()
+            paidAt: chapaData.updated_at || new Date().toISOString()
           });
         } else {
           setError('Payment verification failed. Please contact support.');
