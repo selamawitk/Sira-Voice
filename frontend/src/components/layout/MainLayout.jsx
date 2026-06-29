@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import Sidebar from './Sidebar';
+import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
+import InstallPrompt from '../ui/InstallPrompt.jsx';
 
 const MainLayout = ({ children }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -33,6 +34,8 @@ const MainLayout = ({ children }) => {
         <main className="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-6 lg:px-8 pt-6 py-8 relative z-10 max-w-7xl mx-auto w-full">
           {children}
         </main>
+
+        <InstallPrompt />
       </div>
     </div>
   );
