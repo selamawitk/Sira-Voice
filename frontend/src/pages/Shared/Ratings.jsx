@@ -3,8 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import api from '../../services/api.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import RatingModal from '../../components/trust/RatingModal.jsx';
+import VoiceRatingComponent from '../../components/voice/VoiceRatingComponent.jsx';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
-import { Star, MapPin, DollarSign, User, Briefcase, Calendar } from 'lucide-react';
+import { Star, MapPin, DollarSign, User, Briefcase, Calendar, Mic } from 'lucide-react';
 
 const GlassCard = ({ children, className = '' }) => (
   <div className={`bg-white/[0.03] border border-white/10 rounded-3xl p-6 backdrop-blur-md ${className}`}>
@@ -25,6 +26,8 @@ const Ratings = () => {
   const [apps, setApps] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [active, setActive] = useState(null);
+  const [voiceModalOpen, setVoiceModalOpen] = useState(false);
+  const [voiceActive, setVoiceActive] = useState(null);
   const [reviewsReceived, setReviewsReceived] = useState([]);
   const [reviewsGiven, setReviewsGiven] = useState([]);
   const [activeTab, setActiveTab] = useState('rate');
@@ -86,6 +89,30 @@ const Ratings = () => {
       roleAtTime: user.role
     });
     setModalOpen(true);
+  };
+
+  const openVoiceRate = (application) => {
+    const jobId = application.job?._id ?? application.job;
+    if (!jobId || !user) return;
+
+    const targetUserId =
+      user.role === 'worker'
+        ? application.employer?._id ?? application.employer
+        : application.worker?._id ?? application.worker;
+
+    setVoiceActive({ jobId, targetUserId });
+    setVoiceModalOpen(true);
+  };
+
+  const handleVoiceRateComplete = async () => {
+    setVoiceModalOpen(false);
+    setVoiceActive(null);
+    const [appRes, givenRes] = await Promise.all([
+      api.get('/applications/history'),
+      api.get('/ratings/job-given-ratings').catch(() => ({ data: { data: [] } })),
+    ]);
+    setApps(appRes.data?.data ?? []);
+    setReviewsGiven(givenRes.data?.data ?? []);
   };
 
   const handleRatingSubmit = async ({ dimensions, overall, comment }) => {
@@ -190,12 +217,21 @@ const Ratings = () => {
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => openRate(a)}
-                      className="w-full md:w-auto px-8 py-3 rounded-2xl bg-[#2BB8B8] text-slate-950 font-semibold hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(43,184,184,0.2)] normal-case"
-                    >
-                      {t.rateButton || (activeLang === 'am' ? 'ደረጃ ስጥ' : activeLang === 'or' ? 'Sadarkaa Kenni' : 'Rate Experience')}
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => openRate(a)}
+                        className="px-8 py-3 rounded-2xl bg-[#2BB8B8] text-slate-950 font-semibold hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(43,184,184,0.2)] normal-case"
+                      >
+                        {t.rateButton || (activeLang === 'am' ? 'ደረጃ ስጥ' : activeLang === 'or' ? 'Sadarkaa Kenni' : 'Rate Experience')}
+                      </button>
+                      <button
+                        onClick={() => openVoiceRate(a)}
+                        className="px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white/80 font-semibold hover:bg-white/10 active:scale-95 transition-all normal-case"
+                      >
+                        <Mic className="w-4 h-4 inline-block mr-1.5" />
+                        {activeLang === 'am' ? 'በድምጽ' : activeLang === 'or' ? 'Sagaleen' : 'Voice'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -280,6 +316,22 @@ const Ratings = () => {
         onSubmit={handleRatingSubmit}
         role={active?.roleAtTime || 'employer'}
       />
+
+      {voiceModalOpen && voiceActive && (
+        <div className="fixed inset-0 z-9998 bg-black/60 backdrop-blur-sm grid place-items-center p-4">
+          <div className="w-full max-w-md bg-[#0F171A] border border-white/10 rounded-[2.5rem] p-6 md:p-8 relative overflow-hidden">
+            <div className="absolute -top-40 -right-40 w-130 h-130 bg-[#2BB8B8] opacity-[0.06] blur-[140px] pointer-events-none" />
+            <div className="relative z-10">
+              <VoiceRatingComponent
+                jobId={voiceActive.jobId}
+                targetUserId={voiceActive.targetUserId}
+                onComplete={handleVoiceRateComplete}
+                onCancel={() => { setVoiceModalOpen(false); setVoiceActive(null); }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
