@@ -4,7 +4,7 @@ import { MapPin, Award, ShieldCheck, Edit3, Save, X, Sparkles, TrendingUp, Histo
 import api from '../../services/api.js';
 import { AuthContext } from '../../context/AuthContextInstance.jsx';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
-import toast from 'react-hot-toast';
+import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
 
 const Profile = () => {
   const { id } = useParams();
@@ -14,6 +14,7 @@ const Profile = () => {
   const currentUser = auth?.user;
   const lang = useContext(LanguageContext);
   const copy = lang?.copy;
+  const toast = useContext(ToastContext);
 
   const isPublicView = Boolean(id && id !== currentUser?._id);
 
@@ -48,7 +49,7 @@ const Profile = () => {
         setProfileUser(res.data?.data || res.data);
       } catch (err) {
         console.error(err);
-        toast.error('Could not load worker profile');
+        toast?.show?.('Could not load worker profile', 'error');
         navigate(-1);
       } finally {
         setProfileLoading(false);
@@ -125,10 +126,10 @@ const Profile = () => {
       });
 
       await auth.fetchMe();
-      toast.success('Profile updated');
+        toast?.show?.('Profile updated', 'success');
       setIsEditing(false);
     } catch (err) {
-      toast.error('Update failed');
+        toast?.show?.('Update failed', 'error');
       console.error(err);
     } finally {
       setLoading(false);
@@ -142,9 +143,9 @@ const Profile = () => {
       const newStatus = !isAutoApplyActive;
       await api.put('/users/agent-preferences', { autoApply: newStatus });
       await auth.fetchMe();
-      toast.success(newStatus ? 'Auto-apply ON 🤖' : 'Auto-apply OFF');
+        toast?.show?.(newStatus ? 'Auto-apply ON' : 'Auto-apply OFF', 'success');
     } catch (err) {
-      toast.error('Could not toggle Auto-Apply');
+        toast?.show?.('Could not toggle Auto-Apply', 'error');
       console.error(err);
     } finally {
       setLoading(false);
@@ -506,11 +507,11 @@ const PaymentInfoSection = ({ userId }) => {
       });
       if (res.data?.success) {
         setPaymentProfile(res.data.data);
-        toast.success('Payment information saved');
+        toast?.show?.('Payment information saved', 'success');
         setEditing(false);
       }
     } catch {
-      toast.error('Failed to save payment information');
+        toast?.show?.('Failed to save payment information', 'error');
     } finally {
       setSaving(false);
     }
