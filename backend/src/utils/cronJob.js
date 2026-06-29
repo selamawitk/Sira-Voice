@@ -1,8 +1,9 @@
 import cron from 'node-cron';
 import Job from '../models/Job.js';
 import User from '../models/User.js';
+import Application from '../models/Application.js';
 import { findMatchingWorkers } from '../services/jobMatcher.js';
-import { sendAIAgentNotification, sendJobMatchNotification } from '../services/notificationService.js';
+import { sendAIAgentNotification } from '../services/notificationService.js';
 import { createApplicationLogic } from '../controllers/applicationController.js';
 
 export const initCronJobs = (io) => {
@@ -19,12 +20,15 @@ export const initCronJobs = (io) => {
       for (const job of newJobs) {
         const rankedMatches = await findMatchingWorkers(job);
 
+        const existingApps = await Application.find({ job: job._id }).select('worker');
+        const alreadyApplied = new Set(existingApps.map(a => a.worker.toString()));
+
         for (const match of rankedMatches) {
           const workerId = match._id;
           const score = match.score;
           const reasons = match.reasons || [];
 
-          if (!workerId) continue;
+          if (!workerId || alreadyApplied.has(workerId.toString())) continue;
 
           const worker = await User.findById(workerId);
           if (!worker) continue;
@@ -33,7 +37,7 @@ export const initCronJobs = (io) => {
 
           if (autoApply && score >= 60) {
             try {
-              await createApplicationLogic(job._id, workerId, io, true);
+              await createApplicationLogic(job._id, workerId, io, true, score);
               console.log(`Auto-Applied: Worker ${worker.fullName} (score: ${score}) to Job ${job.title}`);
             } catch (err) {
               if (err.statusCode !== 400) {
