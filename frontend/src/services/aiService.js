@@ -18,3 +18,12 @@ export const transcribeVoice = async (
     throw new Error('Voice transcription failed.');
   }
 };
+
+export const checkJobSafety = async (jobId) => {
+  try {
+    const response = await api.get(`/ai/verify-safety/${jobId}`);
+    return response.data;
+  } catch {
+    return { analysis: { isSafe: true, score: 0, reason: 'Safety check unavailable', flags: [] } };
+  }
+};
