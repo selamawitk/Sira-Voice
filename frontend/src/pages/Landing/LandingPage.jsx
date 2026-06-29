@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
 import { Mic, CheckCircle2, XCircle, Bot, Globe, Wrench, Zap, MapPin, DollarSign, Sparkles } from 'lucide-react';
-import Navbar from '../../components/layout/Navbar';
+import Navbar from '../../components/layout/Navbar.jsx';
 import heroAgentImg from '../../assets/images/hero-ai-agent.png';
 import employerDashboardImg from '../../assets/images/employer-dashboard.png';
 import workerInterfaceImg from '../../assets/images/worker-interface-v2.png';
