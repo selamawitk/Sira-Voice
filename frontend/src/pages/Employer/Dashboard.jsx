@@ -59,6 +59,22 @@ const EmployerDashboard = () => {
   const [closingJobId, setClosingJobId] = useState('');
   const [payingJobId, setPayingJobId] = useState('');
   const [completedJobs, setCompletedJobs] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (!selectedJobId) return;
+      setSuggestionsLoading(true);
+      try {
+        const res = await api.post('/voice/suggestions', { jobId: selectedJobId });
+        if (res.data?.success) setSuggestions(res.data.suggestions);
+      } catch {} finally {
+        setSuggestionsLoading(false);
+      }
+    };
+    fetchSuggestions();
+  }, [selectedJobId]);
 
   const handleCloseJob = async (jobId) => {
     setClosingJobId(jobId);
@@ -411,6 +427,15 @@ const EmployerDashboard = () => {
                               </span>
                             </>
                           )}
+                          {w.reasons && w.reasons.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-1.5">
+                              {w.reasons.map((r, i) => (
+                                <span key={i} className="text-[9px] text-emerald-400/60 bg-emerald-500/5 px-1.5 py-0.5 rounded-full border border-emerald-500/10">
+                                  {r}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -511,6 +536,25 @@ const EmployerDashboard = () => {
           )}
         </GlassCard>
       </div>
+
+      {suggestions.length > 0 && (
+        <div className="mt-8 bg-gradient-to-r from-[#2BB8B8]/5 to-purple-500/5 border border-[#2BB8B8]/20 rounded-[2.5rem] p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-5 h-5 text-[#2BB8B8]" />
+            <h3 className="text-white font-black text-sm uppercase tracking-widest">AI Suggestions</h3>
+          </div>
+          <div className="space-y-2">
+            {suggestions.map((s, i) => (
+              <div key={i} className="flex items-start gap-3 bg-white/[0.03] border border-white/5 rounded-2xl p-4">
+                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full border bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                  {s.type}
+                </span>
+                <p className="text-white/80 text-sm">{s.message}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {completedJobs.length > 0 && (
         <div className="mt-8">
