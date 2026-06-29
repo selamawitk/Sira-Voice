@@ -11,3 +11,7 @@ backend/dist/
 .env
 .env.*
 !.env.example
+
+# Test artifacts
+backend/server_test_error.txt
+backend/server_test_output.txt
