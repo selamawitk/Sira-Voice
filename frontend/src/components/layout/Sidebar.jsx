@@ -165,12 +165,6 @@ const Sidebar = ({ onClose }) => {
       path: "/post-job", 
       isVoice: true 
     },
-    {
-      icon: Mic,
-      label: "Voice Job Posting",
-      path: "/voice-job-posting",
-      isVoice: true
-    },
     { 
       icon: ClipboardList, 
       label: langCtx?.copy?.applicants ?? getFallbackLabel('applicants', "Applicants", "የስራ አመልካቾች", "Iyyattoota"), 

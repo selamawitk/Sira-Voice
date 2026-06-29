@@ -150,11 +150,20 @@ export const processEmployerVoiceToJob = async (filePath) => {
 
     if (!transcript.trim()) return fallbackJob();
 
-    const job = await extractJobFromText(transcript, detectedLanguage);
+    let textForExtraction = transcript;
+    let sourceLanguage = detectedLanguage;
+
+    if (detectedLanguage === 'am' || detectedLanguage === 'or') {
+      const translation = await translateText(transcript, detectedLanguage);
+      textForExtraction = translation?.translatedText || transcript;
+      sourceLanguage = translation?.sourceLanguage || detectedLanguage;
+    }
+
+    const job = await extractJobFromText(textForExtraction, sourceLanguage);
 
     return {
       transcript,
-      translatedText: transcript,
+      translatedText: textForExtraction,
       detectedLanguage,
       job,
     };

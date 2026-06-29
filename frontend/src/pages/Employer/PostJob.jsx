@@ -1,10 +1,9 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom'; 
 import api from '../../services/api.js';
 import { ToastContext } from '../../components/ui/ToastContextInstance.jsx';
 import { LanguageContext } from '../../context/LanguageContextInstance.jsx';
-import { useVoice } from '../../hooks/useVoice.js';
-import { Loader2, ShieldCheck, Info, Mic, MicOff, Sparkles, MapPin, Star } from 'lucide-react';
+import { Loader2, ShieldCheck, Info, Mic, MicOff, Sparkles, MapPin, Star, Pencil, CheckCircle2, X } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -51,28 +50,104 @@ const PostJob = () => {
 
   const [mapCenter, setMapCenter] = useState([8.9806, 38.7578]);
 
-  const handleVoiceData = (data) => {
-    const jobData = data?.data || data;
-    if (jobData.title) setTitle(jobData.title);
-    if (jobData.category) setCategory(jobData.category);
-    if (jobData.address || jobData.location) setAddress(jobData.address || jobData.location);
-    if (jobData.salary) setSalary(String(jobData.salary));
-    if (jobData.description) setDescription(jobData.description);
-    if (jobData.paymentType) setPaymentType(jobData.paymentType);
+  const [voiceState, setVoiceState] = useState('idle');
+  const [transcript, setTranscript] = useState('');
+  const [editedTranscript, setEditedTranscript] = useState('');
+  const [isEditingTranscript, setIsEditingTranscript] = useState(false);
+  const [voiceJobData, setVoiceJobData] = useState(null);
 
-    if (jobData.coordinates) {
-      setMapCenter([jobData.coordinates[1], jobData.coordinates[0]]);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+
+  const allFieldsFilled = title && salary && address && category;
+
+  const startRecording = async () => {
+    try {
+      audioChunksRef.current = [];
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        await uploadAudio(blob);
+      };
+
+      recorder.start();
+      setVoiceState('recording');
+    } catch (err) {
+      toast?.show?.('Microphone access denied', 'error');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop();
+      setVoiceState('transcribing');
+    }
+  };
+
+  const uploadAudio = async (blob) => {
+    try {
+      const formData = new FormData();
+      formData.append('audio', blob, 'recording.webm');
+      const res = await api.post('/voice/job-preview', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      setTranscript(res.data.transcript || '');
+      setEditedTranscript(res.data.transcript || '');
+      setVoiceJobData(res.data.job || null);
+      setVoiceState('done');
+    } catch (err) {
+      toast?.show?.(err.response?.data?.message || 'Voice processing failed', 'error');
+      setVoiceState('idle');
+    }
+  };
+
+  const handleProceed = async () => {
+    const textToProcess = editedTranscript.trim();
+    let jobData = voiceJobData;
+
+    if (textToProcess !== transcript && textToProcess) {
+      try {
+        const res = await api.post('/voice/job-preview', { transcript: textToProcess, lang: 'en' });
+        jobData = res.data.job || null;
+        setVoiceJobData(jobData);
+      } catch (err) {
+        // fall through with existing jobData
+      }
+    }
+
+    if (jobData) {
+      if (jobData.jobTitle) setTitle(jobData.jobTitle);
+      if (jobData.category) setCategory(jobData.category);
+      if (jobData.location) setAddress(jobData.location);
+      if (jobData.salary && Number(jobData.salary) > 0) setSalary(String(jobData.salary));
+      if (jobData.description) setDescription(jobData.description);
+      if (jobData.paymentType) setPaymentType(jobData.paymentType);
     }
 
     toast?.show?.(
-      activeLang === 'am' ? 'የስራ ፎርሙ በድምፅዎ በራስ-ሰር ተሞልቷል!' : 
-      activeLang === 'or' ? 'Unkaan hojii sagalee keessaniin guutameera!' : 
-      'Job form auto-populated via Sira Voice Agent!', 
+      activeLang === 'am' ? 'የስራ ፎርሙ ተሞልቷል!' : 
+      activeLang === 'or' ? 'Unkaan hojii guutameera!' : 
+      'Job form populated from voice!', 
       'success'
     );
   };
 
-  useVoice(handleVoiceData, activeLang);
+  const cancelVoice = () => {
+    setVoiceState('idle');
+    setTranscript('');
+    setEditedTranscript('');
+    setIsEditingTranscript(false);
+    setVoiceJobData(null);
+  };
 
   useEffect(() => {
     if (activeTab === 'applicants') {
@@ -235,40 +310,136 @@ const PostJob = () => {
             </div>
           </div>
 
-          <div className="mb-8 border transition-all duration-300 rounded-4xl p-8 flex flex-col items-center justify-center text-center relative overflow-hidden backdrop-blur-xl bg-white/5 border-white/10 hover:bg-white/[0.07] hover:border-[#2BB8B8]/20 cursor-pointer" onClick={() => navigate('/voice-job-posting')}>
+          <div className="mb-8 border transition-all duration-300 rounded-4xl p-8 flex flex-col items-center justify-center text-center relative overflow-hidden backdrop-blur-xl bg-white/5 border-white/10">
             <div className="absolute -left-20 -top-20 w-48 h-48 bg-[#2BB8B8] opacity-[0.02] blur-3xl pointer-events-none" />
             <div className="absolute -right-20 -bottom-20 w-48 h-48 bg-[#2BB8B8] opacity-[0.02] blur-3xl pointer-events-none" />
 
-            <div className="relative flex items-center justify-center mb-4">
-              <button
-                type="button"
-                onClick={() => navigate('/voice-job-posting')}
-                className="w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 transform active:scale-95 shadow-xl relative z-10 bg-gradient-to-br from-[#2BB8B8] to-emerald-500 text-slate-950 hover:scale-105 shadow-[#2BB8B8]/20 cursor-pointer"
-              >
-                <Mic className="w-10 h-10" />
-              </button>
-            </div>
+            {voiceState === 'idle' && (
+              <>
+                <div className="relative flex items-center justify-center mb-4">
+                  <button
+                    type="button"
+                    onClick={startRecording}
+                    className="w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 transform active:scale-95 shadow-xl relative z-10 bg-gradient-to-br from-[#2BB8B8] to-emerald-500 text-slate-950 hover:scale-105 shadow-[#2BB8B8]/20"
+                  >
+                    <Mic className="w-10 h-10" />
+                  </button>
+                </div>
+                <div className="max-w-md mx-auto space-y-1">
+                  <span className="text-[10px] bg-white/10 border border-white/10 px-2.5 py-0.5 rounded-full text-white/70 tracking-wider font-bold uppercase">
+                    {activeLang === 'am' ? 'የሲራ ድምፅ ረዳት' : activeLang === 'or' ? 'Gargaara Sagalee Sira' : 'Sira Voice AI Agent'}
+                  </span>
+                  <h3 className="text-white font-semibold text-lg mt-2 normal-case">
+                    {activeLang === 'am' ? 'ስራዎን ለመለጠፍ ይናገሩ' : activeLang === 'or' ? 'Hojii keessan galchuuf dubbadhaa' : 'Speak to post a job'}
+                  </h3>
+                  <p className="text-white/40 text-xs normal-case">
+                    {activeLang === 'am' ? 'አማርኛ • Afan Oromo • English' : 'Works in Amharic • Afaan Oromoo • English'}
+                  </p>
+                </div>
+                <p className="mt-4 text-[11px] text-white/30 max-w-md mx-auto leading-relaxed">
+                  {activeLang === 'am' 
+                    ? 'ለምርጥ ውጤት እንደዚህ ይበሉ፡ "የቧንቧ ሰራተኛ እፈልጋለሁ፣ በቦሌ፣ በቀን 800 ብር" — የስራ ርዕስ፣ ቦታ፣ ደሞዝ እና የክፍያ አይነት ይጥቀሱ' 
+                    : activeLang === 'or' 
+                    ? 'Ittaatti jedhaa: "Hojjetaa boombii nan barbaada, Finfinnee Booleetti, guyyaa 800 birr" — mata duree hojii, iddoo, kafaltii fi gosa kafaltii ibsi' 
+                    : 'For best results say: "I need a plumber in Bole, 800 birr per day" — include job title, location, salary, and payment type'}
+                </p>
+              </>
+            )}
 
-            <div className="max-w-md mx-auto space-y-1">
-              <span className="text-[10px] bg-white/10 border border-white/10 px-2.5 py-0.5 rounded-full text-white/70 tracking-wider font-bold uppercase">
-                {activeLang === 'am' ? 'የሲራ ድምፅ ረዳት' : activeLang === 'or' ? 'Gargaara Sagalee Sira' : 'Sira Voice AI Agent'}
-              </span>
-              <h3 className="text-white font-semibold text-lg mt-2 normal-case">
-                {activeLang === 'am' ? 'በድምፅ ስራ ለመለጠፍ እዚህ ይጫኑ' : activeLang === 'or' ? 'Sagaleen hojii galchuuf as cuqaasi' : 'Click to post a job with voice'}
-              </h3>
-              <p className="text-white/40 text-xs normal-case">
-                {activeLang === 'am' ? 'አማርኛ • Afan Oromo • English' : 'Works in Amharic • Afaan Oromoo • English'}
-              </p>
-            </div>
+            {voiceState === 'recording' && (
+              <>
+                <div className="relative flex items-center justify-center mb-4">
+                  <button
+                    type="button"
+                    onClick={stopRecording}
+                    className="w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 transform active:scale-95 shadow-xl relative z-10 bg-gradient-to-br from-red-500 to-rose-600 text-white animate-pulse shadow-red-500/20"
+                  >
+                    <MicOff className="w-10 h-10" />
+                  </button>
+                </div>
+                <h3 className="text-white font-semibold text-lg normal-case">
+                  {activeLang === 'am' ? 'በመቅረጽ ላይ... ለማቆም ይጫኑ' : activeLang === 'or' ? 'Galmee jira... dhaabuuf cuqaasi' : 'Recording... tap to stop'}
+                </h3>
+              </>
+            )}
 
-            <p className="mt-4 text-[11px] text-white/30 max-w-md mx-auto leading-relaxed">
-              {activeLang === 'am' 
-                ? 'ለምርጥ ውጤት እንደዚህ ይበሉ፡ "የቧንቧ ሰራተኛ እፈልጋለሁ፣ በቦሌ፣ በቀን 800 ብር" — የስራ ርዕስ፣ ቦታ፣ ደሞዝ እና የክፍያ አይነት ይጥቀሱ' 
-                : activeLang === 'or' 
-                ? 'Ittaatti jedhaa: "Hojjetaa boombii nan barbaada, Finfinnee Booleetti, guyyaa 800 birr" — mata duree hojii, iddoo, kafaltii fi gosa kafaltii ibsi' 
-                : 'For best results say: "I need a plumber in Bole, 800 birr per day" — include job title, location, salary, and payment type'}
-            </p>
+            {voiceState === 'transcribing' && (
+              <>
+                <Loader2 className="w-12 h-12 animate-spin text-[#2BB8B8] mb-4" />
+                <h3 className="text-white font-semibold text-lg normal-case">
+                  {activeLang === 'am' ? 'በማሰራት ላይ...' : activeLang === 'or' ? 'Hiikuu jira...' : 'Processing voice...'}
+                </h3>
+              </>
+            )}
+
+            {voiceState === 'done' && (
+              <>
+                <div className="relative flex items-center justify-center mb-4">
+                  <div className="w-24 h-24 rounded-full flex items-center justify-center bg-emerald-500/10 border border-emerald-500/20">
+                    <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+                  </div>
+                </div>
+
+                <div className="max-w-lg w-full mx-auto space-y-3">
+                  <div className="flex items-center justify-between gap-2 bg-white/5 border border-white/10 rounded-2xl p-3">
+                    {isEditingTranscript ? (
+                      <div className="flex-1 flex items-center gap-2">
+                        <input
+                          value={editedTranscript}
+                          onChange={(e) => setEditedTranscript(e.target.value)}
+                          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-white text-xs outline-none focus:border-[#2BB8B8]/50"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => { setIsEditingTranscript(false); setEditedTranscript(transcript); }}
+                          className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white/70 transition-all"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-xs text-white/70 text-left leading-relaxed truncate flex-1">
+                          {editedTranscript || transcript}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingTranscript(true)}
+                          className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-[#2BB8B8] transition-all shrink-0"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={cancelVoice}
+                      className="flex-1 px-4 py-2.5 rounded-2xl bg-white/5 text-white/70 font-medium hover:bg-white/10 transition-all text-xs"
+                    >
+                      {activeLang === 'am' ? 'ሰርዝ' : activeLang === 'or' ? 'Haqi' : 'Cancel'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleProceed}
+                      className="flex-1 px-4 py-2.5 rounded-2xl bg-[#2BB8B8] text-slate-950 font-semibold hover:scale-[1.01] active:scale-95 transition-all text-xs"
+                    >
+                      {activeLang === 'am' ? 'ቀጥል' : activeLang === 'or' ? 'Itti Fufi' : 'Proceed'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
+
+          {voiceState === 'idle' && !allFieldsFilled && (
+            <div className="mb-4 text-[10px] text-white/30 text-center">
+              {activeLang === 'am' ? 'ሁሉም መረጃዎች እስኪሞሉ ድረስ "አሁን ስራውን ልጥፍ" አይሰራም' : activeLang === 'or' ? 'Hanga odeeffannoo hunda guutametti "HOJII AMMA BAASI" hin hojjetu' : 'Post Job Now will remain disabled until all fields are filled'}
+            </div>
+          )}
 
           <form onSubmit={submit} className="bg-white/3 border border-white/10 rounded-4xl p-6 space-y-5 backdrop-blur-md relative overflow-hidden text-left">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -405,7 +576,7 @@ const PostJob = () => {
                   {t.cancel || 'Cancel'}
                 </button>
                 <button
-                  disabled={loading}
+                  disabled={loading || !allFieldsFilled}
                   className="flex-1 md:flex-none flex items-center justify-center gap-2 px-10 py-3 rounded-2xl bg-[#2BB8B8] text-slate-950 font-semibold hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-50 text-xs shadow-lg shadow-[#2BB8B8]/10"
                 >
                   {loading ? (

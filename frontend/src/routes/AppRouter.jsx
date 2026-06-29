@@ -28,7 +28,6 @@ const PostJob = lazy(() => import('../pages/Employer/PostJob.jsx'));
 const Applicants = lazy(() => import('../pages/Employer/Applicants.jsx'));
 const ActiveContracts = lazy(() => import('../pages/Employer/ActiveContracts.jsx'));
 const PaymentHistory = lazy(() => import('../pages/Employer/PaymentHistory.jsx'));
-const VoiceJobPosting = lazy(() => import('../pages/Employer/VoiceJobPosting.jsx'));
 
 const Ratings = lazy(() => import('../pages/Shared/Ratings.jsx'));
 const Notifications = lazy(() => import('../pages/Shared/Notifications.jsx'));
@@ -125,7 +124,6 @@ const AppRouter = () => {
             <Route element={<EmployerSection />}>
               <Route path="/employer-dashboard" element={<EmployerDashboard />} />
               <Route path="/post-job" element={<PostJob />} />
-              <Route path="/voice-job-posting" element={<VoiceJobPosting />} />
               <Route path="/applicants" element={<Applicants />} />
               <Route path="/contracts" element={<ActiveContracts />} />
               <Route path="/employer-payments" element={<PaymentHistory />} />
