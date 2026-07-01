@@ -12,6 +12,7 @@ import {
   processVoiceSuggestions,
   voiceJobMatchesWithReasons,
   checkJobSafety,
+  generateCV,
 } from '../controllers/voiceController.js';
 
 import { protect } from '../middleware/authMiddleware.js';
@@ -36,6 +37,8 @@ router.post('/voice-rating', protect, processVoiceRating);
 router.post('/suggestions', protect, processVoiceSuggestions);
 
 router.get('/matches/:jobId', protect, voiceJobMatchesWithReasons);
+
+router.post('/generate-cv', protect, generateCV);
 
 router.post('/process-text', protect, async (req, res, next) => {
   try {
