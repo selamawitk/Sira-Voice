@@ -13,6 +13,8 @@ export const useVoice = (onCompleteCallback, externalLang) => {
 
   const recognitionRef = useRef(null);
   const finalTranscriptRef = useRef('');
+  const manualStopRef = useRef(false);
+  const latestTranscriptRef = useRef('');
 
   const languageContext = useContext(LanguageContext);
   const authContext = useContext(AuthContext);
@@ -57,7 +59,9 @@ export const useVoice = (onCompleteCallback, externalLang) => {
       }
 
       finalTranscriptRef.current = finalTranscript;
-      setTranscript(`${finalTranscript} ${interimTranscript}`.trim());
+      const full = `${finalTranscript} ${interimTranscript}`.trim();
+      latestTranscriptRef.current = full;
+      setTranscript(full);
     };
 
     recognition.onerror = (event) => {
@@ -69,6 +73,15 @@ export const useVoice = (onCompleteCallback, externalLang) => {
 
     recognition.onend = () => {
       setIsListening(false);
+      const hasFinal = finalTranscriptRef.current.trim().length > 0;
+      const fallback = latestTranscriptRef.current.trim();
+      if (!manualStopRef.current && (hasFinal || fallback)) {
+        if (!hasFinal && fallback) {
+          finalTranscriptRef.current = fallback;
+        }
+        processTranscriptData(recognitionRef.current?.onComplete);
+      }
+      manualStopRef.current = false;
     };
 
     recognitionRef.current = recognition;
@@ -78,42 +91,30 @@ export const useVoice = (onCompleteCallback, externalLang) => {
     };
   }, [currentLang, toastContext]);
 
-  const startListening = async (inlineOnComplete, options = {}) => {
-    const { action = 'post-job-ai', jobId = null } = options;
+  const processTranscriptData = async (onComplete) => {
+    const text = finalTranscriptRef.current.trim();
+    if (!text) return;
 
-    if (isListening) return;
+    const raw = recognitionRef.current?.raw || false;
+    const action = recognitionRef.current?.action || 'post-job-ai';
 
-    setError(null);
-    setResult(null);
-    setTranscript('');
-    finalTranscriptRef.current = '';
-
-    try {
-      recognitionRef.current.lang = langMap[currentLang] || 'en-US';
-      recognitionRef.current.start();
-
-      recognitionRef.current.action = action;
-      recognitionRef.current.jobId = jobId;
-      recognitionRef.current.onComplete = inlineOnComplete || onCompleteCallback;
-    } catch (err) {
-      console.error(err);
-      setError('Microphone access denied');
-      toastContext?.show?.('Microphone access denied', 'error');
-      setIsListening(false);
+    if (raw) {
+      const normalizedResult = {
+        transcript: text,
+        actionTaken: null,
+        data: null,
+      };
+      setResult(normalizedResult);
+      if (onComplete && typeof onComplete === 'function') {
+        onComplete(normalizedResult);
+      }
+      return;
     }
-  };
 
-  const stopListening = async () => {
-    if (!recognitionRef.current || !isListening) return;
-
-    recognitionRef.current.stop();
-    setIsListening(false);
     setIsProcessing(true);
-
     try {
-      const action = recognitionRef.current.action || 'post-job-ai';
-      const jobId = recognitionRef.current.jobId || null;
-      const onComplete = recognitionRef.current.onComplete;
+      const jobId = recognitionRef.current?.jobId || null;
+      const savedOnComplete = recognitionRef.current?.onComplete;
 
       let endpoint = '/ai/voice-action';
       if (action === 'register' || action === 'login') {
@@ -123,7 +124,7 @@ export const useVoice = (onCompleteCallback, externalLang) => {
       }
 
       const payload = {
-        transcript: finalTranscriptRef.current.trim(),
+        transcript: text,
         lang: currentLang,
         action,
       };
@@ -143,7 +144,7 @@ export const useVoice = (onCompleteCallback, externalLang) => {
       const responsePayload = data.result?.data || data.data || data;
 
       const normalizedResult = {
-        transcript: data.transcript || finalTranscriptRef.current.trim(),
+        transcript: data.transcript || text,
         actionTaken: data.result?.actionTaken || data.actionTaken || null,
         data: responsePayload,
       };
@@ -158,8 +159,8 @@ export const useVoice = (onCompleteCallback, externalLang) => {
         );
       }
 
-      if (onComplete && typeof onComplete === 'function') {
-        onComplete(normalizedResult);
+      if (savedOnComplete && typeof savedOnComplete === 'function') {
+        savedOnComplete(normalizedResult);
       }
     } catch (err) {
       console.error(err);
@@ -182,6 +183,43 @@ export const useVoice = (onCompleteCallback, externalLang) => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const startListening = async (inlineOnComplete, options = {}) => {
+    const { action = 'post-job-ai', jobId = null, raw = false } = options;
+
+    if (isListening) return;
+
+    setError(null);
+    setResult(null);
+    setTranscript('');
+    finalTranscriptRef.current = '';
+    latestTranscriptRef.current = '';
+
+    try {
+      recognitionRef.current.lang = langMap[currentLang] || 'en-US';
+      recognitionRef.current.start();
+
+      recognitionRef.current.action = action;
+      recognitionRef.current.jobId = jobId;
+      recognitionRef.current.raw = raw;
+      recognitionRef.current.onComplete = inlineOnComplete || onCompleteCallback;
+    } catch (err) {
+      console.error(err);
+      setError('Microphone access denied');
+      toastContext?.show?.('Microphone access denied', 'error');
+      setIsListening(false);
+    }
+  };
+
+  const stopListening = async () => {
+    if (!recognitionRef.current || !isListening) return;
+
+    manualStopRef.current = true;
+    recognitionRef.current.stop();
+    setIsListening(false);
+
+    await processTranscriptData(recognitionRef.current?.onComplete);
   };
 
   return {
