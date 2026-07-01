@@ -59,6 +59,8 @@ setCatchHandler(async ({ event }) => {
   return Response.error();
 });
 
+self.addEventListener('install', () => self.skipWaiting());
+
 self.addEventListener('activate', (event) => {
   const currentCaches = CACHE_NAMES.map(name => `${name}-${CACHE_VERSION}`);
 
@@ -69,7 +71,7 @@ self.addEventListener('activate', (event) => {
         return matched && !currentCaches.includes(cache);
       });
       return Promise.all(obsolete.map((cache) => caches.delete(cache)));
-    })
+    }).then(() => clients.claim())
   );
 });
 
