@@ -390,6 +390,44 @@ NO markdown. NO extra text. ONLY JSON.`;
   }
 };
 
+export const generateCVFromProfile = async (profile, language = 'en') => {
+  try {
+    const prompt = `You are Sira AI CV writer for Ethiopian job marketplace.
+Generate a professional CV/resume based on the following worker profile.
+
+Profile:
+- Skill: ${profile.skill || 'Not specified'}
+- Experience: ${profile.experienceYears || 0} years
+- Location: ${profile.location || 'Not specified'}
+- Availability: ${profile.availability || 'Not specified'}
+
+Generate a complete, well-structured CV with:
+1. Professional summary
+2. Skills section
+3. Experience section
+4. Location and availability
+
+Return ONLY valid JSON:
+{
+  "cvText": "full CV text here with proper formatting"
+}
+
+NO markdown. NO extra text. ONLY JSON.`;
+
+    const result = await model.generateContent(prompt);
+    const raw = (await result.response).text();
+    const parsed = safeParse(raw);
+
+    if (parsed?.cvText) {
+      return parsed.cvText;
+    }
+    return '';
+  } catch (err) {
+    console.error('CV GENERATION ERROR:', err);
+    return '';
+  }
+};
+
 export const enhanceJobSearchWithRanking = async (transcript = '', jobs = [], language = 'am') => {
   try {
     if (!jobs.length) return [];
