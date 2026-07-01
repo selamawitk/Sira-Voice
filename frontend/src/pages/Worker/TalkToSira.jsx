@@ -96,8 +96,13 @@ const TalkToSira = () => {
 
   const handleApplyToJob = async (jobId) => {
     try {
-      const res = await api.post(`/applications/${jobId}/apply`);
-      if (res.data?.success) {
+      const res = await api.post(`/applications/${jobId}/apply`, {
+        source: 'VOICE',
+        message: editable,
+        includeCv: true,
+        cvData: { skills: [], experienceYears: 0 },
+      });
+      if (res.data?._id || res.data?.success) {
         toast?.show?.(getCopy('applySuccess', 'Application submitted successfully!'), 'success');
         setJobs(prev => prev.filter(j => j._id !== jobId));
       }
@@ -154,10 +159,26 @@ const TalkToSira = () => {
                 : getCopy('tapToSpeak', 'Tap to speak')
               }
             </p>
-            <p className="text-gray-500 text-sm mt-1">
-              {getCopy('autoStopHint', 'Auto-stops after ~10 seconds.')}
-            </p>
+            {!isListening && !showingLoader && editable && (
+              <p className="text-gray-500 text-sm mt-1">
+                {getCopy('editThenSend', 'Edit your text above, then click send →')}
+              </p>
+            )}
+            {!isListening && !showingLoader && !editable && (
+              <p className="text-gray-500 text-sm mt-1">
+                {getCopy('autoStopHint', 'Tap mic and speak. Auto-stops after ~10 seconds.')}
+              </p>
+            )}
           </div>
+
+          {!isListening && !showingLoader && !editable && (
+            <div className="w-full bg-[#2BB8B8]/5 border border-[#2BB8B8]/20 rounded-2xl p-4">
+              <p className="text-[#2BB8B8] text-xs font-bold uppercase tracking-wider mb-1">Try saying</p>
+              <p className="text-white/60 text-xs">"Find me cleaning jobs in Bole"</p>
+              <p className="text-white/60 text-xs mt-1">"I need a plumber for tomorrow"</p>
+              <p className="text-white/60 text-xs mt-1">"Apply to the construction job"</p>
+            </div>
+          )}
 
           <div className="w-full space-y-3">
             <label className="block text-xs font-black uppercase tracking-widest text-gray-500">
