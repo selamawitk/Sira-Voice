@@ -15,3 +15,7 @@ backend/dist/
 # Test artifacts
 backend/server_test_error.txt
 backend/server_test_output.txt
+backend/payload.json
+backend/loginPayload.json
+backend/testAuth.log
+backend/server_test_*.txt

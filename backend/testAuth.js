@@ -1,11 +1,10 @@
 const fetch = global.fetch;
-const base = 'http://localhost:5002/api';
-const email = `test+${Date.now()}@example.com`;
-const password = 'Test1234!';
+const base = process.env.TEST_API_URL || 'http://localhost:5002/api';
+const password = process.env.TEST_PASSWORD || 'Test1234!';
 const body = {
   fullName: 'Auth Test',
   phone: '+251' + Math.floor(100000000 + Math.random() * 899999999),
-  email,
+  email: `test+${Date.now()}@example.com`,
   password,
   role: 'worker',
 };
