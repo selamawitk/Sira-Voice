@@ -133,6 +133,12 @@ const SiraApply = () => {
         includeCv,
         source,
         message,
+        cvData: includeCv ? {
+          skills: skills ? skills.split(',').map(s => s.trim()) : (cvInfo?.skills || []),
+          experienceYears: experience ? parseInt(experience) : (cvInfo?.experienceYears || 0),
+          location: '',
+          bio: cvInfo?.bio || '',
+        } : null,
       });
       setSubmitted(true);
       toast?.show?.('Application submitted successfully!', 'success');
@@ -236,6 +242,13 @@ const SiraApply = () => {
                   <p className="text-white/60 text-sm mt-4">
                     {copy?.tapToSpeakApplication ?? 'Tap to speak your application'}
                   </p>
+                  <div className="mt-4 bg-[#2BB8B8]/5 border border-[#2BB8B8]/20 rounded-2xl p-3 text-left">
+                    <p className="text-[#2BB8B8] text-xs font-bold uppercase tracking-wider mb-1">What to include</p>
+                    <p className="text-white/50 text-xs leading-relaxed">
+                      Say why you're a good fit, your experience, and when you can start.
+                    </p>
+                    <p className="text-white/40 text-[10px] italic mt-1">"I have 5 years of experience in this work and can start immediately"</p>
+                  </div>
                 </>
               )}
 
